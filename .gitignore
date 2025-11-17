@@ -27,4 +27,15 @@ db.sqlite3-journal
 .DS_Store
 Thumbs.db
 
+# Fichiers sensibles
+serviceAccountKey.json
+*.json
+input/serviceAccountKey.json
+.env
+.env.local
+
+# Fichiers Excel temporaires
+*.xlsx
+*.xls
+!requirements.txt
 
