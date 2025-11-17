@@ -29,13 +29,12 @@ Thumbs.db
 
 # Fichiers sensibles
 serviceAccountKey.json
-*.json
 input/serviceAccountKey.json
 .env
 .env.local
 
-# Fichiers Excel temporaires
-*.xlsx
-*.xls
-!requirements.txt
+# Fichiers Excel temporaires (exports)
+media/exports/*.xlsx
+media/exports/*.xls
+scripts_manager/scripts/exports/*.xlsx
 
