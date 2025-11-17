@@ -1,0 +1,63 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Connexion - Butter{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-lg p-8 border border-[#C9C1B1] w-full max-w-md">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2 text-center">🔐 Connexion</h1>
+        <p class="text-[#535353] text-center mb-6">Connectez-vous à votre compte</p>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-[14px] {% if message.tags == 'error' %}bg-[#F2D7D4] text-[#D3695E] border border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] border border-[#C9C1B1]{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <label for="username" class="block text-sm font-medium text-[#111111] mb-2">Nom d'utilisateur</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    autofocus
+                    class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
+                    placeholder="Votre nom d'utilisateur"
+                >
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-[#111111] mb-2">Mot de passe</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required
+                    class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
+                    placeholder="Votre mot de passe"
+                >
+            </div>
+            
+            <button type="submit" class="w-full btn-primary">
+                🔓 Se connecter
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center">
+            <p class="text-[#535353] text-sm">
+                Pas encore de compte ? 
+                <a href="{% url 'scripts_manager:register' %}" class="text-[#60BC81] font-medium hover:underline">
+                    Créer un compte
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

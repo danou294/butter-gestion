@@ -1,0 +1,150 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Export - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📤 Export vers Excel</h1>
+        <p class="text-[#535353]">Exportez les collections Firestore ou les utilisateurs Firebase Auth vers Excel.</p>
+    </div>
+    
+    <!-- Export Form -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <form id="export-form" class="space-y-6">
+            <div>
+                <label for="export-type" class="block text-sm font-medium text-[#111111] mb-2">Type d'export *</label>
+                <select id="export-type" required 
+                        class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                    <option value="">-- Sélectionner --</option>
+                    <option value="firestore">Collection Firestore</option>
+                    <option value="auth">Utilisateurs Firebase Auth</option>
+                </select>
+            </div>
+            
+            <div id="collection-group" class="hidden">
+                <label for="collection" class="block text-sm font-medium text-[#111111] mb-2">Collection *</label>
+                <select id="collection" required 
+                        class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                    <option value="users">users</option>
+                    <option value="restaurants">restaurants</option>
+                    <option value="recommandations">recommandations</option>
+                    <option value="feedbacks">feedbacks</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-primary w-full">
+                🚀 Exporter
+            </button>
+        </form>
+        
+        <div id="output" class="mt-6 hidden"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('export-type').addEventListener('change', function() {
+    const collectionGroup = document.getElementById('collection-group');
+    if (this.value === 'firestore') {
+        collectionGroup.classList.remove('hidden');
+    } else {
+        collectionGroup.classList.add('hidden');
+    }
+});
+
+document.getElementById('export-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const exportType = document.getElementById('export-type').value;
+    const collection = document.getElementById('collection').value;
+    const output = document.getElementById('output');
+    const submitButton = this.querySelector('button[type="submit"]');
+    
+    output.classList.remove('hidden');
+    output.innerHTML = '<div class="flex items-center gap-3 p-4 bg-[#F1EFEB] rounded-[14px] border border-[#C9C1B1]"><div class="spinner"></div><span class="text-[#535353]">Génération de l\'export en cours...</span></div>';
+    submitButton.disabled = true;
+    showLoading();
+    
+    fetch('{% url "scripts_manager:run_export" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            type: exportType,
+            collection: collection
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Erreur lors de l\'export');
+            }).catch(() => {
+                throw new Error('Erreur HTTP ' + response.status);
+            });
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('spreadsheet')) {
+            return response.blob().then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'export.xlsx';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                        
+                        function cleanFilename(name) {
+                            const parts = name.split('.xlsx');
+                            if (parts.length > 1) {
+                                let base = parts.slice(0, -1).join('.xlsx');
+                                base = base.replace(/[_-]+$/, '');
+                                return base + '.xlsx';
+                            } else {
+                                name = name.replace(/[_-]+$/, '');
+                                return name + '.xlsx';
+                            }
+                        }
+                        
+                        filename = cleanFilename(filename);
+                        if (filename.endsWith('_.xlsx')) {
+                            filename = filename.slice(0, -6) + '.xlsx';
+                        }
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                output.innerHTML = '<div class="p-4 bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] text-[#60BC81]">✅ Export terminé ! Le téléchargement a démarré.</div>';
+                submitButton.disabled = false;
+                hideLoading();
+            });
+        } else {
+            return response.json().then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                throw new Error('Format de réponse inattendu');
+            });
+        }
+    })
+    .catch(error => {
+        output.innerHTML = '<div class="p-4 bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] text-[#D3695E]">❌ Erreur: ' + error.message + '</div>';
+        submitButton.disabled = false;
+        hideLoading();
+    });
+});
+</script>
+{% endblock %}

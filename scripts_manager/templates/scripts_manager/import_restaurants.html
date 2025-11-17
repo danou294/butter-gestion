@@ -1,0 +1,347 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Import Batch Restaurants - Butter{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .upload-area {
+        border: 3px dashed #667eea;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        background: #f8f9ff;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: #5568d3;
+        background: #f0f2ff;
+    }
+    
+    .upload-area.dragover {
+        border-color: #28a745;
+        background: #e8f5e9;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .file-info {
+        margin-top: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        display: none;
+    }
+    
+    .file-info.active {
+        display: block;
+    }
+    
+    .progress-container {
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .progress-container.active {
+        display: block;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 30px;
+        background: #e9ecef;
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        width: 0%;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .result-container {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+        display: none;
+    }
+    
+    .result-container.success {
+        display: block;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .result-container.error {
+        display: block;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .info-box ul {
+        margin: 10px 0 0 20px;
+        padding: 0;
+    }
+    
+    .info-box li {
+        margin: 5px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card import-container">
+    <h2>📥 Import Batch de Restaurants</h2>
+    
+    <div class="info-box">
+        <strong>ℹ️ Instructions :</strong>
+        <ul>
+            <li>Le fichier Excel doit contenir les colonnes requises (Ref, Nom de base, Vrai Nom, Adresse, etc.)</li>
+            <li>La première ligne doit contenir les en-têtes de colonnes</li>
+            <li>Un backup automatique sera créé avant l'import</li>
+            <li>La collection actuelle sera <strong>remplacée</strong> par les nouvelles données</li>
+            <li>Le processus peut prendre plusieurs minutes selon le nombre de restaurants</li>
+        </ul>
+    </div>
+    
+    <form id="importForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="upload-area" id="uploadArea">
+            <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+            <h3>Glissez-déposez votre fichier Excel ici</h3>
+            <p>ou</p>
+            <button type="button" class="btn" onclick="document.getElementById('excel_file').click()">
+                Parcourir les fichiers
+            </button>
+            <input type="file" id="excel_file" name="excel_file" class="file-input" accept=".xlsx,.xls" required>
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <strong>Fichier sélectionné :</strong> <span id="fileName"></span>
+            <br>
+            <strong>Taille :</strong> <span id="fileSize"></span>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label for="sheet_name" style="display: block; margin-bottom: 10px; font-weight: 500;">
+                Nom de la feuille Excel (optionnel) :
+            </label>
+            <input 
+                type="text" 
+                id="sheet_name" 
+                name="sheet_name" 
+                value="Feuil1" 
+                placeholder="Feuil1"
+                style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px;"
+            >
+            <small style="color: #6c757d;">Laissez vide ou mettez "Feuil1" par défaut</small>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <p id="progressText" style="text-align: center; margin-top: 10px;">Préparation de l'import...</p>
+        </div>
+        
+        <div class="result-container" id="resultContainer"></div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <button type="submit" class="btn" id="submitBtn" style="padding: 15px 40px; font-size: 16px;">
+                🚀 Lancer l'import
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('excel_file');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const importForm = document.getElementById('importForm');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const resultContainer = document.getElementById('resultContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Gestion du drag & drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+            alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+            return;
+        }
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.classList.add('active');
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    importForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files.length) {
+            alert('Veuillez sélectionner un fichier Excel');
+            return;
+        }
+        
+        // Confirmation
+        if (!confirm('⚠️ ATTENTION : Cette opération va remplacer TOUS les restaurants actuels.\n\nUn backup sera créé automatiquement.\n\nVoulez-vous continuer ?')) {
+            return;
+        }
+        
+        const formData = new FormData(importForm);
+        const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
+        formData.set('sheet_name', sheetName);
+        
+        // Afficher le loader
+        progressContainer.classList.add('active');
+        progressFill.style.width = '10%';
+        progressText.textContent = 'Upload du fichier...';
+        submitBtn.disabled = true;
+        resultContainer.style.display = 'none';
+        
+        // Simuler la progression
+        let progress = 10;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 5;
+            if (progress > 90) progress = 90;
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = Math.round(progress) + '%';
+            
+            if (progress < 30) {
+                progressText.textContent = 'Upload du fichier...';
+            } else if (progress < 50) {
+                progressText.textContent = 'Vérification du format...';
+            } else if (progress < 70) {
+                progressText.textContent = 'Création du backup...';
+            } else if (progress < 90) {
+                progressText.textContent = 'Conversion Excel → Firebase...';
+            }
+        }, 500);
+        
+        fetch('{% url "scripts_manager:run_import_restaurants" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearInterval(progressInterval);
+            progressFill.style.width = '100%';
+            progressFill.textContent = '100%';
+            
+            if (data.success) {
+                progressText.textContent = 'Import terminé avec succès !';
+                resultContainer.className = 'result-container success';
+                resultContainer.innerHTML = `
+                    <h3>✅ Import réussi !</h3>
+                    <p><strong>${data.imported}</strong> restaurants importés</p>
+                    ${data.duplicates > 0 ? `<p>⚠️ ${data.duplicates} IDs dupliqués détectés</p>` : ''}
+                    ${data.missing_tag_rows > 0 ? `<p>⚠️ ${data.missing_tag_rows} lignes sans tag (Ref)</p>` : ''}
+                    <p><strong>Backup :</strong> ${data.backup_dir}</p>
+                    <p><strong>Log :</strong> ${data.log_file}</p>
+                `;
+                resultContainer.style.display = 'block';
+                
+                // Réinitialiser le formulaire après 3 secondes
+                setTimeout(() => {
+                    importForm.reset();
+                    fileInfo.classList.remove('active');
+                    progressContainer.classList.remove('active');
+                    submitBtn.disabled = false;
+                }, 5000);
+            } else {
+                progressText.textContent = 'Erreur lors de l\'import';
+                resultContainer.className = 'result-container error';
+                resultContainer.innerHTML = `
+                    <h3>❌ Erreur</h3>
+                    <p>${data.error || 'Une erreur est survenue lors de l\'import'}</p>
+                    ${data.traceback ? `<pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">${data.traceback}</pre>` : ''}
+                `;
+                resultContainer.style.display = 'block';
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            progressText.textContent = 'Erreur lors de l\'import';
+            resultContainer.className = 'result-container error';
+            resultContainer.innerHTML = `
+                <h3>❌ Erreur</h3>
+                <p>Une erreur est survenue : ${error.message}</p>
+            `;
+            resultContainer.style.display = 'block';
+            submitBtn.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}
+

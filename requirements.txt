@@ -1,0 +1,11 @@
+Django>=4.2.0
+pandas
+google-cloud-firestore
+google-cloud-storage
+firebase-admin
+Pillow
+openpyxl
+python-dotenv
+requests
+
+

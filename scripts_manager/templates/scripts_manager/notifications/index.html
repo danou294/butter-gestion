@@ -1,0 +1,268 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Notifications Push - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📱 Envoi de Notifications Push</h1>
+        <p class="text-[#535353]">Envoyez des notifications à vos utilisateurs</p>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+        <div class="border-b border-[#C9C1B1]">
+            <nav class="flex -mb-px">
+                <button onclick="switchTab('all')" id="tab-btn-all" class="tab-button active px-6 py-4 text-sm font-medium border-b-2 border-[#111111] text-[#111111]">
+                    📢 À tous
+                </button>
+                <button onclick="switchTab('personalized')" id="tab-btn-personalized" class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-[#535353] hover:text-[#111111] hover:border-[#C9C1B1]">
+                    👤 Personnalisées
+                </button>
+                <button onclick="switchTab('group')" id="tab-btn-group" class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-[#535353] hover:text-[#111111] hover:border-[#C9C1B1]">
+                    👥 Groupe
+                </button>
+            </nav>
+        </div>
+        
+        <div class="p-6">
+            <!-- Tab: À tous -->
+            <div id="tab-all" class="tab-content">
+                <form id="form-all" class="space-y-4 max-w-2xl">
+                    <div>
+                        <label for="title-all" class="block text-sm font-medium text-[#111111] mb-2">Titre *</label>
+                        <input type="text" id="title-all" name="title" required 
+                               placeholder="Ex: Nouvelle fonctionnalité disponible"
+                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                    </div>
+                    
+                    <div>
+                        <label for="body-all" class="block text-sm font-medium text-[#111111] mb-2">Message *</label>
+                        <textarea id="body-all" name="body" required rows="4" 
+                                  placeholder="Ex: Découvrez notre nouvelle fonctionnalité..."
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="data-all" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
+                        <textarea id="data-all" name="data" rows="3" 
+                                  placeholder='{"type": "feature", "id": "123"}'
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
+                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full btn-primary">
+                        📤 Envoyer à tous les utilisateurs
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Tab: Personnalisées -->
+            <div id="tab-personalized" class="tab-content hidden">
+                <form id="form-personalized" class="space-y-4 max-w-2xl">
+                    <div>
+                        <label for="title-personalized" class="block text-sm font-medium text-[#111111] mb-2">Titre * (utilisez {prenom} pour personnaliser)</label>
+                        <input type="text" id="title-personalized" name="title" required 
+                               placeholder='Ex: Salut {prenom} !'
+                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                    </div>
+                    
+                    <div>
+                        <label for="body-personalized" class="block text-sm font-medium text-[#111111] mb-2">Message * (utilisez {prenom} pour personnaliser)</label>
+                        <textarea id="body-personalized" name="body" required rows="4" 
+                                  placeholder='Ex: {prenom}, découvrez notre nouvelle fonctionnalité...'
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="data-personalized" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
+                        <textarea id="data-personalized" name="data" rows="3" 
+                                  placeholder='{"type": "feature", "id": "123"}'
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
+                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full btn-primary">
+                        👤 Envoyer des notifications personnalisées
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Tab: Groupe -->
+            <div id="tab-group" class="tab-content hidden">
+                <form id="form-group" class="space-y-4 max-w-2xl">
+                    <div>
+                        <label for="users-select" class="block text-sm font-medium text-[#111111] mb-2">Sélectionner les utilisateurs *</label>
+                        <select id="users-select" name="userIds" multiple required 
+                                class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent min-h-[200px] bg-[#F1EFEB] text-[#111111]">
+                            {% for user in users %}
+                            <option value="{{ user.uid }}">{{ user.prenom }} ({{ user.email }})</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-[#535353]">Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs</p>
+                    </div>
+                    
+                    <div>
+                        <label for="title-group" class="block text-sm font-medium text-[#111111] mb-2">Titre *</label>
+                        <input type="text" id="title-group" name="title" required 
+                               placeholder="Ex: Notification spéciale"
+                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                    </div>
+                    
+                    <div>
+                        <label for="body-group" class="block text-sm font-medium text-[#111111] mb-2">Message *</label>
+                        <textarea id="body-group" name="body" required rows="4" 
+                                  placeholder="Ex: Message pour le groupe sélectionné..."
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="data-group" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
+                        <textarea id="data-group" name="data" rows="3" 
+                                  placeholder='{"type": "group", "id": "123"}'
+                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
+                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full btn-primary">
+                        👥 Envoyer au groupe sélectionné
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div id="results" class="hidden bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h3 class="text-xl font-serif font-bold text-[#111111] mb-4">📊 Résultats de l'envoi</h3>
+        <div id="results-content" class="space-y-2"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTab = 'all';
+
+function switchTab(tab) {
+    currentTab = tab;
+    
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active', 'border-amber-600', 'text-amber-600');
+        btn.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    // Show selected tab
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    
+    // Add active class to selected button
+    const activeBtn = document.getElementById(`tab-btn-${tab}`);
+    activeBtn.classList.add('active', 'border-[#111111]', 'text-[#111111]');
+    activeBtn.classList.remove('border-transparent', 'text-[#535353]');
+}
+
+// Form submissions
+document.getElementById('form-all').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await sendNotification('all', '{% url "scripts_manager:send_notification_to_all" %}');
+});
+
+document.getElementById('form-personalized').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await sendNotification('personalized', '{% url "scripts_manager:send_notification_to_all_with_prenom" %}');
+});
+
+document.getElementById('form-group').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await sendNotification('group', '{% url "scripts_manager:send_notification_to_group" %}');
+});
+
+async function sendNotification(tab, endpoint) {
+    const form = document.getElementById(`form-${tab}`);
+    const formData = new FormData(form);
+    
+    const data = {
+        title: formData.get('title'),
+        body: formData.get('body'),
+    };
+    
+    // Parse JSON data if provided
+    const dataField = formData.get('data');
+    if (dataField && dataField.trim()) {
+        try {
+            data.data = JSON.parse(dataField);
+        } catch (e) {
+            alert('❌ Erreur: Les données supplémentaires doivent être au format JSON valide');
+            return;
+        }
+    }
+    
+    // For group tab, get selected user IDs
+    if (tab === 'group') {
+        const select = document.getElementById('users-select');
+        const selectedUsers = Array.from(select.selectedOptions).map(opt => opt.value);
+        if (selectedUsers.length === 0) {
+            alert('❌ Veuillez sélectionner au moins un utilisateur');
+            return;
+        }
+        data.userIds = selectedUsers;
+    }
+    
+    // Show loading
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Envoi en cours...';
+    showLoading();
+    
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify(data),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showResults(result);
+        } else {
+            alert(`❌ Erreur: ${result.error || result.details || 'Erreur inconnue'}`);
+        }
+    } catch (error) {
+        alert(`❌ Erreur: ${error.message}`);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        hideLoading();
+    }
+}
+
+function showResults(result) {
+    const resultsDiv = document.getElementById('results');
+    const resultsContent = document.getElementById('results-content');
+    
+    resultsContent.innerHTML = `
+        <div class="space-y-2">
+            <p><strong>✅ Succès:</strong> <span class="text-[#60BC81] font-semibold">${result.successCount}</span> notification(s) envoyée(s)</p>
+            <p><strong>❌ Échecs:</strong> <span class="text-[#D3695E] font-semibold">${result.failureCount}</span> notification(s) échouée(s)</p>
+            <p><strong>📱 Total:</strong> <span class="text-[#535353] font-semibold">${result.totalTokens || (result.successCount + result.failureCount)}</span> token(s) traité(s)</p>
+            ${result.invalidUsers ? `<p><strong>⚠️ Utilisateurs invalides:</strong> ${result.invalidUsers.length}</p>` : ''}
+        </div>
+    `;
+    
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

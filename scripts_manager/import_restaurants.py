@@ -1,0 +1,825 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Script d'import end-to-end pour la collection 'restaurants' dans Firebase Firestore
+Adapté pour Django
+"""
+
+import os
+import re
+import ast
+import csv
+import json
+import sys
+import hashlib
+import pathlib
+import traceback
+import datetime
+import time
+import urllib.parse
+import urllib.request
+from collections import defaultdict, Counter
+from typing import Dict, Any, List, Optional, Tuple
+
+import pandas as pd
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except Exception:
+    ZoneInfo = None
+
+# Import de la config Django
+from config import SERVICE_ACCOUNT_PATH, FIRESTORE_COLLECTION, INPUT_DIR, EXPORTS_DIR, BACKUP_DIR
+
+# -------------------- Config --------------------
+COLLECTION_SOURCE = FIRESTORE_COLLECTION
+COLLECTION_IMPORT_LOGS = "import logs"
+BATCH_SIZE = 400
+DEDUPE_IDS = False
+
+# -------------------- Utilities --------------------
+def ensure_dir(p: str):
+    pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+
+def now_paris_str() -> str:
+    dt = datetime.datetime.now(datetime.timezone.utc)
+    if ZoneInfo is not None:
+        local = dt.astimezone(ZoneInfo("Europe/Paris"))
+        return local.strftime("%d %b %Y à %H:%M:%S %Z%z")
+    else:
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def sha256_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def log(msg: str, log_file: str):
+    print(msg)
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(msg + "\n")
+
+def init_firestore(log_file: str):
+    sa = SERVICE_ACCOUNT_PATH
+    if not os.path.exists(sa):
+        log(f"❌ Service account introuvable: {sa}", log_file)
+        raise FileNotFoundError(f"Service account introuvable: {sa}")
+    cred = credentials.Certificate(sa)
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+    return firestore.client()
+
+def clean_text(s):
+    """Nettoie le texte d'une cellule Excel"""
+    if s is None or (isinstance(s, float) and pd.isna(s)):
+        return ""
+    s = str(s).strip()
+    return (s.replace("\u202f", " ")
+             .replace("\u2009", " ")
+             .replace(" ", " ")
+             .replace("\xa0", " ")
+             .replace("–", "-")
+             .replace("—", "-")
+             .strip())
+
+def geocode_address(address: str, log_file: str = None, max_retries: int = 3) -> Optional[Tuple[float, float]]:
+    """Géocode une adresse en utilisant Nominatim (OpenStreetMap) avec système de retry."""
+    if not address or not address.strip():
+        return None
+    
+    address_clean = clean_text(address)
+    if not address_clean:
+        return None
+    
+    if "paris" not in address_clean.lower():
+        address_clean = f"{address_clean}, Paris, France"
+    
+    encoded_address = urllib.parse.quote(address_clean)
+    url = f"https://nominatim.openstreetmap.org/search?q={encoded_address}&format=json&limit=1&addressdetails=1"
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            if attempt > 1:
+                wait_time = min(2 ** (attempt - 1), 10)
+                if log_file:
+                    log(f"🔄 Géocodage: tentative {attempt}/{max_retries} pour '{address_clean[:50]}...'", log_file)
+                time.sleep(wait_time)
+            
+            req = urllib.request.Request(url)
+            req.add_header('User-Agent', 'RestaurantImportScript/1.0')
+            req.add_header('Accept', 'application/json')
+            
+            with urllib.request.urlopen(req, timeout=30) as response:
+                response_data = response.read()
+                data = json.loads(response_data.decode())
+                
+                if data and len(data) > 0:
+                    result = data[0]
+                    lat = float(result.get('lat', 0))
+                    lon = float(result.get('lon', 0))
+                    
+                    if lat != 0 and lon != 0:
+                        if log_file:
+                            log(f"✅ Géocodage réussi: '{address_clean[:50]}...' → ({lat:.6f}, {lon:.6f})", log_file)
+                        return (lat, lon)
+            
+            if attempt == max_retries and log_file:
+                log(f"⚠️  Géocodage échoué: '{address_clean[:50]}...' (aucun résultat)", log_file)
+            
+        except Exception as e:
+            if attempt == max_retries and log_file:
+                log(f"❌ Géocodage échoué: '{address_clean[:50]}...' (erreur: {type(e).__name__})", log_file)
+            continue
+    
+    return None
+
+# -------------------- Backup --------------------
+def export_collection(db, collection_name: str, out_dir: str, log_file: str) -> Dict[str, Any]:
+    ensure_dir(out_dir)
+    json_path = os.path.join(out_dir, f"{collection_name}.json")
+    ndjson_path = os.path.join(out_dir, f"{collection_name}.ndjson")
+    csv_path = os.path.join(out_dir, f"{collection_name}.csv")
+    meta_path = os.path.join(out_dir, "backup_meta.json")
+
+    docs = list(db.collection(collection_name).stream())
+    count = len(docs)
+    data_array = []
+
+    with open(ndjson_path, "w", encoding="utf-8") as nf:
+        for d in docs:
+            obj = d.to_dict() or {}
+            row = {"id": d.id, **obj}
+            data_array.append(row)
+            nf.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with open(json_path, "w", encoding="utf-8") as jf:
+        json.dump(data_array, jf, ensure_ascii=False, indent=2)
+
+    with open(csv_path, "w", encoding="utf-8", newline="") as cf:
+        writer = csv.DictWriter(cf, fieldnames=["id", "name", "address", "arrondissement", "tag"])
+        writer.writeheader()
+        for r in data_array:
+            writer.writerow({
+                "id": r.get("id", ""),
+                "name": r.get("name", ""),
+                "address": r.get("address", ""),
+                "arrondissement": r.get("arrondissement", ""),
+                "tag": r.get("tag", ""),
+            })
+
+    meta = {
+        "collection": collection_name,
+        "count": count,
+        "json": os.path.basename(json_path),
+        "ndjson": os.path.basename(ndjson_path),
+        "csv": os.path.basename(csv_path),
+        "timestamp": now_paris_str(),
+        "sha256_json": sha256_file(json_path),
+        "sha256_ndjson": sha256_file(ndjson_path),
+    }
+    with open(meta_path, "w", encoding="utf-8") as mf:
+        json.dump(meta, mf, ensure_ascii=False, indent=2)
+
+    log(f"✅ Backup OK ({count} docs) → {out_dir}", log_file)
+    return {"count": count, "dir": out_dir, **meta}
+
+# -------------------- Excel → records --------------------
+def to_list(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return []
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    s = clean_text(v)
+    if not s:
+        return []
+    if s.startswith("[") and s.endswith("]"):
+        try:
+            items = ast.literal_eval(s)
+            if isinstance(items, (list, tuple)):
+                return [str(x).strip() for x in items if str(x).strip()]
+        except Exception:
+            pass
+    parts = re.split(r"[,/;|·]", s)
+    return [p.strip() for p in parts if p.strip()]
+
+def string_to_tag_list(v):
+    """Convertit une string de tags séparés par des virgules en liste de tags nettoyés"""
+    if not v or (isinstance(v, float) and pd.isna(v)):
+        return []
+    s = clean_text(v)
+    if not s or s.lower() in ["non", "nan", ""]:
+        return []
+    tags = [tag.strip() for tag in s.split(",") if tag.strip()]
+    return [tag for tag in tags if tag.lower() not in ["non", "nan", ""]]
+
+DAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+DAY_EN_TO_FR = dict(zip(DAYS_EN, DAYS_FR))
+DAY_PATTERN = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche):\s*"
+RE_12H = re.compile(r"(\d{1,2}:\d{2})\s*([APMapm]{2})?\s*-\s*(\d{1,2}:\d{2})\s*([APMapm]{2})")
+RE_24H = re.compile(r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})")
+
+def to_24h_safe(hour_str, suffix=""):
+    s = hour_str.strip()
+    if re.fullmatch(r"\d{1,2}:\d{2}", s) and not suffix:
+        return s
+    try:
+        return datetime.datetime.strptime(f"{s} {suffix}".strip(), "%I:%M %p").strftime("%H:%M")
+    except Exception:
+        return s
+
+def parse_bracketed_list_if_any(hours_str):
+    t = clean_text(hours_str)
+    if t.startswith("[") and t.endswith("]"):
+        try:
+            items = ast.literal_eval(t)
+            if isinstance(items, (list, tuple)):
+                return "\n".join(str(x).strip() for x in items if str(x).strip())
+        except Exception:
+            return t
+    return t
+
+def extract_slot_range(slot):
+    slot = clean_text(slot)
+    m12 = RE_12H.search(slot)
+    if m12:
+        h1, s1, h2, s2 = m12.groups()
+        s1 = s1 or s2
+        return f"{to_24h_safe(h1, s1)} - {to_24h_safe(h2, s2)}"
+    m24 = RE_24H.search(slot)
+    if m24:
+        h1, h2 = m24.groups()
+        return f"{to_24h_safe(h1)} - {to_24h_safe(h2)}"
+    return None
+
+def parse_day_slots(text):
+    text = clean_text(text)
+    if not text or re.search(r"\b(closed|ferm[ée]?)\b", text, flags=re.I):
+        return {"closed": True}
+    slots = [s.strip() for s in re.split(r"[;,]", text) if s.strip()]
+    result = {}
+    idx = 1
+    for s in slots:
+        rng = extract_slot_range(s)
+        if rng:
+            result[f"service_{idx}"] = rng
+            idx += 1
+    return result if result else {"closed": True}
+
+def split_hours_by_day(hours_str):
+    text = parse_bracketed_list_if_any(hours_str)
+    text = re.sub(DAY_PATTERN, r"\n\1: ", clean_text(text))
+    parts = re.split(DAY_PATTERN, text)
+    chunks = {}
+    for i in range(1, len(parts), 2):
+        day = parts[i]
+        value = parts[i + 1].strip()
+        fr_day = DAY_EN_TO_FR.get(day, day)
+        chunks[fr_day] = value
+    return chunks
+
+def process_hours(hours_str):
+    if not clean_text(hours_str):
+        return {}
+    day_blocks = split_hours_by_day(hours_str)
+    structured = {fr_day: parse_day_slots(value) for fr_day, value in day_blocks.items()}
+    for d in DAYS_FR:
+        structured.setdefault(d, {"closed": True})
+    return structured
+
+def arrondissement_to_code_postal(v):
+    """Convertit la valeur d'arrondissement en code postal complet"""
+    s = clean_text(v)
+    if not s:
+        return ""
+    if re.match(r"^\d{5}$", s):
+        return s
+    try:
+        n = int(s)
+        if 1 <= n <= 20:
+            return f"750{n:02d}"
+    except Exception:
+        pass
+    return s
+
+def normalize_id_from_tag(tag):
+    rid = re.sub(r"[^a-zA-Z0-9_-]+", "-", tag).strip("-").upper()
+    return rid
+
+TAG_GROUPS = {
+    "type_tags": ['Restaurant', 'Restaurant haut de gamme', 'Restaurant gastronomique', 'Restaurant étoilé',
+                         'Brasserie', 'Cave à manger', 'Fast',
+                         'Boulangerie/pâtisserie', 'Concept brunch', 'Concept goûter',
+                         'Coffee shop/salon de thé', 'Bar'],
+    "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Apéro', 'Dîner'],
+    "location_type": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop'],
+    "location_name": [],
+    "lieu_tags": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop'],
+    "ambiance": ['Classique', 'Convivial', 'Intimiste/tamisé', 'Familial', 'Festif'],
+    "price_range": ['€', '€€', '€€€', '€€€€'],
+    "cuisine": ['Africain', 'Américain', 'Chinois', 'Coréen', 'Colombien', 'Français', 'Grec', 'Indien',
+                 'Israélien', 'Italien', 'Japonais', 'Libanais', 'Mexicain', 'Oriental', 'Péruvien',
+                 'Sud-Américain', 'Thaï', 'Vietnamien'],
+    "diet": ['Casher (certifié)', 'Casher friendly', 'Viande casher', 'Végétarien', 'Vegan',
+             'Hallal (certifié)', 'Viande hallal', 'Offre de vins casher'],
+    "terrace": ['Terrasse', 'Terrasse classique', 'Cour', 'Rooftop']
+}
+
+def collect_type_tags_from_columns(row):
+    """Collecte des tags de type depuis les colonnes _TAG appropriées"""
+    try:
+        type_tags = []
+        for col in ['Spécialité_TAG', 'Lieu_TAG', 'Ambiance_TAG']:
+            if col in row.index:
+                val = row[col]
+                if pd.notna(val) and str(val).strip().lower() not in ["non", "", "nan"]:
+                    type_tags.append(str(val).strip())
+        return ", ".join(type_tags)
+    except Exception as e:
+        return ""
+
+def collect_location_name_from_columns(row):
+    """Collecte du nom du lieu depuis les colonnes _AFFICHAGE appropriées"""
+    try:
+        location_names = []
+        for col in ['Lieu_AFFICHAGE', 'Ambiance_AFFICHAGE']:
+            if col in row.index:
+                val = row[col]
+                if pd.notna(val) and str(val).strip().lower() not in ["non", "", "nan"]:
+                    location_names.append(str(val).strip())
+        return ", ".join(location_names)
+    except Exception as e:
+        return ""
+
+def collect_tags_from_excel_columns(row, tag_group_name):
+    """Collecte des tags depuis les colonnes Excel _TAG et _AFFICHAGE"""
+    try:
+        results = []
+        column_mapping = {
+            "type_tags": ['Spécialité_TAG'],
+            "moment": ['Moment_TAG'],
+            "location_type": ['Lieu_TAG'],
+            "lieu_tags": ['Lieu_TAG'],
+            "ambiance": ['Ambiance_TAG'],
+            "price_range": ['Prix_TAG'],
+            "cuisine": ['Spécialité_TAG'],
+            "diet": ['Restrictions_TAG'],
+            "terrace": ['Lieu_TAG', 'Ambiance_TAG']
+        }
+        columns_to_check = column_mapping.get(tag_group_name, [])
+        for col in columns_to_check:
+            if col in row.index:
+                val = row[col]
+                if pd.notna(val) and str(val).strip().lower() not in ["non", "", "nan"]:
+                    val_str = str(val).strip()
+                    tags = [tag.strip() for tag in val_str.split(",") if tag.strip()]
+                    for tag in tags:
+                        if tag_group_name == "terrace":
+                            if "terrasse" in tag.lower() or "rooftop" in tag.lower() or "cour" in tag.lower():
+                                if tag not in results:
+                                    results.append(tag)
+                        elif tag_group_name == "diet":
+                            if "Casher" in tag:
+                                clean_tag = "Casher"
+                            else:
+                                clean_tag = tag
+                            if clean_tag not in results:
+                                results.append(clean_tag)
+                        else:
+                            if tag not in results:
+                                results.append(tag)
+        return results
+    except Exception as e:
+        return []
+
+def collect_affichage_tags(row):
+    """Collecte tous les tags d'affichage (sauf spécialité) et retourne une liste"""
+    affichage_parts = []
+    affichage_columns = [
+        "Moment_AFFICHAGE",
+        "Ambiance_AFFICHAGE", 
+        "Lieu_AFFICHAGE",
+        "Restrictions_AFFICHAGE"
+    ]
+    for col in affichage_columns:
+        if col in row.index:
+            value = str(row[col]).strip()
+            if value and value.lower() not in ["", "nan", "non"]:
+                items = [item.strip() for item in value.split(",") if item.strip()]
+                for item in items:
+                    if item not in affichage_parts:
+                        affichage_parts.append(item)
+    return affichage_parts
+
+def collect_specialite_affichage(row):
+    """Collecte uniquement Spécialité_AFFICHAGE"""
+    if "Spécialité_AFFICHAGE" in row.index:
+        value = str(row["Spécialité_AFFICHAGE"]).strip()
+        if value and value.lower() not in ["", "nan", "non"]:
+            return value
+    return ""
+
+def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: str, out_csv: str, log_file: str):
+    if not os.path.exists(excel_path):
+        raise FileNotFoundError(f"Excel introuvable: {excel_path}")
+    
+    xls = pd.ExcelFile(excel_path)
+    log(f"📋 Feuilles disponibles: {xls.sheet_names}", log_file)
+    
+    if not xls.sheet_names:
+        raise ValueError("Aucune feuille trouvée dans le fichier Excel")
+    
+    if sheet_name not in xls.sheet_names:
+        sheet_name = xls.sheet_names[0]
+        log(f"⚠️  Feuille '{sheet_name}' non trouvée, utilisation de: {sheet_name}", log_file)
+    
+    df = xls.parse(sheet_name)
+    log(f"📊 Données chargées: {len(df)} lignes, {len(df.columns)} colonnes", log_file)
+    
+    if len(df) == 0:
+        raise ValueError("Le fichier Excel ne contient aucune donnée")
+    
+    # Utiliser la première ligne comme en-têtes
+    df.columns = df.iloc[0]
+    rows = df.iloc[1:].copy()
+    log(f"📝 Données à traiter: {len(rows)} lignes", log_file)
+
+    def row_to_flat_doc(row):
+        entry = {}
+        for col in df.columns:
+            try:
+                val = row[col]
+                if isinstance(val, pd.Series):
+                    non_null_values = val.dropna()
+                    if len(non_null_values) > 0:
+                        entry[col] = str(non_null_values.iloc[0])
+                    else:
+                        entry[col] = ""
+                else:
+                    if pd.notna(val):
+                        entry[col] = str(val)
+                    else:
+                        entry[col] = ""
+            except Exception as e:
+                entry[col] = ""
+
+        for group, tags in TAG_GROUPS.items():
+            try:
+                if group == "type_tags":
+                    entry[group] = collect_type_tags_from_columns(row)
+                elif group == "location_name":
+                    entry[group] = collect_location_name_from_columns(row)
+                else:
+                    collected_tags = collect_tags_from_excel_columns(row, group)
+                    entry[group] = ", ".join(collected_tags)
+            except Exception as e:
+                entry[group] = ""
+
+        name = clean_text(entry.get("Vrai Nom") or entry.get("Nom de base") or "")
+        raw_name = clean_text(entry.get("Nom de base") or "")
+        tag = clean_text(entry.get("Ref") or entry.get("tag") or "")
+        address = clean_text(entry.get("Adresse") or "")
+        arrondissement = arrondissement_to_code_postal(entry.get("Arrondissement"))
+        phone = clean_text(entry.get("Téléphone") or "")
+        website = clean_text(entry.get("Site web") or "")
+        reservation_link = clean_text(entry.get("Lien de réservation") or "")
+        instagram_link = clean_text(entry.get("Lien de votre compte instagram") or "")
+        google_link = clean_text(entry.get("Lien Google") or "")
+        lien_menu = clean_text(entry.get("Lien Menu") or "")
+        hours_raw = clean_text(entry.get("Horaires") or "")
+        hours_structured = process_hours(hours_raw) if hours_raw else {}
+        commentaire = clean_text(entry.get("Infos") or "")
+        
+        latitude = None
+        longitude = None
+        lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
+        lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
+        if lat_str:
+            try:
+                latitude = float(lat_str.replace(",", "."))
+            except (ValueError, AttributeError):
+                latitude = None
+        if lon_str:
+            try:
+                longitude = float(lon_str.replace(",", "."))
+            except (ValueError, AttributeError):
+                longitude = None
+        
+        if (latitude is None or longitude is None) and address:
+            coords = geocode_address(address, log_file)
+            if coords:
+                if latitude is None:
+                    latitude = coords[0]
+                if longitude is None:
+                    longitude = coords[1]
+                time.sleep(1.1)
+        
+        ambiance_tags = collect_tags_from_excel_columns(row, "ambiance")
+        price_range = collect_tags_from_excel_columns(row, "price_range")
+        restrictions_tags = collect_tags_from_excel_columns(row, "diet")
+        lieu_tags = collect_tags_from_excel_columns(row, "lieu_tags")
+        cuisines_tags = collect_tags_from_excel_columns(row, "cuisine")
+        specialite_tag = string_to_tag_list(entry.get("Spécialité_TAG") or "")
+        types_tags = collect_tags_from_excel_columns(row, "type_tags")
+        moments_tags = collect_tags_from_excel_columns(row, "moment")
+        terrace_tags = collect_tags_from_excel_columns(row, "terrace")
+        
+        affichage_fusionne = collect_affichage_tags(row)
+        specialite_affichage = collect_specialite_affichage(row)
+        
+        cuisine_tag = cuisines_tags
+        moment_tag = moments_tags
+        lieu_tag = lieu_tags
+        ambiance_tag = ambiance_tags
+        restriction_tag = restrictions_tags
+        type_tag = types_tags
+        
+        has_terrace = any("terrasse" in x.lower() for x in (ambiance_tags + lieu_tags + terrace_tags))
+        terrace_locs = [x for x in (lieu_tags + terrace_tags) if "terrasse" in x.lower()]
+        
+        stations_metro = []
+        station1 = entry.get("Station de metro 1", "").strip()
+        lignes1 = entry.get("Lignes 1", "").strip()
+        if station1 and station1.lower() not in ["non", "", "nan"]:
+            lines1 = [l.strip() for l in lignes1.split(",") if l.strip()] if lignes1 else []
+            stations_metro.append({"station": station1, "lines": lines1})
+        
+        station2 = entry.get("Stations de metro 2 ", "").strip()
+        lignes2 = entry.get("Lignes 2 ", "").strip()
+        if station2 and station2.lower() not in ["non", "", "nan"]:
+            lines2 = [l.strip() for l in lignes2.split(",") if l.strip()] if lignes2 else []
+            stations_metro.append({"station": station2, "lines": lines2})
+        
+        rid = normalize_id_from_tag(tag)
+        doc = {
+            "id": rid,
+            "tag": tag,
+            "name": name,
+            "raw_name": raw_name,
+            "address": address,
+            "arrondissement": arrondissement,
+            "latitude": latitude,
+            "longitude": longitude,
+            "phone": phone,
+            "website": website,
+            "reservation_link": reservation_link,
+            "instagram_link": instagram_link,
+            "google_link": google_link,
+            "lien_menu": lien_menu,
+            "more_info": commentaire,
+            "hours": hours_raw,
+            "hours_structured": hours_structured,
+            "affichage": affichage_fusionne,
+            "specialite_affichage": specialite_affichage,
+            "cuisine_tag": cuisine_tag,
+            "specialite_tag": specialite_tag,
+            "moment_tag": moment_tag,
+            "lieu_tag": lieu_tag,
+            "ambiance_tag": ambiance_tag,
+            "restriction_tag": restriction_tag,
+            "type_tag": type_tag,
+            "types": types_tags,
+            "moments": moments_tags,
+            "lieux": lieu_tags,
+            "ambiance": ambiance_tags,
+            "price_range": price_range,
+            "cuisines": cuisines_tags,
+            "restrictions": restrictions_tags,
+            "tag_initial": [tag] if tag else [],
+            "restaurant_type": types_tags,
+            "location_type": lieu_tags,
+            "diet": restrictions_tags,
+            "extras": terrace_tags,
+            "has_terrace": bool(has_terrace),
+            "terrace_locs": terrace_locs,
+            "stations_metro": stations_metro,
+            "specialite_tag": specialite_tag,
+            "lieu_tag": lieu_tag,
+        }
+        return rid, doc
+
+    records = []
+    ids = []
+    missing_tag_rows = []
+    total_rows = len(rows)
+    log(f"🔄 Conversion de {total_rows} lignes Excel en documents Firebase...", log_file)
+    for count, (idx, row) in enumerate(rows.iterrows(), 1):
+        if count % 10 == 0 or count == 1:
+            log(f"   📊 Progression: {count}/{total_rows} restaurants traités", log_file)
+        rid, doc = row_to_flat_doc(row)
+        if not rid:
+            missing_tag_rows.append(idx + 2)
+            continue
+        ids.append(rid)
+        records.append(doc)
+
+    dup_counts = Counter([i for i in ids if i])
+    duplicates = [k for k, c in dup_counts.items() if c > 1]
+
+    if duplicates:
+        log(f"⚠️  IDs dupliqués détectés: {duplicates}", log_file)
+    if missing_tag_rows:
+        log(f"⚠️  Lignes sans tag (Ref) : {missing_tag_rows}", log_file)
+
+    if DEDUPE_IDS and duplicates:
+        seen = {}
+        for r in records:
+            rid = r["id"]
+            if not rid:
+                continue
+            if rid not in seen:
+                seen[rid] = 1
+            else:
+                seen[rid] += 1
+                r["id"] = f"{rid}-{seen[rid]}"
+
+    with open(out_json, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+    with open(out_ndjson, "w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    csv_rows = []
+    for doc in records:
+        csv_rows.append({
+            "id": doc.get("id", ""),
+            "tag": doc.get("tag", ""),
+            "name": doc.get("name", ""),
+            "raw_name": doc.get("raw_name", ""),
+            "address": doc.get("address", ""),
+            "arrondissement": doc.get("arrondissement", ""),
+            "latitude": doc.get("latitude") if doc.get("latitude") is not None else "",
+            "longitude": doc.get("longitude") if doc.get("longitude") is not None else "",
+            "phone": doc.get("phone", ""),
+            "website": doc.get("website", ""),
+            "google_link": doc.get("google_link", ""),
+            "reservation_link": doc.get("reservation_link", ""),
+            "instagram_link": doc.get("instagram_link", ""),
+            "lien_menu": doc.get("lien_menu", ""),
+            "more_info": doc.get("more_info", ""),
+            "hours": doc.get("hours", ""),
+            "affichage": ", ".join(doc.get("affichage", [])),
+            "specialite_affichage": doc.get("specialite_affichage", ""),
+            "types": ", ".join(doc.get("types", [])),
+            "moments": ", ".join(doc.get("moments", [])),
+            "lieux": ", ".join(doc.get("lieux", [])),
+            "ambiance": ", ".join(doc.get("ambiance", [])),
+            "price_range": doc.get("price_range", ""),
+            "cuisines": ", ".join(doc.get("cuisines", [])),
+            "restrictions": ", ".join(doc.get("restrictions", [])),
+            "tag_initial": ", ".join(doc.get("tag_initial", [])),
+            "restaurant_type": ", ".join(doc.get("restaurant_type", [])),
+            "location_type": ", ".join(doc.get("location_type", [])),
+            "diet": ", ".join(doc.get("diet", [])),
+            "extras": ", ".join(doc.get("extras", [])),
+            "has_terrace": doc.get("has_terrace", False),
+            "terrace_locs": ", ".join(doc.get("terrace_locs", [])),
+            "specialite_tag": doc.get("specialite_tag", ""),
+            "lieu_tag": doc.get("lieu_tag", "")
+        })
+    
+    with open(out_csv, "w", encoding="utf-8", newline="") as cf:
+        writer = csv.DictWriter(cf, fieldnames=list(csv_rows[0].keys()) if csv_rows else 
+                                ["id","tag","name","raw_name","address","arrondissement","latitude","longitude","phone","website","google_link","reservation_link","instagram_link","lien_menu","more_info","hours","types","moments","lieux","ambiance","price_range","cuisines","restrictions","has_terrace","terrace_locs","specialite_tag","lieu_tag"])
+        writer.writeheader()
+        for r in csv_rows:
+            writer.writerow(r)
+    
+    log(f"📄 CSV temporaire créé: {out_csv}", log_file)
+    return records, {"duplicates": duplicates, "missing_tag_rows": missing_tag_rows}
+
+# -------------------- Clean & Import --------------------
+def delete_collection(db, collection_name: str, batch_size: int, log_file: str) -> int:
+    total_deleted = 0
+    while True:
+        docs = list(db.collection(collection_name).limit(batch_size).stream())
+        if not docs:
+            break
+        batch = db.batch()
+        for d in docs:
+            batch.delete(d.reference)
+        batch.commit()
+        total_deleted += len(docs)
+        log(f"🗑️  Supprimés cumulés: {total_deleted}", log_file)
+    return total_deleted
+
+def import_records(db, collection_name: str, records: List[Dict[str, Any]], batch_size: int, log_file: str) -> int:
+    imported = 0
+    skipped = 0
+    collection = db.collection(collection_name)
+    
+    for doc in records:
+        rid = (doc.get("id") or "").strip()
+        if not rid or not isinstance(doc, dict):
+            skipped += 1
+            log(f"⏭️  skip: id/doc invalides → {doc}", log_file)
+            continue
+        try:
+            doc_ref = collection.document(rid)
+            doc_ref.set(doc, merge=True)
+            imported += 1
+            if imported % 50 == 0:
+                log(f"📥 Importés: {imported}", log_file)
+        except Exception as e:
+            log(f"❌ Erreur doc {rid}: {e}", log_file)
+            skipped += 1
+            continue
+    
+    log(f"📥 Importés: {imported}", log_file)
+    return imported
+
+def write_import_log(db, collection_logs: str, payload: Dict[str, Any], log_file: str):
+    data = dict(payload)
+    data["server_timestamp"] = firestore.SERVER_TIMESTAMP
+    db.collection(collection_logs).add(data)
+    log("📝 Log d'import écrit dans Firestore.", log_file)
+
+# -------------------- Main --------------------
+def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1"):
+    """Fonction principale d'import adaptée pour Django"""
+    ts_dir = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}_{ts_dir}")
+    ensure_dir(backup_dir)
+    log_file = os.path.join(backup_dir, "import_run.log")
+    log("🚀 Démarrage import end-to-end", log_file)
+    log(f"→ Excel: {excel_path}", log_file)
+
+    try:
+        db = init_firestore(log_file)
+    except Exception as e:
+        log(f"❌ Init Firestore échouée: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 1) Backup
+    backup_meta = {}
+    try:
+        log(f"🗄️  Backup de '{COLLECTION_SOURCE}' ...", log_file)
+        backup_meta = export_collection(db, COLLECTION_SOURCE, backup_dir, log_file)
+    except Exception as e:
+        log(f"❌ Backup échoué: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 2) Convert Excel → records
+    try:
+        out_json = os.path.join(backup_dir, "restaurants_from_excel_by_tag.json")
+        out_ndjson = os.path.join(backup_dir, "restaurants_from_excel_by_tag.ndjson")
+        out_csv = os.path.join(backup_dir, "restaurants_from_excel_by_tag.csv")
+        log("🔁 Conversion Excel → JSON/NDJSON/CSV ...", log_file)
+        records, conv_report = convert_excel(excel_path, sheet_name, out_json, out_ndjson, out_csv, log_file)
+        if not records:
+            log("❌ Conversion a produit 0 enregistrements. Abandon.", log_file)
+            raise ValueError("Conversion a produit 0 enregistrements")
+        log(f"✅ Conversion OK ({len(records)} docs). Duplicates: {len(conv_report['duplicates'])}, Missing tags rows: {len(conv_report['missing_tag_rows'])}", log_file)
+    except Exception as e:
+        log(f"❌ Conversion échouée: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 3) Clean collection
+    try:
+        log(f"🧹 Suppression de la collection '{COLLECTION_SOURCE}' ...", log_file)
+        deleted = delete_collection(db, COLLECTION_SOURCE, BATCH_SIZE, log_file)
+        log(f"✅ Suppression terminée: {deleted} documents supprimés.", log_file)
+    except Exception as e:
+        log(f"❌ Suppression échouée: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 4) Import
+    try:
+        log(f"🚚 Import de {len(records)} documents ...", log_file)
+        imported = import_records(db, COLLECTION_SOURCE, records, BATCH_SIZE, log_file)
+        log(f"✅ Import terminé: {imported} documents importés.", log_file)
+    except Exception as e:
+        log(f"❌ Import échoué: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 5) Import log document
+    try:
+        payload = {
+            "collection": COLLECTION_SOURCE,
+            "imported_count": imported,
+            "source": os.path.basename(out_csv),
+            "timestamp": now_paris_str(),
+            "backup_dir": backup_dir,
+            "backup_count": backup_meta.get("count", 0),
+            "backup_json_sha256": backup_meta.get("sha256_json"),
+            "backup_ndjson_sha256": backup_meta.get("sha256_ndjson"),
+            "duplicates_count": len(conv_report.get("duplicates", [])),
+            "missing_tag_rows": conv_report.get("missing_tag_rows", []),
+        }
+        write_import_log(db, COLLECTION_IMPORT_LOGS, payload, log_file)
+    except Exception as e:
+        log(f"❌ Écriture du log d'import échouée: {e}\n{traceback.format_exc()}", log_file)
+
+    log("🎉 Fin de workflow end-to-end.", log_file)
+    return {
+        "success": True,
+        "imported": imported,
+        "backup_dir": backup_dir,
+        "log_file": log_file,
+        "duplicates": len(conv_report.get("duplicates", [])),
+        "missing_tag_rows": len(conv_report.get("missing_tag_rows", []))
+    }
+

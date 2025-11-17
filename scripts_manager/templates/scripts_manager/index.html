@@ -1,0 +1,82 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Card -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-8 border border-[#C9C1B1]">
+        <h1 class="text-4xl font-serif font-bold text-[#111111] mb-4">🧈 Bienvenue sur Butter</h1>
+        <p class="text-lg text-[#535353]">Interface de gestion complète pour votre application Firebase</p>
+    </div>
+    
+    <!-- Configuration Status -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-2xl font-serif font-bold text-[#111111] mb-4">🔑 Configuration</h2>
+        {% if service_account_exists %}
+        <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-2xl">✅</span>
+                <p class="font-semibold text-[#60BC81]">Fichier service account configuré</p>
+            </div>
+            <p class="text-sm text-[#60BC81] mb-2">
+                Le fichier <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">serviceAccountKey.json</code> est présent et sera utilisé automatiquement.
+            </p>
+            <p class="text-xs text-[#60BC81]">
+                Chemin : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
+            </p>
+        </div>
+        {% else %}
+        <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-2xl">❌</span>
+                <p class="font-semibold text-[#D3695E]">Fichier service account manquant</p>
+            </div>
+            <p class="text-sm text-[#D3695E] mb-2">
+                Le fichier <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">serviceAccountKey.json</code> n'a pas été trouvé.
+            </p>
+            <p class="text-xs text-[#D3695E]">
+                Chemin attendu : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <a href="{% url 'scripts_manager:export_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">📤</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Export</h3>
+            <p class="text-[#535353]">Exporter les collections Firestore et utilisateurs Auth vers Excel</p>
+        </a>
+        
+        <a href="{% url 'scripts_manager:users_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">👥</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Utilisateurs</h3>
+            <p class="text-[#535353]">Gérer et suivre les utilisateurs avec RevenueCat</p>
+        </a>
+        
+        <a href="{% url 'scripts_manager:restaurants_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">🍽️</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Restaurants</h3>
+            <p class="text-[#535353]">CRUD complet pour la collection restaurants</p>
+        </a>
+        
+        <a href="{% url 'scripts_manager:photos_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">📸</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Photos</h3>
+            <p class="text-[#535353]">Gérer les logos et photos des restaurants</p>
+        </a>
+        
+        <a href="{% url 'scripts_manager:notifications_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">📱</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Notifications</h3>
+            <p class="text-[#535353]">Envoyer des notifications push aux utilisateurs</p>
+        </a>
+        
+        <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
+            <div class="text-4xl mb-3">📥</div>
+            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Import Batch</h3>
+            <p class="text-[#535353]">Importer des restaurants depuis Excel</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

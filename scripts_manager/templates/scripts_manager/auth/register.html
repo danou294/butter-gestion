@@ -1,0 +1,97 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Inscription - Butter{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-lg p-8 border border-[#C9C1B1] w-full max-w-md">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2 text-center">📝 Inscription</h1>
+        <p class="text-[#535353] text-center mb-6">Créez votre compte pour accéder à l'interface</p>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-[14px] {% if message.tags == 'error' %}bg-[#F2D7D4] text-[#D3695E] border border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] border border-[#C9C1B1]{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4 text-[#D3695E] text-sm">
+                    <strong>Erreurs :</strong>
+                    <ul class="list-disc list-inside mt-2">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            
+            <div>
+                <label for="id_username" class="block text-sm font-medium text-[#111111] mb-2">Nom d'utilisateur</label>
+                <input 
+                    type="text" 
+                    id="id_username" 
+                    name="username" 
+                    required 
+                    autofocus
+                    maxlength="150"
+                    class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
+                    placeholder="Choisissez un nom d'utilisateur"
+                    value="{{ form.username.value|default:'' }}"
+                >
+                <p class="mt-1 text-xs text-[#535353]">150 caractères maximum. Lettres, chiffres et @/./+/-/_ uniquement.</p>
+            </div>
+            
+            <div>
+                <label for="id_password1" class="block text-sm font-medium text-[#111111] mb-2">Mot de passe</label>
+                <input 
+                    type="password" 
+                    id="id_password1" 
+                    name="password1" 
+                    required
+                    class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
+                    placeholder="Créez un mot de passe"
+                >
+                <ul class="mt-1 text-xs text-[#535353] list-disc list-inside">
+                    <li>Votre mot de passe ne peut pas être trop similaire à vos autres informations personnelles.</li>
+                    <li>Votre mot de passe doit contenir au moins 8 caractères.</li>
+                    <li>Votre mot de passe ne peut pas être un mot de passe couramment utilisé.</li>
+                    <li>Votre mot de passe ne peut pas être entièrement numérique.</li>
+                </ul>
+            </div>
+            
+            <div>
+                <label for="id_password2" class="block text-sm font-medium text-[#111111] mb-2">Confirmation du mot de passe</label>
+                <input 
+                    type="password" 
+                    id="id_password2" 
+                    name="password2" 
+                    required
+                    class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
+                    placeholder="Confirmez votre mot de passe"
+                >
+            </div>
+            
+            <button type="submit" class="w-full btn-primary">
+                ✨ Créer mon compte
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center">
+            <p class="text-[#535353] text-sm">
+                Déjà un compte ? 
+                <a href="{% url 'scripts_manager:login' %}" class="text-[#60BC81] font-medium hover:underline">
+                    Se connecter
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

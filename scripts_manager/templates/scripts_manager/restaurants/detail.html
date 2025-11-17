@@ -1,0 +1,74 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}{{ restaurant.name|default:"Restaurant" }} - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h1 class="text-3xl font-serif font-bold text-[#111111]">🍽️ {{ restaurant.name|default:"Restaurant" }}</h1>
+            <div class="flex gap-3 flex-wrap">
+                <a href="{% url 'scripts_manager:restaurant_edit' restaurant.id %}" class="btn-primary">
+                    ✏️ Modifier
+                </a>
+                <a href="{% url 'scripts_manager:restaurants_list' %}" class="btn-secondary">
+                    ← Retour
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Informations -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4 pb-3 border-b border-[#C9C1B1]">Informations</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <tr class="border-b border-[#C9C1B1]">
+                    <td class="py-3 pr-6 font-medium text-[#111111] w-48">ID :</td>
+                    <td class="py-3">
+                        <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-sm text-[#535353]">{{ restaurant.id }}</code>
+                    </td>
+                </tr>
+                {% for key, value in restaurant.items %}
+                {% if key != 'id' %}
+                <tr class="border-b border-[#C9C1B1]">
+                    <td class="py-3 pr-6 font-medium text-[#111111] w-48">{{ key|capfirst }} :</td>
+                    <td class="py-3 text-[#535353]">
+                        {% if value|length > 100 or value|length == 0 %}
+                            <pre class="bg-[#F1EFEB] p-4 rounded-[14px] overflow-x-auto max-h-48 overflow-y-auto text-sm">{{ value }}</pre>
+                        {% else %}
+                            {{ value|default:"—" }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    
+    <!-- JSON -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4 pb-3 border-b border-[#C9C1B1]">JSON</h2>
+        <pre id="json-display" class="bg-[#111111] text-[#F1EFEB] p-6 rounded-[14px] overflow-x-auto text-sm max-h-96 overflow-y-auto"></pre>
+    </div>
+    
+    {{ restaurant|json_script:"restaurant-data" }}
+    <script>
+    const restaurantData = JSON.parse(document.getElementById('restaurant-data').textContent);
+    document.getElementById('json-display').textContent = JSON.stringify(restaurantData, null, 2);
+    </script>
+    
+    <!-- Actions -->
+    <div class="flex flex-col md:flex-row gap-3">
+        <form method="POST" action="{% url 'scripts_manager:restaurant_delete' restaurant.id %}" class="flex-1" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce restaurant ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger w-full">🗑️ Supprimer</button>
+        </form>
+        <a href="{% url 'scripts_manager:restaurant_get_json' restaurant.id %}" class="btn-secondary flex-1 text-center" target="_blank">
+            📄 JSON
+        </a>
+    </div>
+</div>
+{% endblock %}

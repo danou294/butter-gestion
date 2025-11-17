@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Butter - Interface de Gestion{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Inria Sans & Inria Serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inria+Sans:wght@300;400;700&family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inria Sans', 'system-ui', 'sans-serif'],
+                        serif: ['Inria Serif', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        primary: {
+                            dark: '#111111',
+                            gray: '#535353',
+                            white: '#FFFFFF',
+                            beige: '#F1EFEB',
+                            beigeDark: '#C9C1B1',
+                        },
+                        action: {
+                            green: {
+                                light: '#D4F2DA',
+                                dark: '#60BC81',
+                            },
+                            red: {
+                                light: '#F2D7D4',
+                                dark: '#D3695E',
+                            },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inria Sans', system-ui, sans-serif;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inria Serif', Georgia, serif;
+        }
+        
+        /* Animations fluides */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #F1EFEB;
+            border-top: 3px solid #535353;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Boutons modernes */
+        .btn-primary {
+            background: #60BC81;
+            color: #FFFFFF;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            background: #4FA66F;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(96, 188, 129, 0.3);
+        }
+        
+        .btn-danger {
+            background: #D3695E;
+            color: #FFFFFF;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-danger:hover {
+            background: #C55A4F;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(211, 105, 94, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #C9C1B1;
+            color: #111111;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: #535353;
+            color: #FFFFFF;
+            transform: translateY(-2px);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Smooth transitions */
+        * {
+            transition-property: color, background-color, border-color, opacity, transform;
+            transition-duration: 150ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-[#F1EFEB] min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-[#FFFFFF]/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-[#C9C1B1]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="{% url 'scripts_manager:index' %}" class="text-2xl font-serif font-bold text-[#111111] hover:text-[#535353]">
+                        🧈 Butter
+                    </a>
+                    <!-- Burger Menu Button (Mobile) -->
+                    <button id="mobile-menu-button" class="md:hidden p-2 rounded-[14px] text-[#111111] hover:bg-[#F1EFEB] transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div id="desktop-menu" class="hidden md:flex space-x-1">
+                        <a href="{% url 'scripts_manager:index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            Accueil
+                        </a>
+                        <a href="{% url 'scripts_manager:export_index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            Export
+                        </a>
+                        <a href="{% url 'scripts_manager:users_list' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            👥 Utilisateurs
+                        </a>
+                        <a href="{% url 'scripts_manager:restaurants_list' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            Restaurants
+                        </a>
+                        <a href="{% url 'scripts_manager:photos_list' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            📸 Photos
+                        </a>
+                        <a href="{% url 'scripts_manager:notifications_index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            📱 Notifications
+                        </a>
+                        <a href="{% url 'scripts_manager:import_restaurants_index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            📥 Import
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if user.is_authenticated %}
+                    <span class="text-sm text-[#535353]">👤 {{ user.username }}</span>
+                    <a href="{% url 'scripts_manager:logout' %}" class="btn-secondary text-sm">
+                        🚪 Déconnexion
+                    </a>
+                    {% else %}
+                    <a href="{% url 'scripts_manager:login' %}" class="btn-secondary text-sm">
+                        🔓 Connexion
+                    </a>
+                    <a href="{% url 'scripts_manager:register' %}" class="btn-primary text-sm">
+                        ✨ Inscription
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-[#C9C1B1]">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="{% url 'scripts_manager:index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Accueil</a>
+                <a href="{% url 'scripts_manager:export_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Export</a>
+                <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
+                <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Restaurants</a>
+                <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📸 Photos</a>
+                <a href="{% url 'scripts_manager:notifications_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📱 Notifications</a>
+                <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📥 Import</a>
+                {% if user.is_authenticated %}
+                <div class="border-t border-[#C9C1B1] mt-2 pt-2">
+                    <div class="px-3 py-2 text-sm text-[#535353]">👤 {{ user.username }}</div>
+                    <a href="{% url 'scripts_manager:logout' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">🚪 Déconnexion</a>
+                </div>
+                {% else %}
+                <div class="border-t border-[#C9C1B1] mt-2 pt-2">
+                    <a href="{% url 'scripts_manager:login' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">🔓 Connexion</a>
+                    <a href="{% url 'scripts_manager:register' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">✨ Inscription</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-[14px] {% if message.tags == 'error' %}bg-[#F2D7D4] text-[#D3695E] border border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] border border-[#C9C1B1]{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Global Loading Overlay -->
+    <div id="global-loading" class="hidden fixed inset-0 bg-[#111111]/20 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-[#FFFFFF] rounded-[14px] shadow-2xl p-8 flex flex-col items-center space-y-4">
+            <div class="spinner"></div>
+            <p class="text-[#111111] font-medium">Chargement...</p>
+        </div>
+    </div>
+    
+    <script>
+        // Global loading overlay
+        function showLoading() {
+            document.getElementById('global-loading').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('global-loading').classList.add('hidden');
+        }
+        
+        // Auto-show loading on form submissions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Forms with auto-loader class
+            document.querySelectorAll('form.auto-loader').forEach(form => {
+                form.addEventListener('submit', showLoading);
+            });
+            
+            // Links with trigger-loading class
+            document.querySelectorAll('a.trigger-loading').forEach(link => {
+                link.addEventListener('click', showLoading);
+            });
+            
+            // Hide loading when page is fully loaded
+            window.addEventListener('load', hideLoading);
+        });
+        
+        // CSRF token helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
