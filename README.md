@@ -89,37 +89,121 @@ Interface web moderne et complète pour gérer votre application Firebase, inclu
 
 ## 🚀 Installation
 
-### 1. Cloner le projet
+### Installation sur une nouvelle machine
+
+#### 1. Cloner le projet depuis GitHub
 
 ```bash
-cd /Users/admin/Documents/butter_web_interface
+git clone https://github.com/danou294/butter-gestion.git
+cd butter-gestion
 ```
 
-### 2. Créer un environnement virtuel
+#### 2. Créer un environnement virtuel
 
+**Sur macOS/Linux :**
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # Sur macOS/Linux
-# ou
-venv\Scripts\activate  # Sur Windows
+source venv/bin/activate
 ```
 
-### 3. Installer les dépendances
+**Sur Windows :**
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+#### 3. Installer les dépendances
 
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Configurer la base de données
+#### 4. Configurer la base de données
 
 ```bash
 python manage.py migrate
 ```
 
-### 5. Créer un superutilisateur (optionnel)
+#### 5. Créer le premier utilisateur
 
 ```bash
 python manage.py createsuperuser
+```
+
+Suivez les instructions pour créer votre compte administrateur.
+
+#### 6. Configurer les fichiers nécessaires
+
+**a) Fichier serviceAccountKey.json**
+
+Placez votre fichier `serviceAccountKey.json` de Firebase dans le dossier `input/` :
+
+```bash
+# Créer le dossier input s'il n'existe pas
+mkdir -p input
+
+# Copier votre fichier serviceAccountKey.json
+cp /chemin/vers/votre/serviceAccountKey.json input/serviceAccountKey.json
+```
+
+**b) Fichier .env (optionnel pour RevenueCat)**
+
+Créez un fichier `.env` à la racine du projet :
+
+```bash
+echo "REVENUECAT_API_KEY=votre_cle_api_revenuecat" > .env
+```
+
+#### 7. Vérifier la configuration
+
+Vérifiez que le fichier `serviceAccountKey.json` est bien présent :
+
+```bash
+ls -la input/serviceAccountKey.json
+```
+
+#### 8. Démarrer le serveur
+
+```bash
+python manage.py runserver
+```
+
+Le serveur démarre sur `http://127.0.0.1:8000/`
+
+#### 9. Accéder à l'interface
+
+1. Ouvrez votre navigateur : `http://127.0.0.1:8000/`
+2. Vous serez redirigé vers la page de connexion
+3. Connectez-vous avec le compte créé à l'étape 5, ou créez un nouveau compte via `/register/`
+
+### Installation rapide (résumé)
+
+```bash
+# 1. Cloner
+git clone https://github.com/danou294/butter-gestion.git
+cd butter-gestion
+
+# 2. Environnement virtuel
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# ou venv\Scripts\activate  # Windows
+
+# 3. Dépendances
+pip install -r requirements.txt
+
+# 4. Base de données
+python manage.py migrate
+
+# 5. Créer un utilisateur
+python manage.py createsuperuser
+
+# 6. Placer serviceAccountKey.json
+mkdir -p input
+# Copier votre serviceAccountKey.json dans input/
+
+# 7. Démarrer
+python manage.py runserver
 ```
 
 ## ⚙️ Configuration
@@ -152,11 +236,24 @@ Les paramètres principaux sont dans `butter_web_interface/settings.py`. Les che
 
 ### Démarrer le serveur de développement
 
+**Sur la machine locale :**
 ```bash
 python manage.py runserver
 ```
 
 L'interface sera accessible à l'adresse : `http://127.0.0.1:8000/`
+
+**Pour rendre accessible depuis d'autres machines sur le réseau :**
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
+L'interface sera accessible à l'adresse : `http://VOTRE_IP:8000/`
+
+**Pour changer le port :**
+```bash
+python manage.py runserver 0.0.0.0:8080
+```
 
 ### Première connexion
 
@@ -338,10 +435,43 @@ python manage.py runserver
 
 ## 📝 Notes importantes
 
-- **Sécurité** : En production, changez le `SECRET_KEY` dans `settings.py` et activez `DEBUG = False`
-- **Base de données** : Le projet utilise SQLite par défaut. Pour la production, configurez PostgreSQL ou MySQL
-- **Fichiers sensibles** : Ne commitez jamais `serviceAccountKey.json` ou `.env` dans Git
-- **Performance** : Le système utilise le cache Django pour optimiser les performances (cache en mémoire)
+### Sécurité
+
+- **En production** : 
+  - Changez le `SECRET_KEY` dans `settings.py`
+  - Activez `DEBUG = False`
+  - Configurez `ALLOWED_HOSTS` avec votre domaine
+  - Utilisez HTTPS avec un reverse proxy (Nginx, Apache)
+  
+- **Fichiers sensibles** : 
+  - Ne commitez jamais `serviceAccountKey.json` ou `.env` dans Git
+  - Ces fichiers sont déjà dans `.gitignore`
+
+### Base de données
+
+- Le projet utilise **SQLite** par défaut (fichier `db.sqlite3`)
+- Pour la production, configurez **PostgreSQL** ou **MySQL** dans `settings.py`
+
+### Performance
+
+- Le système utilise le cache Django (cache en mémoire) pour optimiser les performances
+- Les requêtes Firestore sont mises en cache pour réduire les appels API
+
+### Déploiement en production
+
+Pour déployer en production, considérez :
+
+1. **Serveur web** : Gunicorn ou uWSGI
+2. **Reverse proxy** : Nginx ou Apache
+3. **Base de données** : PostgreSQL (recommandé)
+4. **Variables d'environnement** : Utilisez des variables d'environnement système plutôt que `.env`
+5. **Static files** : Collectez les fichiers statiques avec `python manage.py collectstatic`
+
+**Exemple avec Gunicorn :**
+```bash
+pip install gunicorn
+gunicorn butter_web_interface.wsgi:application --bind 0.0.0.0:8000
+```
 
 ## 🤝 Contribution
 
