@@ -2,6 +2,29 @@
 
 Guide spécifique pour déployer le projet sur un serveur OVH.
 
+## ⚠️ IMPORTANT : Python 3.7 sur OVH
+
+Le serveur OVH a Python 3.7.3, mais Django 4.2 nécessite Python 3.8+. 
+
+**Solution : Utilisez le fichier `requirements-py37.txt` à la place de `requirements.txt`**
+
+### Installation avec Python 3.7
+
+```bash
+# 1. Activer l'environnement virtuel
+source venv/bin/activate
+
+# 2. Installer les dépendances compatibles Python 3.7
+pip install -r requirements-py37.txt
+
+# 3. Vérifier que Django est installé
+python -c "import django; print(django.get_version())"
+
+# 4. Continuer avec les étapes normales
+python manage.py migrate
+python manage.py createsuperuser
+```
+
 ## Problèmes courants et solutions
 
 ### 1. Vérifier la version de Python
@@ -61,8 +84,8 @@ source venv/bin/activate
 # 4. Mettre à jour pip
 pip install --upgrade pip
 
-# 5. Installer les dépendances
-pip install -r requirements.txt
+# 5. Installer les dépendances (utiliser requirements-py37.txt pour Python 3.7)
+pip install -r requirements-py37.txt
 
 # 6. Vérifier la version de Python
 python --version  # Doit être 3.9+
