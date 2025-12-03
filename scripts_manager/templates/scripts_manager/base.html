@@ -14,35 +14,41 @@
     <link href="https://fonts.googleapis.com/css2?family=Inria+Sans:wght@300;400;700&family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
     
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inria Sans', 'system-ui', 'sans-serif'],
-                        serif: ['Inria Serif', 'Georgia', 'serif'],
-                    },
-                    colors: {
-                        primary: {
-                            dark: '#111111',
-                            gray: '#535353',
-                            white: '#FFFFFF',
-                            beige: '#F1EFEB',
-                            beigeDark: '#C9C1B1',
-                        },
-                        action: {
-                            green: {
-                                light: '#D4F2DA',
-                                dark: '#60BC81',
+        (function configureTailwind() {
+            if (window.tailwind && window.tailwind.config) {
+                window.tailwind.config = {
+                    theme: {
+                        extend: {
+                            fontFamily: {
+                                sans: ['Inria Sans', 'system-ui', 'sans-serif'],
+                                serif: ['Inria Serif', 'Georgia', 'serif'],
                             },
-                            red: {
-                                light: '#F2D7D4',
-                                dark: '#D3695E',
+                            colors: {
+                                primary: {
+                                    dark: '#111111',
+                                    gray: '#535353',
+                                    white: '#FFFFFF',
+                                    beige: '#F1EFEB',
+                                    beigeDark: '#C9C1B1',
+                                },
+                                action: {
+                                    green: {
+                                        light: '#D4F2DA',
+                                        dark: '#60BC81',
+                                    },
+                                    red: {
+                                        light: '#F2D7D4',
+                                        dark: '#D3695E',
+                                    },
+                                },
                             },
                         },
                     },
-                },
-            },
-        }
+                };
+            } else {
+                setTimeout(configureTailwind, 20);
+            }
+        })();
     </script>
     
     <style>
@@ -197,9 +203,6 @@
                     <a href="{% url 'scripts_manager:login' %}" class="btn-secondary text-sm">
                         🔓 Connexion
                     </a>
-                    <a href="{% url 'scripts_manager:register' %}" class="btn-primary text-sm">
-                        ✨ Inscription
-                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -223,7 +226,6 @@
                 {% else %}
                 <div class="border-t border-[#C9C1B1] mt-2 pt-2">
                     <a href="{% url 'scripts_manager:login' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">🔓 Connexion</a>
-                    <a href="{% url 'scripts_manager:register' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">✨ Inscription</a>
                 </div>
                 {% endif %}
             </div>

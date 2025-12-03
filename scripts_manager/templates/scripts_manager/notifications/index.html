@@ -91,16 +91,67 @@
             
             <!-- Tab: Groupe -->
             <div id="tab-group" class="tab-content hidden">
-                <form id="form-group" class="space-y-4 max-w-2xl">
+                <form id="form-group" class="space-y-4">
+                    <!-- Recherche et Import Excel -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="user-search" class="block text-sm font-medium text-[#111111] mb-2">🔍 Rechercher un utilisateur</label>
+                            <input type="text" id="user-search" 
+                                   placeholder="Rechercher par nom, UUID ou téléphone..."
+                                   class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                        </div>
+                        <div>
+                            <label for="excel-upload" class="block text-sm font-medium text-[#111111] mb-2">📊 Importer depuis Excel</label>
+                            <div class="flex gap-2">
+                                <input type="file" id="excel-upload" accept=".xlsx,.xls" 
+                                       class="hidden">
+                                <button type="button" onclick="document.getElementById('excel-upload').click()" 
+                                        class="flex-1 px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] hover:bg-[#E8E4DD] transition-colors">
+                                    📁 Choisir fichier
+                                </button>
+                                <select id="excel-column" 
+                                        class="px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                                    <option value="">Colonne UUID</option>
+                                </select>
+                            </div>
+                            <p class="mt-1 text-xs text-[#535353]" id="excel-info"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Tableau des utilisateurs -->
                     <div>
-                        <label for="users-select" class="block text-sm font-medium text-[#111111] mb-2">Sélectionner les utilisateurs *</label>
-                        <select id="users-select" name="userIds" multiple required 
-                                class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent min-h-[200px] bg-[#F1EFEB] text-[#111111]">
-                            {% for user in users %}
-                            <option value="{{ user.uid }}">{{ user.prenom }} ({{ user.email }})</option>
-                            {% endfor %}
-                        </select>
-                        <p class="mt-1 text-xs text-[#535353]">Maintenez Ctrl (Cmd sur Mac) pour sélectionner plusieurs utilisateurs</p>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-[#111111]">Sélectionner les utilisateurs *</label>
+                            <span id="selected-count" class="text-sm text-[#535353]">0 sélectionné(s)</span>
+                        </div>
+                        <div class="border border-[#C9C1B1] rounded-[14px] overflow-hidden bg-[#F1EFEB] max-h-[400px] overflow-y-auto">
+                            <table class="w-full">
+                                <thead class="bg-[#C9C1B1] sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111] w-12">
+                                            <input type="checkbox" id="select-all" class="rounded border-[#C9C1B1]">
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">Prénom</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">UUID</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">📱 Téléphone</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">✉️ Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    {% for user in users %}
+                                    <tr class="user-row border-t border-[#C9C1B1] hover:bg-[#E8E4DD]" data-uid="{{ user.uid }}" data-prenom="{{ user.prenom|lower }}" data-phone="{{ user.phone|lower }}" data-email="{{ user.email|lower }}">
+                                        <td class="px-4 py-3">
+                                            <input type="checkbox" class="user-checkbox rounded border-[#C9C1B1]" value="{{ user.uid }}">
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.prenom }}</td>
+                                        <td class="px-4 py-3 text-sm text-[#111111] font-mono">{{ user.uid }}</td>
+                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.phone }}</td>
+                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.email }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     
                     <div>
@@ -142,8 +193,20 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SheetJS pour parser Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let currentTab = 'all';
+let allUsers = [
+    {% for user in users %}
+    {
+        uid: "{{ user.uid }}",
+        prenom: "{{ user.prenom }}",
+        phone: "{{ user.phone }}",
+        email: "{{ user.email }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 
 function switchTab(tab) {
     currentTab = tab;
@@ -204,10 +267,10 @@ async function sendNotification(tab, endpoint) {
         }
     }
     
-    // For group tab, get selected user IDs
+    // For group tab, get selected user IDs from checkboxes
     if (tab === 'group') {
-        const select = document.getElementById('users-select');
-        const selectedUsers = Array.from(select.selectedOptions).map(opt => opt.value);
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        const selectedUsers = Array.from(checkboxes).map(cb => cb.value);
         if (selectedUsers.length === 0) {
             alert('❌ Veuillez sélectionner au moins un utilisateur');
             return;
@@ -264,5 +327,179 @@ function showResults(result) {
     resultsDiv.classList.remove('hidden');
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
+
+// Fonction pour obtenir le cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fonction pour afficher/masquer le loading
+function showLoading() {
+    // Peut être implémentée si nécessaire
+}
+function hideLoading() {
+    // Peut être implémentée si nécessaire
+}
+
+// Recherche d'utilisateurs
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('user-search');
+    const selectAllCheckbox = document.getElementById('select-all');
+    const usersTableBody = document.getElementById('users-table-body');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const excelUpload = document.getElementById('excel-upload');
+    const excelColumn = document.getElementById('excel-column');
+    
+    // Recherche en temps réel
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const rows = usersTableBody.querySelectorAll('.user-row');
+            
+            rows.forEach(row => {
+                const prenom = row.dataset.prenom || '';
+                const uid = row.dataset.uid || '';
+                const phone = row.dataset.phone || '';
+                const email = row.dataset.email || '';
+                
+                const matches = !searchTerm || 
+                    prenom.includes(searchTerm) || 
+                    uid.toLowerCase().includes(searchTerm) || 
+                    phone.includes(searchTerm) ||
+                    email.includes(searchTerm);
+                
+                row.style.display = matches ? '' : 'none';
+            });
+        });
+    }
+    
+    // Sélectionner/Désélectionner tout
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function(e) {
+            const checkboxes = usersTableBody.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(cb => {
+                if (cb.closest('.user-row').style.display !== 'none') {
+                    cb.checked = e.target.checked;
+                }
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    // Mettre à jour le compteur de sélection
+    function updateSelectedCount() {
+        const checked = usersTableBody.querySelectorAll('.user-checkbox:checked').length;
+        selectedCountSpan.textContent = `${checked} sélectionné(s)`;
+        
+        // Mettre à jour la checkbox "Tout sélectionner"
+        const visibleCheckboxes = Array.from(usersTableBody.querySelectorAll('.user-checkbox'))
+            .filter(cb => cb.closest('.user-row').style.display !== 'none');
+        const checkedVisible = visibleCheckboxes.filter(cb => cb.checked).length;
+        selectAllCheckbox.checked = visibleCheckboxes.length > 0 && checkedVisible === visibleCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedVisible > 0 && checkedVisible < visibleCheckboxes.length;
+    }
+    
+    // Écouter les changements sur les checkboxes individuelles
+    if (usersTableBody) {
+        usersTableBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('user-checkbox')) {
+                updateSelectedCount();
+            }
+        });
+    }
+    
+    // Import Excel
+    if (excelUpload) {
+        excelUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Prendre la première feuille
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (jsonData.length === 0) {
+                        alert('❌ Le fichier Excel est vide');
+                        return;
+                    }
+                    
+                    // Remplir le select des colonnes avec les en-têtes
+                    const headers = jsonData[0];
+                    excelColumn.innerHTML = '<option value="">Sélectionner une colonne</option>';
+                    headers.forEach((header, index) => {
+                        if (header) {
+                            const option = document.createElement('option');
+                            option.value = index;
+                            option.textContent = header;
+                            excelColumn.appendChild(option);
+                        }
+                    });
+                    
+                    document.getElementById('excel-info').textContent = `${jsonData.length - 1} lignes trouvées. Sélectionnez la colonne contenant les UUIDs.`;
+                    
+                    // Quand une colonne est sélectionnée, sélectionner les utilisateurs
+                    excelColumn.onchange = function() {
+                        const columnIndex = parseInt(this.value);
+                        if (isNaN(columnIndex)) return;
+                        
+                        // Extraire les UUIDs de la colonne sélectionnée (ignorer la première ligne = en-tête)
+                        const uuids = [];
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const cellValue = jsonData[i][columnIndex];
+                            if (cellValue) {
+                                // Nettoyer la valeur (enlever espaces, etc.)
+                                const uuid = String(cellValue).trim();
+                                if (uuid) uuids.push(uuid);
+                            }
+                        }
+                        
+                        // Cocher les utilisateurs correspondants
+                        let found = 0;
+                        const checkboxes = usersTableBody.querySelectorAll('.user-checkbox');
+                        checkboxes.forEach(cb => {
+                            const row = cb.closest('.user-row');
+                            const uid = row.dataset.uid;
+                            if (uuids.includes(uid)) {
+                                cb.checked = true;
+                                found++;
+                            }
+                        });
+                        
+                        updateSelectedCount();
+                        document.getElementById('excel-info').textContent = `${found} utilisateur(s) trouvé(s) et sélectionné(s) sur ${uuids.length} UUID(s) dans le fichier.`;
+                        
+                        if (found < uuids.length) {
+                            alert(`⚠️ ${uuids.length - found} UUID(s) du fichier n'ont pas été trouvés dans la liste des utilisateurs.`);
+                        }
+                    };
+                } catch (error) {
+                    alert('❌ Erreur lors de la lecture du fichier Excel: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+    
+    // Initialiser le compteur
+    updateSelectedCount();
+});
 </script>
 {% endblock %}

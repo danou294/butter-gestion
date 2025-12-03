@@ -7,25 +7,9 @@ from django.views.decorators.http import require_http_methods
 
 
 def register_view(request):
-    """Vue pour l'inscription"""
-    if request.user.is_authenticated:
-        return redirect('scripts_manager:index')
-    
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Compte créé avec succès pour {username} !')
-            # Connecter automatiquement l'utilisateur après l'inscription
-            login(request, user)
-            return redirect('scripts_manager:index')
-        else:
-            messages.error(request, 'Erreur lors de la création du compte. Veuillez vérifier les informations.')
-    else:
-        form = UserCreationForm()
-    
-    return render(request, 'scripts_manager/auth/register.html', {'form': form})
+    """Vue pour l'inscription - DÉSACTIVÉE"""
+    from django.http import Http404
+    raise Http404("L'inscription n'est plus disponible.")
 
 
 @require_http_methods(["GET", "POST"])

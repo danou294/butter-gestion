@@ -11,7 +11,7 @@ app_name = 'scripts_manager'
 urlpatterns = [
     # Authentification
     path('login/', auth_views.login_view, name='login'),
-    path('register/', auth_views.register_view, name='register'),
+    # path('register/', auth_views.register_view, name='register'),  # Inscription désactivée
     path('logout/', auth_views.logout_view, name='logout'),
     
     path('', views.index, name='index'),

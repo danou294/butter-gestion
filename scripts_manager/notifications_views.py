@@ -36,6 +36,7 @@ def notifications_index(request):
         # Accéder aux attributs de UserRecord (pas un dict)
         prenom = profile.get('prenom') or (auth_user.display_name if auth_user else None) or 'Utilisateur'
         email = (auth_user.email if auth_user else None) or profile.get('email') or 'N/A'
+        phone = extract_phone(profile, auth_user) or 'N/A'
         
         # Vérifier qu'il y a au moins un token valide
         tokens_for_user = fcm_tokens.get(uid, [])
@@ -46,6 +47,7 @@ def notifications_index(request):
                 'uid': uid,
                 'prenom': prenom,
                 'email': email,
+                'phone': phone,
             })
     
     # Trier par prénom
