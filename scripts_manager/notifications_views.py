@@ -1,6 +1,7 @@
 """
 Vues Django pour les notifications push
 """
+import hashlib
 import logging
 import json
 from django.http import JsonResponse
@@ -38,6 +39,11 @@ def notifications_index(request):
         email = (auth_user.email if auth_user else None) or profile.get('email') or 'N/A'
         phone = extract_phone(profile, auth_user) or 'N/A'
         
+        # Calculer l'app_user_id RevenueCat (hash du téléphone)
+        app_user_id = None
+        if phone and phone != 'N/A':
+            app_user_id = hashlib.sha256(phone.encode('utf-8')).hexdigest()
+        
         # Vérifier qu'il y a au moins un token valide
         tokens_for_user = fcm_tokens.get(uid, [])
         has_valid_token = any(token_data.get('token') for token_data in tokens_for_user)
@@ -48,6 +54,7 @@ def notifications_index(request):
                 'prenom': prenom,
                 'email': email,
                 'phone': phone,
+                'app_user_id': app_user_id or '',
             })
     
     # Trier par prénom

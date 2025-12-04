@@ -5,20 +5,22 @@ import hashlib
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import firebase_admin
+import pandas as pd
 import requests
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone as django_timezone
 from django.contrib.auth.decorators import login_required
 from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials, firestore
 
-from config import SERVICE_ACCOUNT_PATH
+from config import SERVICE_ACCOUNT_PATH, EXPORTS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -797,4 +799,77 @@ def users_log_all_premium(request):
         'trial_users': trial_users[:50],
         'premium_users': premium_users[:50],
     }, json_dumps_params={'indent': 2})
+
+
+@login_required
+def export_revenuecat_mapping(request):
+    """Exporte le mapping entre Firebase UID et RevenueCat app_user_id avec nom et téléphone"""
+    try:
+        logger.info("📊 Démarrage de l'export RevenueCat mapping...")
+        
+        # Récupérer tous les utilisateurs fusionnés
+        users = merge_users_data(force_refresh=False)
+        logger.info(f"✅ {len(users)} utilisateurs récupérés")
+        
+        # Préparer les données pour l'export
+        export_data = []
+        rc_client = RevenueCatClient()
+        
+        for user in users:
+            uid = user.get('uid', '')
+            phone = user.get('phone', '')
+            display_name = user.get('display_name', '')
+            
+            # Calculer l'app_user_id RevenueCat (hash du téléphone)
+            app_user_id = None
+            if phone:
+                app_user_id = rc_client._hash_phone(phone)
+            
+            export_data.append({
+                'uid_firebase': uid,
+                'app_user_id_revenuecat': app_user_id or '',
+                'nom': display_name or '',
+                'telephone': phone or '',
+            })
+        
+        # Créer le DataFrame
+        df = pd.DataFrame(export_data)
+        
+        # Trier par nom
+        df = df.sort_values('nom')
+        
+        # Générer le nom de fichier
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"revenuecat_mapping_{timestamp}.xlsx"
+        output_path = EXPORTS_DIR / filename
+        
+        # Créer le dossier s'il n'existe pas
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Exporter vers Excel
+        df.to_excel(output_path, index=False)
+        logger.info(f"✅ Export Excel créé: {output_path}")
+        logger.info(f"📈 {len(df)} utilisateurs exportés")
+        
+        # Lire le fichier et le retourner en téléchargement
+        with open(output_path, 'rb') as f:
+            file_content = f.read()
+        
+        # Supprimer le fichier temporaire
+        try:
+            output_path.unlink()
+        except Exception as e:
+            logger.warning(f"Impossible de supprimer le fichier temporaire: {e}")
+        
+        response = HttpResponse(
+            file_content,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'export RevenueCat mapping: {e}", exc_info=True)
+        return JsonResponse({'error': f'Erreur lors de l\'export: {str(e)}'}, status=500)
 

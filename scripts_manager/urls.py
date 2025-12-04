@@ -47,6 +47,7 @@ urlpatterns = [
     path('utilisateurs/<str:uid>/refresh/', users_views.refresh_user_status, name='user_refresh_status'),
     path('utilisateurs/diagnostics/', users_views.users_diagnostics, name='users_diagnostics'),
     path('utilisateurs/log-all-premium/', users_views.users_log_all_premium, name='users_log_all_premium'),
+    path('export/revenuecat-mapping/', users_views.export_revenuecat_mapping, name='export_revenuecat_mapping'),
 
     # CRUD Photos
     path('photos/', photos_views.photos_list, name='photos_list'),
