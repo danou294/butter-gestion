@@ -1,0 +1,397 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Restaurer un Backup - Butter{% endblock %}
+
+{% block extra_css %}
+<style>
+    .restore-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .backup-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .backup-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .backup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .backup-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .info-value {
+        font-size: 16px;
+        color: #111111;
+        font-weight: 600;
+    }
+    
+    .backup-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    
+    .btn-restore {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-restore:hover {
+        background: #218838;
+        transform: scale(1.05);
+    }
+    
+    .btn-info {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-info:hover {
+        background: #5568d3;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+    
+    .result-container {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+        display: none;
+    }
+    
+    .result-container.success {
+        display: block;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .result-container.error {
+        display: block;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin-bottom: 30px;
+        border-radius: 4px;
+    }
+    
+    .warning-box strong {
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="restore-container">
+    <div style="background: #FFFFFF; rounded-[14px]; shadow-sm; p-6; border border-[#C9C1B1]; margin-bottom: 30px;">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">🔄 Restaurer un Backup</h1>
+        <p class="text-[#535353]">Sélectionnez un backup pour restaurer l'état précédent de vos restaurants.</p>
+    </div>
+    
+    <div class="warning-box">
+        <strong>⚠️ Attention :</strong>
+        <ul style="margin: 10px 0 0 20px; padding: 0;">
+            <li>La restauration va <strong>remplacer</strong> tous les restaurants actuels</li>
+            <li>Un backup de sécurité sera créé automatiquement avant la restauration</li>
+            <li>Cette opération est irréversible (sauf si vous restaurez à nouveau un autre backup)</li>
+        </ul>
+    </div>
+    
+    <div style="margin-bottom: 20px; text-align: right;">
+        <button type="button" class="btn" id="refreshBackupsBtn" style="padding: 10px 20px;">
+            🔄 Actualiser la liste
+        </button>
+    </div>
+    
+    <div id="backupsContainer">
+        <div id="backupsLoading" class="loading" style="display: none;">
+            <p>⏳ Chargement des backups...</p>
+        </div>
+        
+        <div id="backupsSelectContainer" style="display: none;">
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <label for="backupSelect" style="display: block; margin-bottom: 10px; font-weight: 600; color: #111111;">
+                    📦 Sélectionner un backup à restaurer :
+                </label>
+                <select id="backupSelect" 
+                        style="width: 100%; padding: 12px; border: 2px solid #C9C1B1; border-radius: 8px; font-size: 16px; background: #F1EFEB; color: #111111;">
+                    <option value="">-- Sélectionner un backup --</option>
+                </select>
+                <div id="backupInfo" style="margin-top: 15px; padding: 15px; background: #F1EFEB; border-radius: 8px; display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">📅 Date/Heure</span>
+                            <span id="backupDate" style="font-weight: 600; color: #111111;"></span>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">🍽️ Restaurants</span>
+                            <span id="backupCount" style="font-weight: 600; color: #111111;"></span>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">💾 Taille</span>
+                            <span id="backupSize" style="font-weight: 600; color: #111111;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button type="button" class="btn-primary" id="restoreBtn" style="padding: 15px 40px; font-size: 16px; display: none;">
+                    🔄 Restaurer ce backup
+                </button>
+            </div>
+        </div>
+        
+        <div id="backupsEmpty" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📦</div>
+            <h3 style="color: #6c757d; margin-bottom: 10px;">Aucun backup disponible</h3>
+            <p style="color: #6c757d;">Les backups sont créés automatiquement lors des imports de restaurants.</p>
+        </div>
+    </div>
+    
+    <div id="restoreResult" class="result-container"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshBackupsBtn = document.getElementById('refreshBackupsBtn');
+    const backupsLoading = document.getElementById('backupsLoading');
+    const backupsSelectContainer = document.getElementById('backupsSelectContainer');
+    const backupSelect = document.getElementById('backupSelect');
+    const backupInfo = document.getElementById('backupInfo');
+    const backupDate = document.getElementById('backupDate');
+    const backupCount = document.getElementById('backupCount');
+    const backupSize = document.getElementById('backupSize');
+    const restoreBtn = document.getElementById('restoreBtn');
+    const backupsEmpty = document.getElementById('backupsEmpty');
+    const restoreResult = document.getElementById('restoreResult');
+    
+    let backupsData = [];
+    
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function formatDate(timestamp) {
+        if (!timestamp) return 'Date inconnue';
+        try {
+            // Essayer de parser différents formats
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) {
+                // Si ce n'est pas une date valide, essayer de parser le format YYYYMMDD_HHMMSS
+                const match = timestamp.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+                if (match) {
+                    const [, year, month, day, hour, minute, second] = match;
+                    return `${day}/${month}/${year} à ${hour}:${minute}:${second}`;
+                }
+                return timestamp;
+            }
+            return date.toLocaleString('fr-FR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch (e) {
+            return timestamp;
+        }
+    }
+    
+    function loadBackups() {
+        backupsLoading.style.display = 'block';
+        backupsSelectContainer.style.display = 'none';
+        backupsEmpty.style.display = 'none';
+        restoreResult.style.display = 'none';
+        backupSelect.innerHTML = '<option value="">-- Sélectionner un backup --</option>';
+        backupInfo.style.display = 'none';
+        restoreBtn.style.display = 'none';
+        
+        fetch('{% url "scripts_manager:list_backups" %}')
+            .then(response => response.json())
+            .then(data => {
+                backupsLoading.style.display = 'none';
+                
+                if (data.success && data.backups && data.backups.length > 0) {
+                    backupsData = data.backups;
+                    
+                    // Trier par date (plus récent en premier)
+                    backupsData.sort((a, b) => {
+                        const dateA = a.timestamp || a.backup_name || '';
+                        const dateB = b.timestamp || b.backup_name || '';
+                        return dateB.localeCompare(dateA);
+                    });
+                    
+                    // Remplir le select
+                    backupsData.forEach((backup, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = `${formatDate(backup.timestamp)} - ${backup.count || 0} restaurants`;
+                        backupSelect.appendChild(option);
+                    });
+                    
+                    backupsSelectContainer.style.display = 'block';
+                } else {
+                    backupsEmpty.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                backupsLoading.style.display = 'none';
+                backupsEmpty.style.display = 'block';
+                backupsEmpty.innerHTML = `
+                    <div class="empty-state-icon">❌</div>
+                    <h3 style="color: #dc3545; margin-bottom: 10px;">Erreur lors du chargement</h3>
+                    <p style="color: #6c757d;">${error.message}</p>
+                `;
+            });
+    }
+    
+    // Gérer la sélection dans le select
+    backupSelect.addEventListener('change', function() {
+        const selectedIndex = this.value;
+        if (selectedIndex === '' || !backupsData[selectedIndex]) {
+            backupInfo.style.display = 'none';
+            restoreBtn.style.display = 'none';
+            return;
+        }
+        
+        const backup = backupsData[selectedIndex];
+        backupDate.textContent = formatDate(backup.timestamp);
+        backupCount.textContent = backup.count || 'N/A';
+        backupSize.textContent = formatFileSize(backup.size || 0);
+        backupInfo.style.display = 'block';
+        restoreBtn.style.display = 'inline-block';
+        restoreBtn.onclick = () => restoreBackup(backup.backup_dir, backup.backup_name);
+    });
+    
+    function restoreBackup(backupDir, backupName) {
+        if (!confirm(`⚠️ ATTENTION : Cette opération va remplacer TOUS les restaurants actuels par ceux du backup "${backupName}".\n\nUn backup de sécurité sera créé avant la restauration.\n\nVoulez-vous vraiment continuer ?`)) {
+            return;
+        }
+        
+        restoreResult.style.display = 'block';
+        restoreResult.className = 'result-container';
+        restoreResult.innerHTML = '<p>⏳ Restauration en cours... Cette opération peut prendre plusieurs minutes.</p>';
+        
+        fetch('{% url "scripts_manager:restore_backup" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                backup_dir: backupDir,
+                create_backup_before: true
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                restoreResult.className = 'result-container success';
+                restoreResult.innerHTML = `
+                    <h3>✅ Restauration réussie !</h3>
+                    <p><strong>${data.imported}</strong> restaurants restaurés</p>
+                    <p><strong>Backup restauré :</strong> ${data.backup_dir}</p>
+                    ${data.backup_before_dir ? `<p><strong>Backup de sécurité créé :</strong> ${data.backup_before_dir}</p>` : ''}
+                    <p style="margin-top: 15px;"><a href="{% url 'scripts_manager:restaurants_list' %}" class="btn" style="display: inline-block; margin-top: 10px;">Voir les restaurants</a></p>
+                `;
+                
+                // Recharger la liste des backups après quelques secondes
+                setTimeout(() => {
+                    loadBackups();
+                }, 2000);
+            } else {
+                restoreResult.className = 'result-container error';
+                restoreResult.innerHTML = `
+                    <h3>❌ Erreur lors de la restauration</h3>
+                    <p>${data.error || 'Une erreur est survenue lors de la restauration'}</p>
+                    ${data.traceback ? `<pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin-top: 10px;">${data.traceback}</pre>` : ''}
+                `;
+            }
+        })
+        .catch(error => {
+            restoreResult.className = 'result-container error';
+            restoreResult.innerHTML = `
+                <h3>❌ Erreur</h3>
+                <p>Une erreur est survenue : ${error.message}</p>
+            `;
+        });
+    }
+    
+    refreshBackupsBtn.addEventListener('click', loadBackups);
+    
+    // Charger les backups au chargement de la page
+    loadBackups();
+});
+</script>
+{% endblock %}

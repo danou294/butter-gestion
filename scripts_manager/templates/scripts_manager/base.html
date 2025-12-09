@@ -167,14 +167,6 @@
                            class="px-4 py-2 rounded-[14px] text-sm font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                             Accueil
                         </a>
-                        <a href="{% url 'scripts_manager:export_index' %}" 
-                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                            Export
-                        </a>
-                        <a href="{% url 'scripts_manager:users_list' %}" 
-                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                            👥 Utilisateurs
-                        </a>
                         <a href="{% url 'scripts_manager:restaurants_list' %}" 
                            class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                             Restaurants
@@ -183,6 +175,10 @@
                            class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                             📸 Photos
                         </a>
+                        <a href="{% url 'scripts_manager:users_list' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            👥 Utilisateurs
+                        </a>
                         <a href="{% url 'scripts_manager:notifications_index' %}" 
                            class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                             📱 Notifications
@@ -190,6 +186,14 @@
                         <a href="{% url 'scripts_manager:import_restaurants_index' %}" 
                            class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                             📥 Import
+                        </a>
+                        <a href="{% url 'scripts_manager:restore_backup_index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'restore_backup' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            🔄 Restaurer
+                        </a>
+                        <a href="{% url 'scripts_manager:export_index' %}" 
+                           class="px-4 py-2 rounded-[14px] text-sm font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            Export
                         </a>
                     </div>
                 </div>
@@ -212,12 +216,13 @@
         <div id="mobile-menu" class="hidden md:hidden border-t border-[#C9C1B1]">
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <a href="{% url 'scripts_manager:index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Accueil</a>
-                <a href="{% url 'scripts_manager:export_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Export</a>
-                <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
                 <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Restaurants</a>
                 <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📸 Photos</a>
+                <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
                 <a href="{% url 'scripts_manager:notifications_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📱 Notifications</a>
                 <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📥 Import</a>
+                <a href="{% url 'scripts_manager:restore_backup_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'restore_backup' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🔄 Restaurer</a>
+                <a href="{% url 'scripts_manager:export_index' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">Export</a>
                 {% if user.is_authenticated %}
                 <div class="border-t border-[#C9C1B1] mt-2 pt-2">
                     <div class="px-3 py-2 text-sm text-[#535353]">👤 {{ user.username }}</div>

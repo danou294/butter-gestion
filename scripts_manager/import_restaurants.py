@@ -487,6 +487,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         website = clean_text(entry.get("Site web") or "")
         reservation_link = clean_text(entry.get("Lien de réservation") or "")
         instagram_link = clean_text(entry.get("Lien de votre compte instagram") or "")
+        instagram_video_link = clean_text(entry.get("Lien vidéo insta") or entry.get("Lien video insta") or entry.get("Lien vidéo instagram") or entry.get("Lien video instagram") or "")
         google_link = clean_text(entry.get("Lien Google") or "")
         lien_menu = clean_text(entry.get("Lien Menu") or "")
         hours_raw = clean_text(entry.get("Horaires") or "")
@@ -567,6 +568,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "website": website,
             "reservation_link": reservation_link,
             "instagram_link": instagram_link,
+            "instagram_video_link": instagram_video_link,
             "google_link": google_link,
             "lien_menu": lien_menu,
             "more_info": commentaire,
@@ -658,6 +660,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "google_link": doc.get("google_link", ""),
             "reservation_link": doc.get("reservation_link", ""),
             "instagram_link": doc.get("instagram_link", ""),
+            "instagram_video_link": doc.get("instagram_video_link", ""),
             "lien_menu": doc.get("lien_menu", ""),
             "more_info": doc.get("more_info", ""),
             "hours": doc.get("hours", ""),
@@ -683,7 +686,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
     
     with open(out_csv, "w", encoding="utf-8", newline="") as cf:
         writer = csv.DictWriter(cf, fieldnames=list(csv_rows[0].keys()) if csv_rows else 
-                                ["id","tag","name","raw_name","address","arrondissement","latitude","longitude","phone","website","google_link","reservation_link","instagram_link","lien_menu","more_info","hours","types","moments","lieux","ambiance","price_range","cuisines","restrictions","has_terrace","terrace_locs","specialite_tag","lieu_tag"])
+                                ["id","tag","name","raw_name","address","arrondissement","latitude","longitude","phone","website","google_link","reservation_link","instagram_link","instagram_video_link","lien_menu","more_info","hours","types","moments","lieux","ambiance","price_range","cuisines","restrictions","has_terrace","terrace_locs","specialite_tag","lieu_tag"])
         writer.writeheader()
         for r in csv_rows:
             writer.writerow(r)

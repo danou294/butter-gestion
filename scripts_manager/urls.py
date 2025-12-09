@@ -42,6 +42,11 @@ urlpatterns = [
     path('import-restaurants/', views.import_restaurants_index, name='import_restaurants_index'),
     path('import-restaurants/run/', views.run_import_restaurants, name='run_import_restaurants'),
     
+    # Restauration de Backups
+    path('restore-backup/', views.restore_backup_index, name='restore_backup_index'),
+    path('restore-backup/list/', views.list_backups, name='list_backups'),
+    path('restore-backup/restore/', views.restore_backup, name='restore_backup'),
+    
     # Utilisateurs
     path('utilisateurs/', users_views.users_list, name='users_list'),
     path('utilisateurs/<str:uid>/refresh/', users_views.refresh_user_status, name='user_refresh_status'),

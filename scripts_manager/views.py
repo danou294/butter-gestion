@@ -443,6 +443,12 @@ def import_restaurants_index(request):
 
 
 @login_required
+def restore_backup_index(request):
+    """Page d'index pour restaurer un backup"""
+    return render(request, 'scripts_manager/restore_backup.html')
+
+
+@login_required
 @require_http_methods(["POST"])
 def run_import_restaurants(request):
     """Traite l'upload d'un fichier Excel et lance l'import"""
@@ -496,5 +502,69 @@ def run_import_restaurants(request):
         import traceback
         return JsonResponse({
             'error': f'Erreur lors de l\'import: {str(e)}',
+            'traceback': traceback.format_exc()
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def list_backups(request):
+    """Liste tous les backups disponibles"""
+    try:
+        from restore_backup import list_available_backups
+        backups = list_available_backups()
+        return JsonResponse({
+            'success': True,
+            'backups': backups
+        })
+    except Exception as e:
+        logger.error(f"Erreur lors de la liste des backups: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def restore_backup(request):
+    """Restaure un backup de restaurants"""
+    try:
+        data = json.loads(request.body)
+        backup_dir = data.get('backup_dir')
+        create_backup_before = data.get('create_backup_before', True)
+        
+        if not backup_dir:
+            return JsonResponse({'error': 'Le chemin du backup est requis'}, status=400)
+        
+        logger.info(f"🔄 Démarrage de la restauration depuis: {backup_dir}")
+        
+        from restore_backup import restore_from_backup
+        
+        # Restaurer le backup
+        result = restore_from_backup(backup_dir, create_backup_before=create_backup_before)
+        
+        logger.info(f"✅ Restauration terminée: {result['imported']} restaurants restaurés")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Restauration réussie : {result["imported"]} restaurants restaurés',
+            'imported': result['imported'],
+            'backup_dir': result['backup_dir'],
+            'backup_before_dir': result.get('backup_before_dir'),
+            'total_records': result.get('total_records', 0)
+        })
+        
+    except FileNotFoundError as e:
+        logger.error(f"❌ Erreur: {e}")
+        return JsonResponse({'error': f'Backup non trouvé: {str(e)}'}, status=404)
+    except ValueError as e:
+        logger.error(f"❌ Erreur de validation: {e}")
+        return JsonResponse({'error': f'Erreur de validation: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la restauration: {e}")
+        import traceback
+        return JsonResponse({
+            'error': f'Erreur lors de la restauration: {str(e)}',
             'traceback': traceback.format_exc()
         }, status=500)
