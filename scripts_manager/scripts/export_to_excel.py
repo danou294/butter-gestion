@@ -117,11 +117,52 @@ def export_firestore_collection(collection_name: str, logger: logging.Logger) ->
     docs = list(collection_ref.stream())
     logger.info(f"✅ {len(docs)} documents trouvés")
     
+    # Si c'est la collection "users", enrichir avec les données Auth
+    auth_users_map = {}
+    if collection_name == "users":
+        logger.info("  Enrichissement avec les données Firebase Auth...")
+        try:
+            # Initialisation Firebase Admin si nécessaire
+            if not firebase_admin._apps:
+                cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+                firebase_admin.initialize_app(cred)
+            
+            # Récupérer tous les utilisateurs Auth
+            for auth_user in auth.list_users().iterate_all():
+                uid = auth_user.uid
+                last_sign_in_iso = None
+                if auth_user.user_metadata and auth_user.user_metadata.last_sign_in_timestamp:
+                    last_sign_in_iso = datetime.fromtimestamp(
+                        auth_user.user_metadata.last_sign_in_timestamp / 1000
+                    ).isoformat()
+                
+                auth_users_map[uid] = {
+                    'last_sign_in_iso': last_sign_in_iso,
+                    'email': str(getattr(auth_user, "email", "") or "").strip(),
+                    'display_name': str(getattr(auth_user, "display_name", "") or "").strip(),
+                }
+            logger.info(f"  ✅ {len(auth_users_map)} utilisateurs Auth récupérés")
+        except Exception as e:
+            logger.warning(f"  ⚠️  Impossible d'enrichir avec Auth: {e}")
+    
     records: List[Dict[str, Any]] = []
     for i, doc in enumerate(docs, 1):
         data = doc.to_dict() or {}
         # Ajoute l'identifiant du document
         data_with_id = {**data, 'id': doc.id}
+        
+        # Enrichir avec les données Auth si disponible
+        if collection_name == "users" and auth_users_map:
+            doc_id = doc.id
+            uid = data.get('uid') or doc_id
+            auth_data = auth_users_map.get(uid)
+            if auth_data:
+                data_with_id['auth_last_sign_in_iso'] = auth_data.get('last_sign_in_iso')
+                if not data_with_id.get('email') and auth_data.get('email'):
+                    data_with_id['auth_email'] = auth_data.get('email')
+                if not data_with_id.get('displayName') and auth_data.get('display_name'):
+                    data_with_id['auth_display_name'] = auth_data.get('display_name')
+        
         flat = flatten(data_with_id)
         records.append(flat)
         if i % 100 == 0:
@@ -169,21 +210,29 @@ def export_firebase_auth(logger: logging.Logger) -> Path:
     users = []
     logger.info("  Récupération des utilisateurs...")
     for user in auth.list_users().iterate_all():
+        # Récupérer la date de création
+        created_at_iso = None
+        if user.user_metadata and user.user_metadata.creation_timestamp:
+            created_at_iso = datetime.fromtimestamp(user.user_metadata.creation_timestamp / 1000).isoformat()
+        
+        # Récupérer la dernière connexion
+        last_sign_in_iso = None
+        if user.user_metadata and user.user_metadata.last_sign_in_timestamp:
+            last_sign_in_iso = datetime.fromtimestamp(user.user_metadata.last_sign_in_timestamp / 1000).isoformat()
+        
         users.append({
             "uid": user.uid,
             "email": str(getattr(user, "email", "") or "").strip(),
             "displayName": str(getattr(user, "display_name", "") or "").strip(),
             "is_anonymous": len(user.provider_data) == 0,
-            "created_at_iso": (
-                datetime.fromtimestamp(user.user_metadata.creation_timestamp / 1000).isoformat()
-                if user.user_metadata and user.user_metadata.creation_timestamp else None
-            )
+            "created_at_iso": created_at_iso,
+            "last_sign_in_iso": last_sign_in_iso
         })
     
     logger.info(f"✅ {len(users)} utilisateurs récupérés")
     
     # Création du DataFrame
-    fields = ["uid", "email", "displayName", "is_anonymous", "created_at_iso"]
+    fields = ["uid", "email", "displayName", "is_anonymous", "created_at_iso", "last_sign_in_iso"]
     df = pd.DataFrame(users, columns=fields)
     
     # Nettoyage des données

@@ -819,17 +819,29 @@ def export_revenuecat_mapping(request):
             uid = user.get('uid', '')
             phone = user.get('phone', '')
             display_name = user.get('display_name', '')
+            last_sign_in = user.get('last_sign_in')
+            last_sign_in_display = user.get('last_sign_in_display', '')
             
             # Calculer l'app_user_id RevenueCat (hash du téléphone)
             app_user_id = None
             if phone:
                 app_user_id = rc_client._hash_phone(phone)
             
+            # Formater la dernière connexion en ISO si disponible
+            last_sign_in_iso = None
+            if last_sign_in:
+                if isinstance(last_sign_in, datetime):
+                    last_sign_in_iso = last_sign_in.isoformat()
+                else:
+                    last_sign_in_iso = str(last_sign_in)
+            
             export_data.append({
                 'uid_firebase': uid,
                 'app_user_id_revenuecat': app_user_id or '',
                 'nom': display_name or '',
                 'telephone': phone or '',
+                'derniere_connexion': last_sign_in_display or '',
+                'derniere_connexion_iso': last_sign_in_iso or '',
             })
         
         # Créer le DataFrame
