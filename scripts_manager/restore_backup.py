@@ -17,6 +17,10 @@ from firebase_admin import credentials, firestore
 
 from config import SERVICE_ACCOUNT_PATH, BACKUP_DIR, FIRESTORE_COLLECTION
 
+# NOTE: BACKUP_DIR pointe vers media/exports/backups/
+# Les backups sont créés lors de l'import avec le format: restaurants_YYYYMMDD_HHMMSS/
+# Ce même chemin est utilisé pour la restauration
+
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 400
@@ -37,11 +41,18 @@ def list_available_backups() -> List[Dict[str, Any]]:
     """
     Liste tous les backups disponibles
     
+    Les backups sont créés lors de l'import dans: media/exports/backups/
+    Format des dossiers: restaurants_YYYYMMDD_HHMMSS/
+    Chaque backup contient: restaurants.json, restaurants.ndjson, backup_meta.json
+    
     Returns:
         Liste de dictionnaires avec les infos de chaque backup
     """
     backups = []
+    # BACKUP_DIR = media/exports/backups/ (même chemin utilisé lors de l'import)
     backup_path = Path(BACKUP_DIR)
+    
+    logger.info(f"📂 Recherche des backups dans: {BACKUP_DIR}")
     
     if not backup_path.exists():
         logger.warning(f"Le dossier de backup n'existe pas: {BACKUP_DIR}")
