@@ -5,6 +5,7 @@ from . import photos_views
 from . import users_views
 from . import notifications_views
 from . import auth_views
+from . import firebase_env_views
 
 app_name = 'scripts_manager'
 
@@ -49,10 +50,10 @@ urlpatterns = [
     
     # Utilisateurs
     path('utilisateurs/', users_views.users_list, name='users_list'),
-    path('utilisateurs/<str:uid>/refresh/', users_views.refresh_user_status, name='user_refresh_status'),
-    path('utilisateurs/diagnostics/', users_views.users_diagnostics, name='users_diagnostics'),
-    path('utilisateurs/log-all-premium/', users_views.users_log_all_premium, name='users_log_all_premium'),
-    path('export/revenuecat-mapping/', users_views.export_revenuecat_mapping, name='export_revenuecat_mapping'),
+    
+    # Gestion environnement Firebase
+    path('firebase-env/switch/', firebase_env_views.switch_firebase_env, name='switch_firebase_env'),
+    path('firebase-env/status/', firebase_env_views.get_firebase_env, name='get_firebase_env'),
 
     # CRUD Photos
     path('photos/', photos_views.photos_list, name='photos_list'),

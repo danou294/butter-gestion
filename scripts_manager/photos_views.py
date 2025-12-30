@@ -15,7 +15,8 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import storage
 from google.oauth2 import service_account
 from PIL import Image, ImageOps
-from config import SERVICE_ACCOUNT_PATH, FIREBASE_BUCKET
+from config import FIREBASE_BUCKET
+from .firebase_utils import get_service_account_path
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,17 @@ def build_query_without_page(request):
     return query_params.urlencode()
 
 # Initialiser le client Storage
-def get_storage_client():
-    """Retourne un client Storage configuré"""
+def get_storage_client(request=None):
+    """
+    Retourne un client Storage configuré
+    
+    Args:
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
     try:
+        service_account_path = get_service_account_path(request)
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_PATH,
+            service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']
         )
         return storage.Client(credentials=credentials, project=credentials.project_id)
@@ -44,11 +51,17 @@ def get_storage_client():
         return None
 
 # Obtenir les credentials pour la signature
-def get_storage_credentials():
-    """Retourne les credentials pour la signature d'URL"""
+def get_storage_credentials(request=None):
+    """
+    Retourne les credentials pour la signature d'URL
+    
+    Args:
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
     try:
+        service_account_path = get_service_account_path(request)
         return service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_PATH,
+            service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']
         )
     except Exception as e:
@@ -65,10 +78,13 @@ def photos_list(request):
         page_number = request.GET.get('page', 1)
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
 
-        cache_key = f"{PHOTOS_CACHE_PREFIX}{folder}"
+        # Inclure l'environnement dans la clé de cache
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
+        cache_key = f"{PHOTOS_CACHE_PREFIX}{folder}_{env}"
         cached_photos = cache.get(cache_key)
         if cached_photos is None:
-            client = get_storage_client()
+            client = get_storage_client(request)
             if not client:
                 return render(request, 'scripts_manager/photos/list.html', {
                     'photos': [],
@@ -152,7 +168,7 @@ def photo_detail(request, folder, photo_name):
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
         full_path = f"{folder_path}{photo_name}"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -219,7 +235,7 @@ def photo_upload(request):
         filename = filename.replace(' ', '_').replace('/', '_').replace('\\', '_')
         full_path = f"{folder_path}{filename}"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -267,7 +283,7 @@ def photo_delete(request, folder, photo_name):
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
         full_path = f"{folder_path}{photo_name}"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -298,7 +314,7 @@ def photo_get_url(request, folder, photo_name):
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
         full_path = f"{folder_path}{photo_name}"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -341,7 +357,7 @@ def photo_rename(request, folder, photo_name):
         old_path = f"{folder_path}{photo_name}"
         new_path = f"{folder_path}{new_name}"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -436,7 +452,7 @@ def photo_convert_png_to_webp(request):
         max_height = 1920
         quality = 85
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
@@ -559,7 +575,7 @@ def photo_bulk_delete(request):
         
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
         
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         

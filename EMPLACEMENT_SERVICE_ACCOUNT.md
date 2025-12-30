@@ -86,3 +86,5 @@ butter_web_interface/
 7. Renommez-le en `serviceAccountKey.json`
 8. Placez-le dans `media/input/`
 
+
+

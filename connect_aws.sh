@@ -14,25 +14,19 @@ fi
 # Vérifier les permissions
 chmod 400 "$PEM_PATH"
 
+# Configuration par défaut du serveur AWS
+DEFAULT_SERVER="16.171.225.193"
+DEFAULT_USER="ec2-user"
+
 # Demander l'adresse IP ou le nom DNS du serveur
 if [ -z "$1" ]; then
-    echo "Usage: ./connect_aws.sh <adresse_ip_ou_dns> [utilisateur]"
-    echo ""
-    echo "Exemples:"
-    echo "  ./connect_aws.sh ec2-12-34-56-78.compute-1.amazonaws.com"
-    echo "  ./connect_aws.sh 12.34.56.78"
-    echo "  ./connect_aws.sh 12.34.56.78 ubuntu"
-    echo ""
-    echo "Utilisateurs par défaut selon l'AMI:"
-    echo "  - Amazon Linux: ec2-user"
-    echo "  - Ubuntu: ubuntu"
-    echo "  - Debian: admin"
-    echo "  - CentOS: centos"
-    exit 1
+    echo "Connexion au serveur AWS par défaut..."
+    SERVER_ADDRESS="$DEFAULT_SERVER"
+    USER="$DEFAULT_USER"
+else
+    SERVER_ADDRESS="$1"
+    USER="${2:-$DEFAULT_USER}"  # Par défaut: ec2-user (Amazon Linux)
 fi
-
-SERVER_ADDRESS="$1"
-USER="${2:-ec2-user}"  # Par défaut: ec2-user (Amazon Linux)
 
 echo "🔐 Connexion au serveur AWS..."
 echo "   Serveur: $SERVER_ADDRESS"

@@ -30,6 +30,7 @@ Thumbs.db
 # Fichiers sensibles
 serviceAccountKey.json
 input/serviceAccountKey.json
+firebase_credentials/
 .env
 .env.local
 

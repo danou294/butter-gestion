@@ -275,3 +275,5 @@ sudo tail -f /var/log/nginx/access.log
 
 **Recommandation** : Utilisez Nginx en reverse proxy (Option 1) pour une configuration de production propre et sécurisée.
 
+
+

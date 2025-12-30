@@ -22,7 +22,8 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Configuration
-from config import SERVICE_ACCOUNT_PATH, EXPORTS_DIR, INPUT_DIR
+from config import EXPORTS_DIR, INPUT_DIR, SERVICE_ACCOUNT_PATH_DEV, SERVICE_ACCOUNT_PATH_PROD
+from .firebase_utils import get_service_account_path
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -34,11 +35,25 @@ running_tasks = {}
 @login_required
 def index(request):
     """Page d'accueil"""
-    # Vérifier si le fichier service account existe
-    service_account_exists = Path(SERVICE_ACCOUNT_PATH).exists()
+    # Récupérer le chemin selon l'environnement actif (depuis la session)
+    service_account_path = get_service_account_path(request)
+    service_account_exists = Path(service_account_path).exists()
+    service_account_dev_exists = Path(SERVICE_ACCOUNT_PATH_DEV).exists()
+    service_account_prod_exists = Path(SERVICE_ACCOUNT_PATH_PROD).exists()
+    
+    # Récupérer l'environnement depuis le context processor
+    from .context_processors import firebase_env
+    env_context = firebase_env(request)
+    
     context = {
         'service_account_exists': service_account_exists,
-        'service_account_path': SERVICE_ACCOUNT_PATH
+        'service_account_path': service_account_path,
+        'firebase_env': env_context['firebase_env'],
+        'firebase_env_label': env_context['firebase_env_label'],
+        'service_account_dev_exists': service_account_dev_exists,
+        'service_account_prod_exists': service_account_prod_exists,
+        'service_account_dev_path': SERVICE_ACCOUNT_PATH_DEV,
+        'service_account_prod_path': SERVICE_ACCOUNT_PATH_PROD,
     }
     return render(request, 'scripts_manager/index.html', context)
 
@@ -91,7 +106,8 @@ def run_export(request):
         
         # Définir les variables d'environnement
         env = os.environ.copy()
-        env['GOOGLE_APPLICATION_CREDENTIALS'] = SERVICE_ACCOUNT_PATH
+        service_account_path = get_service_account_path(request)
+        env['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
         env['PYTHONPATH'] = str(SCRIPTS_DIR) + ':' + env.get('PYTHONPATH', '')
         
         # Exécuter le script de manière synchrone
@@ -352,7 +368,8 @@ def run_script_task(task_id, cmd, exports_dir):
     try:
         # Définir les variables d'environnement
         env = os.environ.copy()
-        env['GOOGLE_APPLICATION_CREDENTIALS'] = SERVICE_ACCOUNT_PATH
+        service_account_path = get_service_account_path(request)
+        env['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
         env['PYTHONPATH'] = str(SCRIPTS_DIR) + ':' + env.get('PYTHONPATH', '')
         
         # Exécuter le script
@@ -475,7 +492,7 @@ def run_import_restaurants(request):
         from import_restaurants import import_restaurants_from_excel
         
         # Lancer l'import
-        result = import_restaurants_from_excel(str(file_path), sheet_name)
+        result = import_restaurants_from_excel(str(file_path), sheet_name, request=request)
         
         # Supprimer le fichier temporaire après import
         if file_path.exists():
@@ -542,7 +559,7 @@ def restore_backup(request):
         from restore_backup import restore_from_backup
         
         # Restaurer le backup
-        result = restore_from_backup(backup_dir, create_backup_before=create_backup_before)
+        result = restore_from_backup(backup_dir, create_backup_before=create_backup_before, request=request)
         
         logger.info(f"✅ Restauration terminée: {result['imported']} restaurants restaurés")
         

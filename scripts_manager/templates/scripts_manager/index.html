@@ -10,28 +10,95 @@
     
     <!-- Configuration Status -->
     <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-2xl font-serif font-bold text-[#111111] mb-4">🔑 Configuration</h2>
+        <h2 class="text-2xl font-serif font-bold text-[#111111] mb-4">🔑 Configuration Firebase</h2>
+        
+        <!-- Environnement actif -->
+        <div class="mb-4 p-4 rounded-[14px] {% if firebase_env == 'dev' %}bg-yellow-50 border border-yellow-300{% else %}bg-green-50 border border-green-300{% endif %}">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-2xl">{{ firebase_env_label }}</span>
+                <p class="font-semibold {% if firebase_env == 'dev' %}text-yellow-800{% else %}text-green-800{% endif %}">
+                    Environnement actif : <strong>{{ firebase_env|upper }}</strong>
+                </p>
+            </div>
+            <p class="text-sm {% if firebase_env == 'dev' %}text-yellow-700{% else %}text-green-700{% endif %}">
+                Pour changer d'environnement, définissez la variable <code class="bg-white px-2 py-1 rounded">FIREBASE_ENV=dev</code> ou <code class="bg-white px-2 py-1 rounded">FIREBASE_ENV=prod</code>
+            </p>
+        </div>
+        
+        <!-- Fichier DEV -->
+        <div class="mb-4">
+            <h3 class="text-lg font-serif font-bold text-[#111111] mb-2">🔧 Environnement DEV</h3>
+            {% if service_account_dev_exists %}
+            <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">✅</span>
+                    <p class="font-semibold text-[#60BC81]">Fichier DEV présent</p>
+                </div>
+                <p class="text-xs text-[#60BC81]">
+                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_dev_path }}</code>
+                </p>
+            </div>
+            {% else %}
+            <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">⚠️</span>
+                    <p class="font-semibold text-[#535353]">Fichier DEV manquant</p>
+                </div>
+                <p class="text-xs text-[#535353]">
+                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_dev_path }}</code>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Fichier PROD -->
+        <div class="mb-4">
+            <h3 class="text-lg font-serif font-bold text-[#111111] mb-2">🚀 Environnement PROD</h3>
+            {% if service_account_prod_exists %}
+            <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">✅</span>
+                    <p class="font-semibold text-[#60BC81]">Fichier PROD présent</p>
+                </div>
+                <p class="text-xs text-[#60BC81]">
+                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_prod_path }}</code>
+                </p>
+            </div>
+            {% else %}
+            <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">❌</span>
+                    <p class="font-semibold text-[#D3695E]">Fichier PROD manquant</p>
+                </div>
+                <p class="text-xs text-[#D3695E]">
+                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_prod_path }}</code>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Fichier actuellement utilisé -->
         {% if service_account_exists %}
         <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
             <div class="flex items-center gap-2 mb-2">
                 <span class="text-2xl">✅</span>
-                <p class="font-semibold text-[#60BC81]">Fichier service account configuré</p>
+                <p class="font-semibold text-[#60BC81]">Fichier actif configuré</p>
             </div>
             <p class="text-sm text-[#60BC81] mb-2">
-                Le fichier <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">serviceAccountKey.json</code> est présent et sera utilisé automatiquement.
+                Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> est présent et sera utilisé automatiquement.
             </p>
             <p class="text-xs text-[#60BC81]">
-                Chemin : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
+                Chemin actif : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
             </p>
         </div>
         {% else %}
         <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4">
             <div class="flex items-center gap-2 mb-2">
                 <span class="text-2xl">❌</span>
-                <p class="font-semibold text-[#D3695E]">Fichier service account manquant</p>
+                <p class="font-semibold text-[#D3695E]">Fichier actif manquant</p>
             </div>
             <p class="text-sm text-[#D3695E] mb-2">
-                Le fichier <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">serviceAccountKey.json</code> n'a pas été trouvé.
+                Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> n'a pas été trouvé.
             </p>
             <p class="text-xs text-[#D3695E]">
                 Chemin attendu : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>

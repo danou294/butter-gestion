@@ -15,7 +15,8 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import firestore
 from google.cloud import storage
 from google.oauth2 import service_account
-from config import SERVICE_ACCOUNT_PATH, FIREBASE_BUCKET
+from config import FIREBASE_BUCKET
+from .firebase_utils import get_service_account_path
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +37,31 @@ def build_query_without_page(request):
     return query_params.urlencode()
 
 # Initialiser le client Firestore
-def get_firestore_client():
-    """Retourne un client Firestore configuré"""
+def get_firestore_client(request=None):
+    """
+    Retourne un client Firestore configuré
+    
+    Args:
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
+    service_account_path = get_service_account_path(request)
     if not os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = SERVICE_ACCOUNT_PATH
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
     return firestore.Client()
 
 
 # Initialiser le client Storage
-def get_storage_client():
-    """Retourne un client Storage configuré"""
+def get_storage_client(request=None):
+    """
+    Retourne un client Storage configuré
+    
+    Args:
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
     try:
+        service_account_path = get_service_account_path(request)
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_PATH,
+            service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']
         )
         return storage.Client(credentials=credentials, project=credentials.project_id)
@@ -64,6 +77,7 @@ def get_restaurants_with_missing_photos():
         if cached is not None:
             return cached
 
+        # Note: Cette fonction n'a pas accès à request, donc utilisera l'env par défaut
         client = get_storage_client()
         if not client:
             return set()
@@ -128,7 +142,7 @@ def get_restaurants_with_missing_logos():
         if cached is not None:
             return cached
 
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return set()
         
@@ -182,7 +196,7 @@ def get_restaurant_media_info(restaurant_ids):
     }
     """
     try:
-        client = get_storage_client()
+        client = get_storage_client(request)
         if not client:
             return {}
         
@@ -243,9 +257,14 @@ def restaurants_list(request):
         page_number = request.GET.get('page', 1)
         logger.info(f"🔍 Recherche demandée: '{search_query}', Filtre: '{filter_type}'")
 
-        cached_restaurants = cache.get(RESTAURANTS_CACHE_KEY)
+        # Inclure l'environnement dans la clé de cache
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
+        cache_key = f"{RESTAURANTS_CACHE_KEY}_{env}"
+        
+        cached_restaurants = cache.get(cache_key)
         if cached_restaurants is None:
-            client = get_firestore_client()
+            client = get_firestore_client(request)
             restaurants_ref = client.collection('restaurants')
             restaurants = []
             for doc in restaurants_ref.stream():
@@ -268,7 +287,7 @@ def restaurants_list(request):
 
                 restaurants.append(restaurant_data)
 
-            cache.set(RESTAURANTS_CACHE_KEY, [dict(r) for r in restaurants], RESTAURANTS_CACHE_TTL)
+            cache.set(cache_key, [dict(r) for r in restaurants], RESTAURANTS_CACHE_TTL)
         else:
             restaurants = [dict(r) for r in cached_restaurants]
         
@@ -506,7 +525,7 @@ def restaurants_list(request):
 def restaurant_detail(request, restaurant_id):
     """Affiche les détails d'un restaurant"""
     try:
-        client = get_firestore_client()
+        client = get_firestore_client(request)
         restaurant_ref = client.collection('restaurants').document(restaurant_id)
         restaurant_doc = restaurant_ref.get()
         
@@ -549,7 +568,7 @@ def restaurant_create(request):
     
     elif request.method == 'POST':
         try:
-            client = get_firestore_client()
+            client = get_firestore_client(request)
             restaurants_ref = client.collection('restaurants')
             
             # Récupérer les données du formulaire
@@ -609,7 +628,7 @@ def restaurant_create(request):
 def restaurant_edit(request, restaurant_id):
     """Affiche le formulaire d'édition ou met à jour un restaurant"""
     try:
-        client = get_firestore_client()
+        client = get_firestore_client(request)
         restaurant_ref = client.collection('restaurants').document(restaurant_id)
         restaurant_doc = restaurant_ref.get()
         
@@ -700,7 +719,7 @@ def restaurant_edit(request, restaurant_id):
 def restaurant_delete(request, restaurant_id):
     """Supprime un restaurant"""
     try:
-        client = get_firestore_client()
+        client = get_firestore_client(request)
         restaurant_ref = client.collection('restaurants').document(restaurant_id)
         restaurant_doc = restaurant_ref.get()
         
@@ -721,7 +740,7 @@ def restaurant_delete(request, restaurant_id):
 def restaurant_get_json(request, restaurant_id):
     """Retourne un restaurant en JSON (pour API)"""
     try:
-        client = get_firestore_client()
+        client = get_firestore_client(request)
         restaurant_ref = client.collection('restaurants').document(restaurant_id)
         restaurant_doc = restaurant_ref.get()
         

@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Any
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from config import SERVICE_ACCOUNT_PATH, BACKUP_DIR, FIRESTORE_COLLECTION
+from config import BACKUP_DIR, FIRESTORE_COLLECTION
 
 # NOTE: BACKUP_DIR pointe vers media/exports/backups/
 # Les backups sont créés lors de l'import avec le format: restaurants_YYYYMMDD_HHMMSS/
@@ -26,12 +26,32 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = 400
 
 
-def init_firestore():
-    """Initialise Firestore"""
-    if not os.path.exists(SERVICE_ACCOUNT_PATH):
-        raise FileNotFoundError(f"Service account introuvable: {SERVICE_ACCOUNT_PATH}")
+def init_firestore(request=None):
+    """
+    Initialise Firestore avec le bon environnement
     
-    cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+    Args:
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
+    # Utiliser firebase_utils pour obtenir le bon chemin selon l'environnement
+    try:
+        from scripts_manager.firebase_utils import get_service_account_path
+        service_account_path = get_service_account_path(request)
+    except ImportError:
+        # Fallback si firebase_utils n'est pas disponible
+        from config import SERVICE_ACCOUNT_PATH_DEV, SERVICE_ACCOUNT_PATH_PROD
+        import os
+        env = os.getenv('FIREBASE_ENV', 'prod').lower()
+        if env == 'dev':
+            service_account_path = SERVICE_ACCOUNT_PATH_DEV
+        else:
+            service_account_path = SERVICE_ACCOUNT_PATH_PROD
+    
+    if not os.path.exists(service_account_path):
+        raise FileNotFoundError(f"Service account introuvable: {service_account_path}")
+    
+    logger.info(f"🔑 Utilisation du service account: {service_account_path}")
+    cred = credentials.Certificate(service_account_path)
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     return firestore.client()
@@ -211,13 +231,14 @@ def import_records_from_backup(db, collection_name: str, records: List[Dict[str,
     return imported
 
 
-def restore_from_backup(backup_dir: str, create_backup_before: bool = True) -> Dict[str, Any]:
+def restore_from_backup(backup_dir: str, create_backup_before: bool = True, request=None) -> Dict[str, Any]:
     """
     Restaure un backup dans Firestore
     
     Args:
         backup_dir: Chemin du dossier de backup
         create_backup_before: Si True, crée un backup de l'état actuel avant restauration
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
         
     Returns:
         Dictionnaire avec le résultat de la restauration
@@ -267,7 +288,7 @@ def restore_from_backup(backup_dir: str, create_backup_before: bool = True) -> D
         raise ValueError("Le backup ne contient aucun enregistrement")
     
     # Initialiser Firestore
-    db = init_firestore()
+    db = init_firestore(request)
     
     # Créer un backup de l'état actuel si demandé
     backup_before_dir = None

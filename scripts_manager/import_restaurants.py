@@ -31,7 +31,7 @@ except Exception:
     ZoneInfo = None
 
 # Import de la config Django
-from config import SERVICE_ACCOUNT_PATH, FIRESTORE_COLLECTION, INPUT_DIR, EXPORTS_DIR, BACKUP_DIR
+from config import FIRESTORE_COLLECTION, INPUT_DIR, EXPORTS_DIR, BACKUP_DIR
 
 # -------------------- Config --------------------
 COLLECTION_SOURCE = FIRESTORE_COLLECTION
@@ -63,11 +63,33 @@ def log(msg: str, log_file: str):
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(msg + "\n")
 
-def init_firestore(log_file: str):
-    sa = SERVICE_ACCOUNT_PATH
+def init_firestore(log_file: str, request=None):
+    """
+    Initialise Firestore avec le bon environnement
+    
+    Args:
+        log_file: Chemin du fichier de log
+        request: Objet request Django (optionnel) pour déterminer l'environnement
+    """
+    # Utiliser firebase_utils pour obtenir le bon chemin selon l'environnement
+    try:
+        from scripts_manager.firebase_utils import get_service_account_path
+        sa = get_service_account_path(request)
+    except ImportError:
+        # Fallback si firebase_utils n'est pas disponible
+        from config import SERVICE_ACCOUNT_PATH_DEV, SERVICE_ACCOUNT_PATH_PROD
+        import os
+        env = os.getenv('FIREBASE_ENV', 'prod').lower()
+        if env == 'dev':
+            sa = SERVICE_ACCOUNT_PATH_DEV
+        else:
+            sa = SERVICE_ACCOUNT_PATH_PROD
+    
     if not os.path.exists(sa):
         log(f"❌ Service account introuvable: {sa}", log_file)
         raise FileNotFoundError(f"Service account introuvable: {sa}")
+    
+    log(f"🔑 Utilisation du service account: {sa}", log_file)
     cred = credentials.Certificate(sa)
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
@@ -741,8 +763,15 @@ def write_import_log(db, collection_logs: str, payload: Dict[str, Any], log_file
     log("📝 Log d'import écrit dans Firestore.", log_file)
 
 # -------------------- Main --------------------
-def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1"):
-    """Fonction principale d'import adaptée pour Django"""
+def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None):
+    """
+    Fonction principale d'import adaptée pour Django
+    
+    Args:
+        excel_path: Chemin vers le fichier Excel
+        sheet_name: Nom de la feuille Excel (défaut: "Feuil1")
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
+    """
     ts_dir = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}_{ts_dir}")
     ensure_dir(backup_dir)
@@ -751,7 +780,7 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1"):
     log(f"→ Excel: {excel_path}", log_file)
 
     try:
-        db = init_firestore(log_file)
+        db = init_firestore(log_file, request)
     except Exception as e:
         log(f"❌ Init Firestore échouée: {e}\n{traceback.format_exc()}", log_file)
         raise

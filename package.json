@@ -1,0 +1,26 @@
+{
+  "name": "butter_web_interface",
+  "version": "1.0.0",
+  "description": "Interface web moderne et complète pour gérer votre application Firebase, incluant la gestion des utilisateurs, restaurants, photos, notifications push et exports de données.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danou294/butter-gestion.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/danou294/butter-gestion/issues"
+  },
+  "homepage": "https://github.com/danou294/butter-gestion#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.13"
+  }
+}
