@@ -6,6 +6,7 @@ from . import users_views
 from . import notifications_views
 from . import auth_views
 from . import firebase_env_views
+from . import search_restaurants_views
 
 app_name = 'scripts_manager'
 
@@ -44,6 +45,7 @@ urlpatterns = [
     path('import-restaurants/run/', views.run_import_restaurants, name='run_import_restaurants'),
     path('import-restaurants/dev/', views.dev_import_function, name='dev_import_function'),
     path('import-restaurants/logs/', views.get_import_logs, name='get_import_logs'),
+    path('import-restaurants/analyze-sheets/', views.analyze_excel_sheets, name='analyze_excel_sheets'),
     
     # Restauration de Backups
     path('restore-backup/', views.restore_backup_index, name='restore_backup_index'),
@@ -72,5 +74,12 @@ urlpatterns = [
     path('notifications/send-all/', notifications_views.send_notification_to_all, name='send_notification_to_all'),
     path('notifications/send-all-prenom/', notifications_views.send_notification_to_all_with_prenom, name='send_notification_to_all_with_prenom'),
     path('notifications/send-group/', notifications_views.send_notification_to_group, name='send_notification_to_group'),
+    
+    # Recherche de restaurants
+    path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
+    path('search/analyze-columns/', search_restaurants_views.analyze_excel_columns, name='analyze_excel_columns'),
+    path('search/run/', search_restaurants_views.run_search_restaurants, name='run_search_restaurants'),
+    path('search/logs/', search_restaurants_views.get_search_logs, name='get_search_logs'),
+    path('search/download/', search_restaurants_views.download_search_result, name='download_search_result'),
 ]
 

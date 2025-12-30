@@ -1,0 +1,376 @@
+{% extends 'scripts_manager/base.html' %}
+{% load static %}
+
+{% block title %}Recherche de Restaurants - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">🔍 Recherche de Restaurants</h1>
+        <p class="text-[#535353]">Recherchez des restaurants via Google Places API avec adresses, métro, etc.</p>
+        {% if firebase_env == 'dev' %}
+        <div class="mt-4 p-3 bg-[#FFF3CD] border border-[#FFC107] rounded-[8px]">
+            <p class="text-sm text-[#856404]">🔧 Mode DEV actif - Cette fonctionnalité est disponible uniquement en développement</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Formulaire de recherche -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <form id="searchForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="space-y-6">
+                <!-- Upload fichier Excel -->
+                <div>
+                    <label for="excel_file" class="block text-sm font-medium text-[#111111] mb-2">
+                        📄 Fichier Excel *
+                    </label>
+                    <div class="upload-area" id="uploadArea" style="border: 2px dashed #C9C1B1; border-radius: 8px; padding: 40px; text-align: center; background: #F1EFEB; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+                        <h3>Glissez-déposez votre fichier Excel ici</h3>
+                        <p>ou</p>
+                        <button type="button" class="btn-primary" onclick="document.getElementById('excel_file').click()">
+                            Parcourir les fichiers
+                        </button>
+                        <input type="file" id="excel_file" name="excel_file" class="hidden" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="file-info mt-4" id="fileInfo" style="display: none;">
+                        <strong>Fichier sélectionné :</strong> <span id="fileName"></span>
+                        <br>
+                        <strong>Taille :</strong> <span id="fileSize"></span>
+                    </div>
+                </div>
+                
+                <!-- Sélection de la colonne -->
+                <div>
+                    <label for="name_column" class="block text-sm font-medium text-[#111111] mb-2">
+                        Colonne contenant les noms de restaurants *
+                    </label>
+                    <select 
+                        id="name_column" 
+                        name="name_column" 
+                        required
+                        disabled
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
+                    >
+                        <option value="">Sélectionnez un fichier Excel d'abord</option>
+                    </select>
+                    <small style="color: #6c757d;">La colonne sera détectée automatiquement après la sélection du fichier</small>
+                </div>
+                
+                <!-- Bouton de recherche -->
+                <button type="submit" class="btn-primary w-full" id="searchBtn">
+                    🔍 Lancer la recherche
+                </button>
+            </div>
+        </form>
+        
+        <!-- Zone de progression -->
+        <div class="progress-container mt-6" id="progressContainer" style="display: none;">
+            <!-- Laura.gif avec "let me cook" pendant la recherche -->
+            <div id="lauraGifContainer" style="margin-bottom: 20px; text-align: center; display: none;">
+                <h3 style="margin-bottom: 10px; color: #111111; font-size: 24px; font-weight: bold;">let me cook</h3>
+                <img id="lauraGif" src="{% static 'loading_gifs/Laura.gif' %}" alt="Laura cooking" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            </div>
+            
+            <div class="progress-bar" style="width: 100%; height: 30px; background: #F1EFEB; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                <div class="progress-fill" id="progressFill" style="height: 100%; background: #60BC81; width: 0%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s;">0%</div>
+            </div>
+            <p id="progressText" style="text-align: center; margin-top: 10px; color: #535353;">Préparation de la recherche...</p>
+            
+            <!-- Terminal pour afficher les logs en temps réel -->
+            <div id="terminalContainer" style="margin-top: 20px; display: none;">
+                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                    <div id="terminalContent" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">
+                        <span style="color: #4ec9b0;">🔍 Démarrage de la recherche...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- omg.gif à la fin -->
+            <div id="omgGifContainer" style="margin-top: 20px; text-align: center; display: none;">
+                <img id="omgGif" src="{% static 'loading_gifs/omg.gif' %}" alt="OMG!" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            </div>
+        </div>
+        
+        <!-- Résultat -->
+        <div id="resultContainer" class="result-container" style="margin-top: 20px; display: none;"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Script de recherche chargé');
+    
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('excel_file');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const nameColumnSelect = document.getElementById('name_column');
+    const searchForm = document.getElementById('searchForm');
+    const searchBtn = document.getElementById('searchBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    // Drag & drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+            alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+            nameColumnSelect.disabled = true;
+            nameColumnSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+            return;
+        }
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        
+        // Analyser les colonnes du fichier Excel
+        analyzeExcelColumns(file);
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function analyzeExcelColumns(file) {
+        nameColumnSelect.disabled = true;
+        nameColumnSelect.innerHTML = '<option value="">⏳ Analyse des colonnes en cours...</option>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        
+        fetch('{% url "scripts_manager:analyze_excel_columns" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.columns && data.columns.length > 0) {
+                nameColumnSelect.innerHTML = '';
+                data.columns.forEach(col => {
+                    const option = document.createElement('option');
+                    option.value = col;
+                    option.textContent = col;
+                    // Sélectionner automatiquement les colonnes qui contiennent "nom" ou "name"
+                    if (col.toLowerCase().includes('nom') || col.toLowerCase().includes('name')) {
+                        option.selected = true;
+                    }
+                    nameColumnSelect.appendChild(option);
+                });
+                nameColumnSelect.disabled = false;
+            } else {
+                nameColumnSelect.innerHTML = '<option value="">Aucune colonne trouvée</option>';
+                nameColumnSelect.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de l\'analyse des colonnes:', error);
+            nameColumnSelect.innerHTML = '<option value="">Erreur lors de l\'analyse</option>';
+            nameColumnSelect.disabled = false;
+        });
+    }
+    
+    // Fonction pour récupérer et afficher les logs
+    let logPollingInterval = null;
+    function startLogPolling(logFile) {
+        if (logPollingInterval) clearInterval(logPollingInterval);
+        
+        logPollingInterval = setInterval(() => {
+            fetch(`{% url "scripts_manager:get_search_logs" %}?log_file=${encodeURIComponent(logFile)}`)
+                .then(response => response.json())
+                .then(logData => {
+                    if (logData.success && logData.logs) {
+                        const terminalContent = document.getElementById('terminalContent');
+                        // Formater les logs avec des couleurs
+                        let formattedLogs = '';
+                        logData.logs.split('\n').forEach(line => {
+                            if (line.trim()) {
+                                let color = '#d4d4d4';
+                                if (line.includes('✅')) color = '#4ec9b0';
+                                else if (line.includes('❌') || line.includes('Erreur')) color = '#f48771';
+                                else if (line.includes('⚠️')) color = '#dcdcaa';
+                                else if (line.includes('📊') || line.includes('📥')) color = '#569cd6';
+                                else if (line.includes('🔍') || line.includes('🚇')) color = '#c586c0';
+                                
+                                formattedLogs += `<span style="color: ${color};">${escapeHtml(line)}</span>\n`;
+                            }
+                        });
+                        terminalContent.innerHTML = formattedLogs;
+                        // Scroll vers le bas
+                        const terminalDiv = terminalContent.parentElement;
+                        terminalDiv.scrollTop = terminalDiv.scrollHeight;
+                        
+                        // Vérifier si la recherche est terminée
+                        if (logData.complete) {
+                            clearInterval(logPollingInterval);
+                            
+                            progressFill.style.width = '100%';
+                            progressFill.textContent = '100%';
+                            
+                            // Masquer Laura.gif et afficher omg.gif
+                            document.getElementById('lauraGifContainer').style.display = 'none';
+                            document.getElementById('omgGifContainer').style.display = 'block';
+                            
+                            // Afficher le bouton de téléchargement si un fichier est disponible
+                            if (logData.result_file) {
+                                resultContainer.style.display = 'block';
+                                resultContainer.className = 'result-container success';
+                                resultContainer.innerHTML = `
+                                    <h3>✅ Recherche terminée !</h3>
+                                    <p>Le fichier Excel est prêt à être téléchargé.</p>
+                                    <a href="{% url "scripts_manager:download_search_result" %}?file=${encodeURIComponent(logData.result_file)}" class="btn-primary" style="display: inline-block; margin-top: 15px;">
+                                        📥 Télécharger le fichier Excel
+                                    </a>
+                                `;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération des logs:', error);
+                });
+        }, 1000); // Poll toutes les secondes
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Soumission du formulaire
+    searchForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files.length) {
+            alert('Veuillez sélectionner un fichier Excel');
+            return;
+        }
+        
+        if (!nameColumnSelect.value) {
+            alert('Veuillez sélectionner une colonne pour les noms de restaurants');
+            return;
+        }
+        
+        const formData = new FormData(searchForm);
+        
+        // Afficher le loader
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '10%';
+        progressFill.textContent = '10%';
+        progressText.textContent = 'Upload du fichier...';
+        searchBtn.disabled = true;
+        resultContainer.style.display = 'none';
+        
+        // Afficher Laura.gif avec "let me cook"
+        document.getElementById('lauraGifContainer').style.display = 'block';
+        
+        // Afficher le terminal
+        document.getElementById('terminalContainer').style.display = 'block';
+        const terminalContent = document.getElementById('terminalContent');
+        terminalContent.innerHTML = '<span style="color: #4ec9b0;">🔍 Démarrage de la recherche...</span>\n';
+        
+        // Masquer omg.gif si visible
+        document.getElementById('omgGifContainer').style.display = 'none';
+        
+        // Simuler la progression
+        let progress = 10;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 3;
+            if (progress > 95) progress = 95;
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = Math.round(progress) + '%';
+        }, 1000);
+        
+        fetch('{% url "scripts_manager:run_search_restaurants" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearInterval(progressInterval);
+            
+            if (data.success && data.status === 'running' && data.log_file) {
+                // Démarrer le polling des logs
+                startLogPolling(data.log_file);
+            } else if (data.success) {
+                // Recherche terminée immédiatement (peu probable)
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+                document.getElementById('lauraGifContainer').style.display = 'none';
+                document.getElementById('omgGifContainer').style.display = 'block';
+                searchBtn.disabled = false;
+            } else {
+                progressText.textContent = 'Erreur lors de la recherche';
+                document.getElementById('lauraGifContainer').style.display = 'none';
+                if (logPollingInterval) clearInterval(logPollingInterval);
+                resultContainer.className = 'result-container error';
+                resultContainer.innerHTML = `
+                    <h3>❌ Erreur</h3>
+                    <p>${data.error || 'Une erreur est survenue lors de la recherche'}</p>
+                `;
+                resultContainer.style.display = 'block';
+                searchBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            if (logPollingInterval) clearInterval(logPollingInterval);
+            document.getElementById('lauraGifContainer').style.display = 'none';
+            progressText.textContent = 'Erreur lors de la recherche';
+            resultContainer.className = 'result-container error';
+            resultContainer.innerHTML = `
+                <h3>❌ Erreur</h3>
+                <p>Une erreur est survenue : ${error.message}</p>
+            `;
+            resultContainer.style.display = 'block';
+            searchBtn.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}
+

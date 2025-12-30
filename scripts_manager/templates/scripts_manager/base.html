@@ -261,6 +261,15 @@
                         <!-- Séparateur -->
                         <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
                         
+                        <!-- Section : Recherche -->
+                        <a href="{% url 'scripts_manager:search_restaurants' %}" 
+                           class="px-4 py-2 rounded-none text-sm font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                            🔍 Recherche
+                        </a>
+                        
+                        <!-- Séparateur -->
+                        <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
+                        
                         <!-- Section : Base de données (Menu déroulant) -->
                         <div class="relative group">
                             <button class="px-4 py-2 rounded-none text-sm font-medium {% if 'import_restaurants' in request.resolver_match.url_name or 'restore_backup' in request.resolver_match.url_name or 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors flex items-center gap-1">
@@ -345,6 +354,12 @@
                 <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🍽️ Restaurants</a>
                 <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📸 Photos</a>
                 <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
+                
+                <!-- Séparateur -->
+                <div class="border-t border-[#C9C1B1] my-2"></div>
+                
+                <!-- Section : Recherche -->
+                <a href="{% url 'scripts_manager:search_restaurants' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🔍 Recherche</a>
                 
                 <!-- Séparateur -->
                 <div class="border-t border-[#C9C1B1] my-2"></div>
