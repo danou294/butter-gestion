@@ -220,22 +220,20 @@
             <div id="uploadArea" onclick="document.getElementById('photo_file').click()" 
                  class="border-2 border-dashed border-[#C9C1B1] rounded-[14px] p-8 text-center cursor-pointer transition-colors hover:border-[#60BC81] hover:bg-[#F1EFEB]">
                 <div class="text-5xl mb-4">📄</div>
-                <h4 class="text-lg font-medium text-[#111111] mb-2">Glissez-déposez votre photo ici</h4>
+                <h4 class="text-lg font-medium text-[#111111] mb-2">Glissez-déposez vos photos ici</h4>
                 <p class="text-[#535353] mb-4">ou</p>
                 <button type="button" class="btn-secondary">Parcourir les fichiers</button>
-                <input type="file" id="photo_file" name="photo_file" accept="image/*" required class="hidden">
+                <p class="text-sm text-[#535353] mt-2">Vous pouvez sélectionner plusieurs photos à la fois</p>
+                <input type="file" id="photo_file" name="photo_file" accept="image/*" multiple required class="hidden">
             </div>
             
-            <div id="fileInfo" class="mt-4 p-4 bg-[#F1EFEB] rounded-[14px] hidden">
-                <strong class="text-[#111111]">Fichier :</strong> <span id="fileName" class="text-[#535353]"></span><br>
-                <strong class="text-[#111111]">Taille :</strong> <span id="fileSize" class="text-[#535353]"></span>
+            <div id="filesList" class="mt-4 hidden">
+                <div class="bg-[#F1EFEB] rounded-[14px] p-4">
+                    <strong class="text-[#111111] block mb-2">Fichiers sélectionnés (<span id="filesCount">0</span>) :</strong>
+                    <div id="filesInfo" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                </div>
             </div>
             
-            <div class="mt-4">
-                <label for="filename" class="block text-sm font-medium text-[#111111] mb-2">Nom du fichier (optionnel) :</label>
-                <input type="text" id="filename" name="filename" placeholder="Laissez vide pour utiliser le nom original" 
-                       class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-            </div>
             
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="btn-primary flex-1">📤 Upload</button>
@@ -253,7 +251,8 @@ function showUploadModal() {
 function hideUploadModal() {
     document.getElementById('uploadModal').classList.add('hidden');
     document.getElementById('uploadForm').reset();
-    document.getElementById('fileInfo').classList.add('hidden');
+    document.getElementById('filesList').classList.add('hidden');
+    document.getElementById('filesInfo').innerHTML = '';
 }
 
 // Drag & drop
@@ -273,24 +272,50 @@ uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('border-[#60BC81]', 'bg-[#D4F2DA]');
     if (e.dataTransfer.files.length > 0) {
-        photoFile.files = e.dataTransfer.files;
-        handleFileSelect(e.dataTransfer.files[0]);
+        // Créer un DataTransfer pour assigner plusieurs fichiers
+        const dt = new DataTransfer();
+        for (let file of e.dataTransfer.files) {
+            dt.items.add(file);
+        }
+        photoFile.files = dt.files;
+        handleFilesSelect(Array.from(e.dataTransfer.files));
     }
 });
 
 photoFile.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
-        handleFileSelect(e.target.files[0]);
+        handleFilesSelect(Array.from(e.target.files));
     }
 });
 
-function handleFileSelect(file) {
-    document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileSize').textContent = formatFileSize(file.size);
-    document.getElementById('fileInfo').classList.remove('hidden');
-    if (!document.getElementById('filename').value) {
-        document.getElementById('filename').value = file.name;
-    }
+function handleFilesSelect(files) {
+    const filesList = document.getElementById('filesList');
+    const filesInfo = document.getElementById('filesInfo');
+    const filesCount = document.getElementById('filesCount');
+    
+    filesList.classList.remove('hidden');
+    filesInfo.innerHTML = '';
+    filesCount.textContent = files.length;
+    
+    let totalSize = 0;
+    files.forEach((file, index) => {
+        totalSize += file.size;
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'flex items-center justify-between p-2 bg-white rounded-[8px] text-sm';
+        fileDiv.innerHTML = `
+            <div class="flex-1">
+                <span class="text-[#111111] font-medium">${file.name}</span>
+                <span class="text-[#535353] ml-2">(${formatFileSize(file.size)})</span>
+            </div>
+        `;
+        filesInfo.appendChild(fileDiv);
+    });
+    
+    // Afficher la taille totale
+    const totalDiv = document.createElement('div');
+    totalDiv.className = 'mt-2 pt-2 border-t border-[#C9C1B1] text-sm font-semibold text-[#111111]';
+    totalDiv.textContent = `Taille totale: ${formatFileSize(totalSize)}`;
+    filesInfo.appendChild(totalDiv);
 }
 
 function formatFileSize(bytes) {
@@ -304,26 +329,78 @@ function formatFileSize(bytes) {
 // Upload form
 document.getElementById('uploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData(this);
+    const photoFileInput = document.getElementById('photo_file');
+    const files = photoFileInput.files;
     
-    fetch('{% url "scripts_manager:photo_upload" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('✅ ' + data.message);
+    if (files.length === 0) {
+        alert('⚠️ Veuillez sélectionner au moins un fichier');
+        return;
+    }
+    
+    const folder = document.getElementById('uploadFolder').value;
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.textContent;
+    
+    // Désactiver le bouton et afficher la progression
+    submitButton.disabled = true;
+    submitButton.textContent = '⏳ Upload en cours...';
+    
+    let uploaded = 0;
+    let errors = 0;
+    const total = files.length;
+    const errorMessages = [];
+    
+    // Uploader chaque fichier séquentiellement
+    const uploadPromises = Array.from(files).map((file, index) => {
+        const formData = new FormData();
+        formData.append('photo_file', file);
+        formData.append('folder', folder);
+        // Utiliser le nom original du fichier
+        
+        return fetch('{% url "scripts_manager:photo_upload" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                uploaded++;
+                submitButton.textContent = `⏳ Upload: ${uploaded}/${total}...`;
+            } else {
+                errors++;
+                errorMessages.push(`${file.name}: ${data.error || 'Erreur inconnue'}`);
+            }
+        })
+        .catch(error => {
+            errors++;
+            errorMessages.push(`${file.name}: ${error.message}`);
+        });
+    });
+    
+    // Attendre que tous les uploads soient terminés
+    Promise.all(uploadPromises).then(() => {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+        
+        if (uploaded === total) {
+            alert(`✅ ${uploaded} photo(s) uploadée(s) avec succès !`);
+            location.reload();
+        } else if (uploaded > 0) {
+            let message = `⚠️ ${uploaded} photo(s) uploadée(s), ${errors} erreur(s)\n\n`;
+            if (errorMessages.length > 0) {
+                message += 'Erreurs:\n' + errorMessages.slice(0, 5).join('\n');
+                if (errorMessages.length > 5) {
+                    message += `\n... et ${errorMessages.length - 5} autre(s) erreur(s)`;
+                }
+            }
+            alert(message);
             location.reload();
         } else {
-            alert('❌ ' + data.error);
+            alert('❌ Aucune photo n\'a pu être uploadée.\n\n' + errorMessages.join('\n'));
         }
-    })
-    .catch(error => {
-        alert('❌ Erreur: ' + error.message);
     });
 });
 

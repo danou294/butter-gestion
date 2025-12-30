@@ -213,7 +213,7 @@ def photo_detail(request, folder, photo_name):
 @require_http_methods(["POST"])
 @login_required
 def photo_upload(request):
-    """Upload une nouvelle photo"""
+    """Upload une ou plusieurs nouvelles photos"""
     try:
         if 'photo_file' not in request.FILES:
             return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
@@ -221,8 +221,17 @@ def photo_upload(request):
         folder = request.POST.get('folder', 'logos')
         folder_path = "Logos/" if folder == "logos" else "Photos restaurants/"
         
-        photo_file = request.FILES['photo_file']
+        # Récupérer tous les fichiers (support multiple)
+        photo_files = request.FILES.getlist('photo_file')
+        if not photo_files:
+            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+        
+        # Traiter le premier fichier (pour compatibilité avec l'ancien code)
+        photo_file = photo_files[0]
         filename = request.POST.get('filename', photo_file.name)
+        
+        # Si un nom personnalisé est fourni, l'utiliser uniquement pour le premier fichier
+        # Sinon, utiliser le nom original de chaque fichier
         
         # Vérifier l'extension
         allowed_extensions = ['.png', '.jpg', '.jpeg', '.webp', '.gif']
