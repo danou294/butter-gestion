@@ -780,6 +780,52 @@ def dev_import_function(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def analyze_excel_sheets(request):
+    """Analyse un fichier Excel et retourne la liste des feuilles disponibles"""
+    try:
+        if 'excel_file' not in request.FILES:
+            return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+        
+        excel_file = request.FILES['excel_file']
+        
+        # Vérifier l'extension
+        if not excel_file.name.endswith(('.xlsx', '.xls')):
+            return JsonResponse({'error': 'Le fichier doit être un fichier Excel (.xlsx ou .xls)'}, status=400)
+        
+        # Sauvegarder le fichier temporairement
+        file_path = INPUT_DIR / excel_file.name
+        with open(file_path, 'wb+') as destination:
+            for chunk in excel_file.chunks():
+                destination.write(chunk)
+        
+        try:
+            import pandas as pd
+            xls = pd.ExcelFile(file_path)
+            sheets = xls.sheet_names
+            
+            # Supprimer le fichier temporaire
+            if file_path.exists():
+                file_path.unlink()
+            
+            return JsonResponse({
+                'success': True,
+                'sheets': sheets,
+                'default_sheet': sheets[0] if sheets else 'Feuil1'
+            })
+        except Exception as e:
+            # Supprimer le fichier temporaire en cas d'erreur
+            if file_path.exists():
+                file_path.unlink()
+            logger.error(f"Erreur lors de l'analyse des feuilles: {e}")
+            return JsonResponse({'error': f'Erreur lors de l\'analyse: {str(e)}'}, status=500)
+            
+    except Exception as e:
+        logger.error(f"Erreur analyze_excel_sheets: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
 @require_http_methods(["GET"])
 def get_import_logs(request):
     """Récupère les logs d'import en temps réel"""
