@@ -1,4 +1,5 @@
 {% extends 'scripts_manager/base.html' %}
+{% load static %}
 
 {% block title %}Import Batch Restaurants - Butter{% endblock %}
 
@@ -119,6 +120,13 @@
 <div class="card import-container">
     <h2>📥 Import Batch de Restaurants</h2>
     
+    {% if firebase_env == 'dev' %}
+    <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107; margin-bottom: 20px;">
+        <strong>🔧 Mode DEV actif</strong>
+        <p style="margin: 10px 0 0 0;">Vous êtes en mode développement. Des fonctions supplémentaires sont disponibles ci-dessous.</p>
+    </div>
+    {% endif %}
+    
     <div class="info-box">
         <strong>ℹ️ Instructions :</strong>
         <ul>
@@ -127,8 +135,34 @@
             <li>Un backup automatique sera créé avant l'import</li>
             <li>La collection actuelle sera <strong>remplacée</strong> par les nouvelles données</li>
             <li>Le processus peut prendre plusieurs minutes selon le nombre de restaurants</li>
+            <li><strong>Environnement actif :</strong> {{ firebase_env_label }}</li>
         </ul>
     </div>
+    
+    {% if firebase_env == 'dev' %}
+    <!-- Fonctions supplémentaires DEV uniquement -->
+    <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-left: 4px solid #667eea; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #667eea;">🔧 Fonctions DEV</h3>
+        <p style="color: #535353; margin-bottom: 15px;">Ces fonctions sont disponibles uniquement en mode développement :</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+            <button type="button" class="btn" onclick="devFunction1()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                🔍 Analyser le fichier Excel
+            </button>
+            <button type="button" class="btn" onclick="devFunction2()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                📊 Prévisualiser les données
+            </button>
+            <button type="button" class="btn" onclick="devFunction3()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                🧪 Test d'import partiel
+            </button>
+            <button type="button" class="btn" onclick="devFunction4()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                🔄 Valider les données
+            </button>
+        </div>
+        
+        <div id="devResult" style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none;"></div>
+    </div>
+    {% endif %}
     
     <form id="importForm" enctype="multipart/form-data">
         {% csrf_token %}
@@ -165,10 +199,30 @@
         </div>
         
         <div class="progress-container" id="progressContainer">
+            <!-- Laura.gif avec "let me cook" pendant l'import -->
+            <div id="lauraGifContainer" style="margin-bottom: 20px; text-align: center; display: none;">
+                <h3 style="margin-bottom: 10px; color: #111111; font-size: 24px; font-weight: bold;">let me cook</h3>
+                <img id="lauraGif" src="{% static 'loading_gifs/Laura.gif' %}" alt="Laura cooking" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            </div>
+            
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill">0%</div>
             </div>
             <p id="progressText" style="text-align: center; margin-top: 10px;">Préparation de l'import...</p>
+            
+            <!-- Terminal pour afficher les logs en temps réel -->
+            <div id="terminalContainer" style="margin-top: 20px; display: none;">
+                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                    <div id="terminalContent" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">
+                        <span style="color: #4ec9b0;">🚀 Démarrage de l'import...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- omg.gif à la fin -->
+            <div id="omgGifContainer" style="margin-top: 20px; text-align: center; display: none;">
+                <img id="omgGif" src="{% static 'loading_gifs/omg.gif' %}" alt="OMG!" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            </div>
         </div>
         
         <div class="result-container" id="resultContainer"></div>
@@ -308,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
     
-    importForm.addEventListener('submit', function(e) {
+    importForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         if (!fileInput.files.length) {
@@ -316,8 +370,40 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Confirmation
-        if (!confirm('⚠️ ATTENTION : Cette opération va remplacer TOUS les restaurants actuels.\n\nUn backup sera créé automatiquement.\n\nVoulez-vous continuer ?')) {
+        // Confirmation avec lapin.gif
+        const confirmModal = document.createElement('div');
+        confirmModal.id = 'confirmModal';
+        confirmModal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+        confirmModal.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <img src="{% static 'loading_gifs/lapin.gif' %}" alt="Lapin" style="max-width: 300px; max-height: 250px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #111111;">⚠️ ATTENTION</h3>
+                <p style="margin-bottom: 20px; color: #535353; line-height: 1.6;">
+                    Cette opération va remplacer TOUS les restaurants actuels.<br><br>
+                    Un backup sera créé automatiquement.<br><br>
+                    Voulez-vous continuer ?
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="confirmYes" style="padding: 12px 30px; background: #60BC81; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Oui, continuer</button>
+                    <button id="confirmNo" style="padding: 12px 30px; background: #D3695E; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Annuler</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(confirmModal);
+        
+        // Attendre la confirmation
+        const confirmed = await new Promise((resolve) => {
+            document.getElementById('confirmYes').onclick = () => {
+                document.body.removeChild(confirmModal);
+                resolve(true);
+            };
+            document.getElementById('confirmNo').onclick = () => {
+                document.body.removeChild(confirmModal);
+                resolve(false);
+            };
+        });
+        
+        if (!confirmed) {
             return;
         }
         
@@ -332,24 +418,74 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         resultContainer.style.display = 'none';
         
-        // Simuler la progression
+        // Afficher Laura.gif avec "let me cook"
+        document.getElementById('lauraGifContainer').style.display = 'block';
+        
+        // Afficher le terminal
+        document.getElementById('terminalContainer').style.display = 'block';
+        const terminalContent = document.getElementById('terminalContent');
+        terminalContent.innerHTML = '<span style="color: #4ec9b0;">🚀 Démarrage de l\'import...</span>\n';
+        
+        // Masquer omg.gif si visible
+        document.getElementById('omgGifContainer').style.display = 'none';
+        
+        // Variable pour stocker le chemin du log (sera récupéré après l'upload)
+        let logFilePath = null;
+        
+        // Simuler la progression (sera remplacée par les vrais logs)
         let progress = 10;
         const progressInterval = setInterval(() => {
-            progress += Math.random() * 5;
-            if (progress > 90) progress = 90;
+            progress += Math.random() * 3;
+            if (progress > 95) progress = 95; // Ne pas aller à 100% avant la fin
             progressFill.style.width = progress + '%';
             progressFill.textContent = Math.round(progress) + '%';
+        }, 1000);
+        
+        // Fonction pour récupérer et afficher les logs
+        let logPollingInterval = null;
+        function startLogPolling(logFile) {
+            if (logPollingInterval) clearInterval(logPollingInterval);
             
-            if (progress < 30) {
-                progressText.textContent = 'Upload du fichier...';
-            } else if (progress < 50) {
-                progressText.textContent = 'Vérification du format...';
-            } else if (progress < 70) {
-                progressText.textContent = 'Création du backup...';
-            } else if (progress < 90) {
-                progressText.textContent = 'Conversion Excel → Firebase...';
-            }
-        }, 500);
+            logPollingInterval = setInterval(() => {
+                fetch(`{% url "scripts_manager:get_import_logs" %}?log_file=${encodeURIComponent(logFile)}`)
+                    .then(response => response.json())
+                    .then(logData => {
+                        if (logData.success && logData.logs) {
+                            const terminalContent = document.getElementById('terminalContent');
+                            // Formater les logs avec des couleurs
+                            let formattedLogs = '';
+                            logData.logs.split('\n').forEach(line => {
+                                if (line.trim()) {
+                                    let color = '#d4d4d4';
+                                    if (line.includes('✅')) color = '#4ec9b0';
+                                    else if (line.includes('❌') || line.includes('Erreur')) color = '#f48771';
+                                    else if (line.includes('⚠️')) color = '#dcdcaa';
+                                    else if (line.includes('📊') || line.includes('📥')) color = '#569cd6';
+                                    else if (line.includes('🗄️') || line.includes('🔄')) color = '#c586c0';
+                                    
+                                    formattedLogs += `<span style="color: ${color};">${escapeHtml(line)}</span>\n`;
+                                }
+                            });
+                            terminalContent.innerHTML = formattedLogs;
+                            // Scroll vers le bas
+                            const terminalDiv = terminalContent.parentElement;
+                            terminalDiv.scrollTop = terminalDiv.scrollHeight;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la récupération des logs:', error);
+                    });
+            }, 1000); // Poll toutes les secondes
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Démarrer le polling des logs dès que le log_file est disponible
+        // On va le démarrer après avoir reçu la réponse de l'upload
         
         fetch('{% url "scripts_manager:run_import_restaurants" %}', {
             method: 'POST',
@@ -360,13 +496,107 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            clearInterval(progressInterval);
-            progressFill.style.width = '100%';
-            progressFill.textContent = '100%';
-            
-            if (data.success) {
+            // Si l'import est en cours (status: running), démarrer le polling
+            if (data.status === 'running' && data.log_file) {
+                startLogPolling(data.log_file);
+                
+                // Vérifier périodiquement si l'import est terminé
+                const checkCompletion = setInterval(() => {
+                    fetch(`{% url "scripts_manager:get_import_logs" %}?log_file=${encodeURIComponent(data.log_file)}`)
+                        .then(response => response.json())
+                        .then(logData => {
+                            if (logData.success && logData.logs) {
+                                const terminalContent = document.getElementById('terminalContent');
+                                let formattedLogs = '';
+                                logData.logs.split('\n').forEach(line => {
+                                    if (line.trim()) {
+                                        let color = '#d4d4d4';
+                                        if (line.includes('✅')) color = '#4ec9b0';
+                                        else if (line.includes('❌') || line.includes('Erreur')) color = '#f48771';
+                                        else if (line.includes('⚠️')) color = '#dcdcaa';
+                                        else if (line.includes('📊') || line.includes('📥')) color = '#569cd6';
+                                        else if (line.includes('🗄️') || line.includes('🔄')) color = '#c586c0';
+                                        
+                                        formattedLogs += `<span style="color: ${color};">${escapeHtml(line)}</span>\n`;
+                                    }
+                                });
+                                terminalContent.innerHTML = formattedLogs;
+                                const terminalDiv = terminalContent.parentElement;
+                                terminalDiv.scrollTop = terminalDiv.scrollHeight;
+                                
+                                // Vérifier si l'import est terminé
+                                if (logData.logs.includes('Fin de workflow') || logData.logs.includes('🎉')) {
+                                    clearInterval(checkCompletion);
+                                    if (logPollingInterval) clearInterval(logPollingInterval);
+                                    
+                                    clearInterval(progressInterval);
+                                    progressFill.style.width = '100%';
+                                    progressFill.textContent = '100%';
+                                    
+                                    // Masquer Laura.gif et afficher omg.gif
+                                    document.getElementById('lauraGifContainer').style.display = 'none';
+                                    document.getElementById('omgGifContainer').style.display = 'block';
+                                    
+                                    // Récupérer les résultats finaux depuis le log (parser les dernières lignes)
+                                    // Pour l'instant, on affiche juste un message de succès
+                                    progressText.textContent = 'Import terminé avec succès !';
+                                    resultContainer.className = 'result-container success';
+                                    resultContainer.innerHTML = `
+                                        <h3>✅ Import terminé !</h3>
+                                        <p>Consultez les logs ci-dessus pour les détails.</p>
+                                        <p><strong>Log :</strong> ${data.log_file}</p>
+                                    `;
+                                    resultContainer.style.display = 'block';
+                                    
+                                    // Réinitialiser le formulaire après 5 secondes
+                                    setTimeout(() => {
+                                        importForm.reset();
+                                        fileInfo.classList.remove('active');
+                                        progressContainer.classList.remove('active');
+                                        submitBtn.disabled = false;
+                                        document.getElementById('omgGifContainer').style.display = 'none';
+                                    }, 5000);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la vérification des logs:', error);
+                        });
+                }, 2000); // Vérifier toutes les 2 secondes
+            } else if (data.success) {
+                // Import terminé immédiatement (cas peu probable)
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+                
+                document.getElementById('lauraGifContainer').style.display = 'none';
+                document.getElementById('omgGifContainer').style.display = 'block';
+                
                 progressText.textContent = 'Import terminé avec succès !';
                 resultContainer.className = 'result-container success';
+                
+                let favoriteStatsHtml = '';
+                if (data.favorite_count_stats) {
+                    const favStats = data.favorite_count_stats;
+                    if (favStats.updated !== undefined) {
+                        favoriteStatsHtml = `
+                            <div style="margin-top: 15px; padding: 15px; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <h4 style="margin-top: 0; color: #667eea;">❤️ Compteurs de favoris mis à jour</h4>
+                                <p><strong>${favStats.updated || 0}</strong> restaurants mis à jour</p>
+                                <p><strong>${favStats.zero_initialized || 0}</strong> restaurants initialisés à 0</p>
+                                <p><strong>${favStats.active_favorites || 0}</strong> favoris actifs au total</p>
+                                ${favStats.errors > 0 ? `<p style="color: #dc3545;">⚠️ ${favStats.errors} erreurs</p>` : ''}
+                            </div>
+                        `;
+                    } else if (favStats.error) {
+                        favoriteStatsHtml = `
+                            <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                <p style="color: #856404;">⚠️ Erreur lors de la mise à jour des compteurs de favoris: ${favStats.error}</p>
+                            </div>
+                        `;
+                    }
+                }
+                
                 resultContainer.innerHTML = `
                     <h3>✅ Import réussi !</h3>
                     <p><strong>${data.imported}</strong> restaurants importés</p>
@@ -374,10 +604,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     ${data.missing_tag_rows > 0 ? `<p>⚠️ ${data.missing_tag_rows} lignes sans tag (Ref)</p>` : ''}
                     <p><strong>Backup :</strong> ${data.backup_dir}</p>
                     <p><strong>Log :</strong> ${data.log_file}</p>
+                    ${favoriteStatsHtml}
                 `;
                 resultContainer.style.display = 'block';
                 
-                // Réinitialiser le formulaire après 3 secondes
                 setTimeout(() => {
                     importForm.reset();
                     fileInfo.classList.remove('active');
@@ -385,7 +615,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.disabled = false;
                 }, 5000);
             } else {
+                clearInterval(progressInterval);
                 progressText.textContent = 'Erreur lors de l\'import';
+                document.getElementById('lauraGifContainer').style.display = 'none';
+                if (logPollingInterval) clearInterval(logPollingInterval);
                 resultContainer.className = 'result-container error';
                 resultContainer.innerHTML = `
                     <h3>❌ Erreur</h3>
@@ -398,6 +631,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             clearInterval(progressInterval);
+            if (logPollingInterval) clearInterval(logPollingInterval);
+            // Masquer Laura.gif
+            document.getElementById('lauraGifContainer').style.display = 'none';
             progressText.textContent = 'Erreur lors de l\'import';
             resultContainer.className = 'result-container error';
             resultContainer.innerHTML = `
@@ -560,6 +796,202 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Charger les backups au chargement de la page
     loadBackups();
+    
+    {% if firebase_env == 'dev' %}
+    // Fonctions DEV uniquement
+    function devFunction1() {
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            return;
+        }
+        
+        const devResult = document.getElementById('devResult');
+        devResult.style.display = 'block';
+        devResult.innerHTML = '<p>⏳ Analyse du fichier en cours...</p>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', fileInput.files[0]);
+        formData.append('action', 'analyze');
+        
+        fetch('{% url "scripts_manager:dev_import_function" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                devResult.innerHTML = `
+                    <h4>✅ Analyse terminée</h4>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data.result, null, 2)}</pre>
+                `;
+            } else {
+                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+            }
+        })
+        .catch(error => {
+            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+        });
+    }
+    
+    function devFunction2() {
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            return;
+        }
+        
+        const devResult = document.getElementById('devResult');
+        devResult.style.display = 'block';
+        devResult.innerHTML = '<p>⏳ Prévisualisation en cours...</p>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', fileInput.files[0]);
+        formData.append('action', 'preview');
+        const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
+        formData.append('sheet_name', sheetName);
+        
+        fetch('{% url "scripts_manager:dev_import_function" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let previewHtml = '<h4>📊 Prévisualisation des données (10 premières lignes)</h4>';
+                if (data.preview && data.preview.length > 0) {
+                    previewHtml += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
+                    // En-têtes
+                    previewHtml += '<tr style="background: #f8f9fa;">';
+                    Object.keys(data.preview[0]).forEach(key => {
+                        previewHtml += `<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">${key}</th>`;
+                    });
+                    previewHtml += '</tr>';
+                    // Données
+                    data.preview.slice(0, 10).forEach(row => {
+                        previewHtml += '<tr>';
+                        Object.values(row).forEach(val => {
+                            previewHtml += `<td style="padding: 8px; border: 1px solid #dee2e6;">${val || ''}</td>`;
+                        });
+                        previewHtml += '</tr>';
+                    });
+                    previewHtml += '</table>';
+                    previewHtml += `<p style="margin-top: 10px; color: #6c757d;">Total: ${data.total || 0} lignes</p>`;
+                } else {
+                    previewHtml += '<p>Aucune donnée trouvée</p>';
+                }
+                devResult.innerHTML = previewHtml;
+            } else {
+                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+            }
+        })
+        .catch(error => {
+            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+        });
+    }
+    
+    function devFunction3() {
+        if (!confirm('🧪 Cette fonction va importer uniquement les 5 premiers restaurants pour tester. Continuer ?')) {
+            return;
+        }
+        
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            return;
+        }
+        
+        const devResult = document.getElementById('devResult');
+        devResult.style.display = 'block';
+        devResult.innerHTML = '<p>⏳ Test d\'import partiel en cours...</p>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', fileInput.files[0]);
+        formData.append('action', 'test_import');
+        const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
+        formData.append('sheet_name', sheetName);
+        formData.append('limit', '5');
+        
+        fetch('{% url "scripts_manager:dev_import_function" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                devResult.innerHTML = `
+                    <h4>✅ Test d'import terminé</h4>
+                    <p>${data.imported || 0} restaurant(s) importé(s) pour le test</p>
+                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data.result, null, 2)}</pre>
+                `;
+            } else {
+                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+            }
+        })
+        .catch(error => {
+            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+        });
+    }
+    
+    function devFunction4() {
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            return;
+        }
+        
+        const devResult = document.getElementById('devResult');
+        devResult.style.display = 'block';
+        devResult.innerHTML = '<p>⏳ Validation des données en cours...</p>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', fileInput.files[0]);
+        formData.append('action', 'validate');
+        const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
+        formData.append('sheet_name', sheetName);
+        
+        fetch('{% url "scripts_manager:dev_import_function" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let validationHtml = '<h4>✅ Validation terminée</h4>';
+                if (data.validation) {
+                    validationHtml += `<p><strong>Total lignes:</strong> ${data.validation.total || 0}</p>`;
+                    validationHtml += `<p><strong>Lignes valides:</strong> ${data.validation.valid || 0}</p>`;
+                    validationHtml += `<p><strong>Erreurs:</strong> ${data.validation.errors || 0}</p>`;
+                    if (data.validation.error_details && data.validation.error_details.length > 0) {
+                        validationHtml += '<h5>Détails des erreurs:</h5><ul>';
+                        data.validation.error_details.slice(0, 10).forEach(err => {
+                            validationHtml += `<li>${err}</li>`;
+                        });
+                        validationHtml += '</ul>';
+                    }
+                }
+                devResult.innerHTML = validationHtml;
+            } else {
+                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+            }
+        })
+        .catch(error => {
+            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+        });
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}

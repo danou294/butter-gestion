@@ -456,7 +456,28 @@ def download_file(request, file_path):
 @login_required
 def import_restaurants_index(request):
     """Page d'index pour l'import batch de restaurants"""
-    return render(request, 'scripts_manager/import_restaurants.html')
+    # Récupérer l'environnement actif pour le passer au template
+    from .context_processors import firebase_env
+    env_context = firebase_env(request)
+    
+    # Récupérer la liste des GIFs/memes disponibles
+    import os
+    import json
+    from pathlib import Path
+    loading_gifs_dir = Path(__file__).resolve().parent / 'static' / 'loading_gifs'
+    loading_gifs = []
+    
+    if loading_gifs_dir.exists():
+        allowed_extensions = ['.gif', '.png', '.jpg', '.jpeg']
+        for file in loading_gifs_dir.iterdir():
+            if file.is_file() and file.suffix.lower() in allowed_extensions:
+                loading_gifs.append(file.name)
+    
+    return render(request, 'scripts_manager/import_restaurants.html', {
+        'firebase_env': env_context['firebase_env'],
+        'firebase_env_label': env_context['firebase_env_label'],
+        'loading_gifs': json.dumps(loading_gifs),  # Convertir en JSON pour JavaScript
+    })
 
 
 @login_required
@@ -470,6 +491,13 @@ def restore_backup_index(request):
 def run_import_restaurants(request):
     """Traite l'upload d'un fichier Excel et lance l'import"""
     try:
+        # Vérifier l'environnement - bloquer l'import en PROD si nécessaire
+        from .firebase_utils import get_firebase_env_from_session
+        current_env = get_firebase_env_from_session(request)
+        
+        # En PROD, on peut bloquer ou autoriser selon les besoins
+        # Pour l'instant, on autorise les deux mais on peut ajouter une vérification
+        
         if 'excel_file' not in request.FILES:
             return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
         
@@ -486,26 +514,56 @@ def run_import_restaurants(request):
             for chunk in excel_file.chunks():
                 destination.write(chunk)
         
-        logger.info(f"📥 Fichier Excel uploadé: {file_path}")
+        logger.info(f"📥 Fichier Excel uploadé: {file_path} (env: {current_env})")
         
-        # Importer le module d'import
-        from import_restaurants import import_restaurants_from_excel
+        # Créer le chemin du log avant l'import pour pouvoir le retourner immédiatement
+        from datetime import datetime
+        from config import BACKUP_DIR, FIRESTORE_COLLECTION
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
         
-        # Lancer l'import
-        result = import_restaurants_from_excel(str(file_path), sheet_name, request=request)
+        ts_dir = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        # Convertir BACKUP_DIR en Path si c'est une chaîne
+        backup_base = Path(BACKUP_DIR) if isinstance(BACKUP_DIR, str) else BACKUP_DIR
+        backup_dir = backup_base / f"{FIRESTORE_COLLECTION}_{ts_dir}"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        log_file = backup_dir / "import_run.log"
         
-        # Supprimer le fichier temporaire après import
-        if file_path.exists():
-            file_path.unlink()
+        # Créer le fichier de log vide pour qu'il soit disponible immédiatement
+        log_file.write_text("🚀 Démarrage import end-to-end\n", encoding='utf-8')
+        
+        # Lancer l'import en arrière-plan pour permettre le polling des logs
+        import threading
+        import_result = {'done': False, 'result': None, 'error': None}
+        
+        def run_import():
+            try:
+                from import_restaurants import import_restaurants_from_excel
+                result = import_restaurants_from_excel(str(file_path), sheet_name, request=request, log_file_path=str(log_file))
+                import_result['result'] = result
+                import_result['done'] = True
+            except Exception as e:
+                import traceback
+                import_result['error'] = str(e)
+                import_result['traceback'] = traceback.format_exc()
+                import_result['done'] = True
+            finally:
+                # Supprimer le fichier temporaire après import
+                if file_path.exists():
+                    file_path.unlink()
+        
+        thread = threading.Thread(target=run_import)
+        thread.daemon = True
+        thread.start()
+        
+        # Retourner immédiatement le chemin du log pour permettre le polling
+        log_file_relative = str(log_file.relative_to(BASE_DIR)) if str(log_file).startswith(str(BASE_DIR)) else str(log_file)
         
         return JsonResponse({
             'success': True,
-            'message': f'Import réussi : {result["imported"]} restaurants importés',
-            'imported': result['imported'],
-            'backup_dir': result['backup_dir'],
-            'log_file': result['log_file'],
-            'duplicates': result['duplicates'],
-            'missing_tag_rows': result['missing_tag_rows']
+            'message': 'Import démarré',
+            'log_file': log_file_relative,
+            'status': 'running'
         })
         
     except FileNotFoundError as e:
@@ -521,6 +579,246 @@ def run_import_restaurants(request):
             'error': f'Erreur lors de l\'import: {str(e)}',
             'traceback': traceback.format_exc()
         }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def dev_import_function(request):
+    """Fonctions supplémentaires pour l'import en mode DEV uniquement"""
+    try:
+        # Vérifier que nous sommes en DEV
+        from .firebase_utils import get_firebase_env_from_session
+        current_env = get_firebase_env_from_session(request)
+        
+        if current_env != 'dev':
+            return JsonResponse({
+                'error': 'Cette fonction est disponible uniquement en mode DEV'
+            }, status=403)
+        
+        action = request.POST.get('action')
+        
+        if action == 'analyze':
+            # Analyser le fichier Excel
+            if 'excel_file' not in request.FILES:
+                return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+            
+            excel_file = request.FILES['excel_file']
+            file_path = INPUT_DIR / excel_file.name
+            with open(file_path, 'wb+') as destination:
+                for chunk in excel_file.chunks():
+                    destination.write(chunk)
+            
+            try:
+                import pandas as pd
+                xls = pd.ExcelFile(file_path)
+                
+                result = {
+                    'sheets': xls.sheet_names,
+                    'file_size': file_path.stat().st_size,
+                    'file_name': excel_file.name
+                }
+                
+                # Analyser la première feuille
+                if xls.sheet_names:
+                    df = pd.read_excel(file_path, sheet_name=xls.sheet_names[0], nrows=0)
+                    result['columns'] = df.columns.tolist()
+                    result['column_count'] = len(df.columns)
+                
+                if file_path.exists():
+                    file_path.unlink()
+                
+                return JsonResponse({'success': True, 'result': result})
+            except Exception as e:
+                if file_path.exists():
+                    file_path.unlink()
+                return JsonResponse({'error': f'Erreur lors de l\'analyse: {str(e)}'}, status=500)
+        
+        elif action == 'preview':
+            # Prévisualiser les données
+            if 'excel_file' not in request.FILES:
+                return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+            
+            excel_file = request.FILES['excel_file']
+            sheet_name = request.POST.get('sheet_name', 'Feuil1')
+            file_path = INPUT_DIR / excel_file.name
+            with open(file_path, 'wb+') as destination:
+                for chunk in excel_file.chunks():
+                    destination.write(chunk)
+            
+            try:
+                import pandas as pd
+                df = pd.read_excel(file_path, sheet_name=sheet_name, nrows=10)
+                
+                preview = df.to_dict('records')
+                total = len(pd.read_excel(file_path, sheet_name=sheet_name))
+                
+                if file_path.exists():
+                    file_path.unlink()
+                
+                return JsonResponse({
+                    'success': True,
+                    'preview': preview,
+                    'total': total
+                })
+            except Exception as e:
+                if file_path.exists():
+                    file_path.unlink()
+                return JsonResponse({'error': f'Erreur lors de la prévisualisation: {str(e)}'}, status=500)
+        
+        elif action == 'test_import':
+            # Test d'import partiel (limité)
+            limit = int(request.POST.get('limit', 5))
+            if 'excel_file' not in request.FILES:
+                return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+            
+            excel_file = request.FILES['excel_file']
+            sheet_name = request.POST.get('sheet_name', 'Feuil1')
+            file_path = INPUT_DIR / excel_file.name
+            with open(file_path, 'wb+') as destination:
+                for chunk in excel_file.chunks():
+                    destination.write(chunk)
+            
+            try:
+                from import_restaurants import convert_excel, import_records, init_firestore
+                import os
+                from datetime import datetime
+                
+                db = init_firestore("", request)
+                backup_dir = os.path.join(EXPORTS_DIR, "test_import_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+                os.makedirs(backup_dir, exist_ok=True)
+                log_file = os.path.join(backup_dir, "test_import.log")
+                
+                out_json = os.path.join(backup_dir, "test_restaurants.json")
+                out_ndjson = os.path.join(backup_dir, "test_restaurants.ndjson")
+                out_csv = os.path.join(backup_dir, "test_restaurants.csv")
+                
+                records, conv_report = convert_excel(str(file_path), sheet_name, out_json, out_ndjson, out_csv, log_file)
+                
+                # Limiter à N enregistrements
+                test_records = records[:limit]
+                imported = import_records(db, "restaurants", test_records, 400, log_file)
+                
+                if file_path.exists():
+                    file_path.unlink()
+                
+                return JsonResponse({
+                    'success': True,
+                    'imported': imported,
+                    'result': {
+                        'total_converted': len(records),
+                        'test_imported': imported,
+                        'backup_dir': backup_dir
+                    }
+                })
+            except Exception as e:
+                if file_path.exists():
+                    file_path.unlink()
+                logger.error(f"❌ Erreur test import: {e}")
+                return JsonResponse({'error': f'Erreur lors du test: {str(e)}'}, status=500)
+        
+        elif action == 'validate':
+            # Valider les données
+            if 'excel_file' not in request.FILES:
+                return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+            
+            excel_file = request.FILES['excel_file']
+            sheet_name = request.POST.get('sheet_name', 'Feuil1')
+            file_path = INPUT_DIR / excel_file.name
+            with open(file_path, 'wb+') as destination:
+                for chunk in excel_file.chunks():
+                    destination.write(chunk)
+            
+            try:
+                import pandas as pd
+                df = pd.read_excel(file_path, sheet_name=sheet_name)
+                
+                total = len(df)
+                valid = 0
+                errors = []
+                
+                # Vérifier les colonnes requises
+                required_columns = ['Ref', 'Nom de base', 'Vrai Nom']
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                
+                if missing_columns:
+                    errors.append(f"Colonnes manquantes: {', '.join(missing_columns)}")
+                
+                # Valider chaque ligne
+                for idx, row in df.iterrows():
+                    if pd.notna(row.get('Ref')) and pd.notna(row.get('Nom de base')):
+                        valid += 1
+                    else:
+                        errors.append(f"Ligne {idx + 2}: Ref ou Nom de base manquant")
+                
+                if file_path.exists():
+                    file_path.unlink()
+                
+                return JsonResponse({
+                    'success': True,
+                    'validation': {
+                        'total': total,
+                        'valid': valid,
+                        'errors': len(errors),
+                        'error_details': errors[:20]  # Limiter à 20 erreurs
+                    }
+                })
+            except Exception as e:
+                if file_path.exists():
+                    file_path.unlink()
+                return JsonResponse({'error': f'Erreur lors de la validation: {str(e)}'}, status=500)
+        
+        else:
+            return JsonResponse({'error': 'Action non reconnue'}, status=400)
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur fonction DEV: {e}")
+        import traceback
+        return JsonResponse({
+            'error': f'Erreur: {str(e)}',
+            'traceback': traceback.format_exc()
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_import_logs(request):
+    """Récupère les logs d'import en temps réel"""
+    try:
+        log_file = request.GET.get('log_file')
+        if not log_file:
+            return JsonResponse({'error': 'Paramètre log_file manquant'}, status=400)
+        
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        
+        # Construire le chemin complet
+        if not log_file.startswith('/'):
+            # Chemin relatif depuis BASE_DIR
+            log_path = BASE_DIR / log_file
+        else:
+            # Chemin absolu
+            log_path = Path(log_file)
+        
+        if not log_path.exists():
+            return JsonResponse({'error': 'Fichier de log non trouvé'}, status=404)
+        
+        # Lire le fichier de log
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                logs = f.read()
+            
+            return JsonResponse({
+                'success': True,
+                'logs': logs,
+                'file': str(log_path)
+            })
+        except Exception as e:
+            logger.error(f"Erreur lors de la lecture du log: {e}")
+            return JsonResponse({'error': f'Erreur lors de la lecture: {str(e)}'}, status=500)
+            
+    except Exception as e:
+        logger.error(f"Erreur get_import_logs: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required

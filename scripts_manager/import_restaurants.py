@@ -78,7 +78,7 @@ def init_firestore(log_file: str, request=None):
     except ImportError:
         # Fallback si firebase_utils n'est pas disponible
         from config import SERVICE_ACCOUNT_PATH_DEV, SERVICE_ACCOUNT_PATH_PROD
-        import os
+        # Ne pas redéclarer 'os' ici, utiliser le module importé au début du fichier
         env = os.getenv('FIREBASE_ENV', 'prod').lower()
         if env == 'dev':
             sa = SERVICE_ACCOUNT_PATH_DEV
@@ -108,35 +108,55 @@ def clean_text(s):
              .replace("—", "-")
              .strip())
 
-def geocode_address(address: str, log_file: str = None, max_retries: int = 3) -> Optional[Tuple[float, float]]:
+def geocode_address(address: str, log_file: str = None, max_retries: int = 3, restaurant_name: str = None) -> Optional[Tuple[float, float]]:
     """Géocode une adresse en utilisant Nominatim (OpenStreetMap) avec système de retry."""
     if not address or not address.strip():
+        if log_file:
+            log(f"⚠️  Géocodage: adresse vide ou None", log_file)
         return None
     
     address_clean = clean_text(address)
     if not address_clean:
+        if log_file:
+            log(f"⚠️  Géocodage: adresse nettoyée vide", log_file)
         return None
     
+    # Ajouter Paris si nécessaire
+    original_address = address_clean
     if "paris" not in address_clean.lower():
         address_clean = f"{address_clean}, Paris, France"
+        if log_file:
+            log(f"🌍 [{restaurant_name or 'Restaurant'}] Adresse enrichie: '{original_address}' → '{address_clean}'", log_file)
     
     encoded_address = urllib.parse.quote(address_clean)
     url = f"https://nominatim.openstreetmap.org/search?q={encoded_address}&format=json&limit=1&addressdetails=1"
+    
+    if log_file:
+        log(f"🌐 [{restaurant_name or 'Restaurant'}] Appel API Nominatim pour: '{address_clean}'", log_file)
     
     for attempt in range(1, max_retries + 1):
         try:
             if attempt > 1:
                 wait_time = min(2 ** (attempt - 1), 10)
                 if log_file:
-                    log(f"🔄 Géocodage: tentative {attempt}/{max_retries} pour '{address_clean[:50]}...'", log_file)
+                    log(f"🔄 [{restaurant_name or 'Restaurant'}] Géocodage: tentative {attempt}/{max_retries} pour '{address_clean[:60]}...' (attente {wait_time}s)", log_file)
                 time.sleep(wait_time)
+            else:
+                if log_file:
+                    log(f"🔄 [{restaurant_name or 'Restaurant'}] Géocodage: tentative {attempt}/{max_retries} pour '{address_clean[:60]}...'", log_file)
             
             req = urllib.request.Request(url)
             req.add_header('User-Agent', 'RestaurantImportScript/1.0')
             req.add_header('Accept', 'application/json')
             
+            if log_file:
+                log(f"📡 [{restaurant_name or 'Restaurant'}] Envoi requête HTTP à Nominatim...", log_file)
+            
             with urllib.request.urlopen(req, timeout=30) as response:
                 response_data = response.read()
+                if log_file:
+                    log(f"📥 [{restaurant_name or 'Restaurant'}] Réponse reçue ({len(response_data)} bytes)", log_file)
+                
                 data = json.loads(response_data.decode())
                 
                 if data and len(data) > 0:
@@ -144,17 +164,36 @@ def geocode_address(address: str, log_file: str = None, max_retries: int = 3) ->
                     lat = float(result.get('lat', 0))
                     lon = float(result.get('lon', 0))
                     
+                    if log_file:
+                        log(f"📍 [{restaurant_name or 'Restaurant'}] Coordonnées brutes de l'API: lat={lat}, lon={lon}", log_file)
+                    
                     if lat != 0 and lon != 0:
                         if log_file:
-                            log(f"✅ Géocodage réussi: '{address_clean[:50]}...' → ({lat:.6f}, {lon:.6f})", log_file)
+                            log(f"✅ [{restaurant_name or 'Restaurant'}] Géocodage réussi: '{address_clean[:60]}...' → ({lat:.6f}, {lon:.6f})", log_file)
                         return (lat, lon)
+                    else:
+                        if log_file:
+                            log(f"⚠️  [{restaurant_name or 'Restaurant'}] Coordonnées invalides (0,0) reçues de l'API", log_file)
+                else:
+                    if log_file:
+                        log(f"⚠️  [{restaurant_name or 'Restaurant'}] Aucun résultat dans la réponse de l'API", log_file)
             
             if attempt == max_retries and log_file:
-                log(f"⚠️  Géocodage échoué: '{address_clean[:50]}...' (aucun résultat)", log_file)
+                log(f"❌ [{restaurant_name or 'Restaurant'}] Géocodage échoué après {max_retries} tentatives: '{address_clean[:60]}...' (aucun résultat valide)", log_file)
             
+        except urllib.error.URLError as e:
+            if log_file:
+                log(f"❌ [{restaurant_name or 'Restaurant'}] Erreur réseau lors du géocodage (tentative {attempt}/{max_retries}): {type(e).__name__} - {str(e)[:100]}", log_file)
+            if attempt == max_retries:
+                if log_file:
+                    log(f"❌ [{restaurant_name or 'Restaurant'}] Géocodage définitivement échoué: erreur réseau", log_file)
+            continue
         except Exception as e:
-            if attempt == max_retries and log_file:
-                log(f"❌ Géocodage échoué: '{address_clean[:50]}...' (erreur: {type(e).__name__})", log_file)
+            if log_file:
+                log(f"❌ [{restaurant_name or 'Restaurant'}] Erreur inattendue lors du géocodage (tentative {attempt}/{max_retries}): {type(e).__name__} - {str(e)[:100]}", log_file)
+            if attempt == max_retries:
+                if log_file:
+                    log(f"❌ [{restaurant_name or 'Restaurant'}] Géocodage définitivement échoué: {type(e).__name__}", log_file)
             continue
     
     return None
@@ -468,7 +507,11 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
     df.columns = df.iloc[0]
     rows = df.iloc[1:].copy()
     log(f"📝 Données à traiter: {len(rows)} lignes", log_file)
-
+    
+    # Variables pour le géocodage (utiliser des listes pour permettre la modification dans la fonction interne)
+    geocoding_counter = [0]
+    geocoding_stats = {"with_coords": 0, "needs_geocoding": 0, "no_address": 0}
+    
     def row_to_flat_doc(row):
         entry = {}
         for col in df.columns:
@@ -520,25 +563,64 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         longitude = None
         lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
         lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
+        
+        # Log initial pour le restaurant
+        restaurant_name = name or tag or "Restaurant inconnu"
+        
         if lat_str:
             try:
                 latitude = float(lat_str.replace(",", "."))
-            except (ValueError, AttributeError):
+                if log_file:
+                    log(f"📍 [{restaurant_name}] Latitude trouvée dans Excel: {latitude:.6f}", log_file)
+            except (ValueError, AttributeError) as e:
                 latitude = None
+                if log_file:
+                    log(f"⚠️  [{restaurant_name}] Erreur parsing latitude '{lat_str}': {e}", log_file)
         if lon_str:
             try:
                 longitude = float(lon_str.replace(",", "."))
-            except (ValueError, AttributeError):
+                if log_file:
+                    log(f"📍 [{restaurant_name}] Longitude trouvée dans Excel: {longitude:.6f}", log_file)
+            except (ValueError, AttributeError) as e:
                 longitude = None
+                if log_file:
+                    log(f"⚠️  [{restaurant_name}] Erreur parsing longitude '{lon_str}': {e}", log_file)
         
-        if (latitude is None or longitude is None) and address:
-            coords = geocode_address(address, log_file)
+        # Vérifier si on a besoin de géocoder
+        needs_geocoding = (latitude is None or longitude is None) and address
+        
+        if needs_geocoding:
+            geocoding_counter[0] += 1
+            if log_file:
+                missing = []
+                if latitude is None:
+                    missing.append("latitude")
+                if longitude is None:
+                    missing.append("longitude")
+                log(f"🌍 [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Démarrage géocodage - Adresse: '{address}' - Manque: {', '.join(missing)}", log_file)
+            
+            coords = geocode_address(address, log_file, restaurant_name=restaurant_name)
             if coords:
                 if latitude is None:
                     latitude = coords[0]
+                    if log_file:
+                        log(f"✅ [{restaurant_name}] Latitude obtenue par géocodage: {latitude:.6f}", log_file)
                 if longitude is None:
                     longitude = coords[1]
+                    if log_file:
+                        log(f"✅ [{restaurant_name}] Longitude obtenue par géocodage: {longitude:.6f}", log_file)
+                if log_file:
+                    log(f"✅ [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Géocodage terminé avec succès", log_file)
                 time.sleep(1.1)
+            else:
+                if log_file:
+                    log(f"❌ [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Géocodage échoué - Aucune coordonnée obtenue pour: '{address}'", log_file)
+        elif not address:
+            if log_file:
+                log(f"⚠️  [{restaurant_name}] Pas d'adresse disponible pour géocodage", log_file)
+        else:
+            if log_file:
+                log(f"✅ [{restaurant_name}] Coordonnées complètes (pas de géocodage nécessaire): lat={latitude:.6f}, lon={longitude:.6f}", log_file)
         
         ambiance_tags = collect_tags_from_excel_columns(row, "ambiance")
         price_range = collect_tags_from_excel_columns(row, "price_range")
@@ -625,6 +707,46 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         }
         return rid, doc
 
+    # Première passe : compter les restaurants nécessitant un géocodage
+    log("🔍 Analyse préliminaire : comptage des restaurants nécessitant un géocodage...", log_file)
+    geocoding_stats = {"with_coords": 0, "needs_geocoding": 0, "no_address": 0}
+    
+    for idx, row in rows.iterrows():
+        entry = {}
+        for col in df.columns:
+            try:
+                val = row[col]
+                if isinstance(val, pd.Series):
+                    non_null_values = val.dropna()
+                    if len(non_null_values) > 0:
+                        entry[col] = str(non_null_values.iloc[0])
+                    else:
+                        entry[col] = ""
+                else:
+                    if pd.notna(val):
+                        entry[col] = str(val)
+                    else:
+                        entry[col] = ""
+            except Exception:
+                entry[col] = ""
+        
+        address = clean_text(entry.get("Adresse") or "")
+        lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
+        lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
+        
+        has_lat = bool(lat_str)
+        has_lon = bool(lon_str)
+        
+        if has_lat and has_lon:
+            geocoding_stats["with_coords"] += 1
+        elif address:
+            geocoding_stats["needs_geocoding"] += 1
+        else:
+            geocoding_stats["no_address"] += 1
+    
+    log(f"📊 Statistiques géocodage: {geocoding_stats['with_coords']} avec coordonnées, {geocoding_stats['needs_geocoding']} nécessitent géocodage, {geocoding_stats['no_address']} sans adresse", log_file)
+    log(f"🌍 Démarrage du traitement avec géocodage pour {geocoding_stats['needs_geocoding']} restaurants...", log_file)
+    
     records = []
     ids = []
     missing_tag_rows = []
@@ -762,8 +884,106 @@ def write_import_log(db, collection_logs: str, payload: Dict[str, Any], log_file
     db.collection(collection_logs).add(data)
     log("📝 Log d'import écrit dans Firestore.", log_file)
 
+# -------------------- Favorite Count Update --------------------
+def update_favorite_counts(db, log_file: str) -> Dict[str, Any]:
+    """
+    Met à jour le champ favorite_count dans chaque document restaurant
+    en comptant les favoris actifs depuis la collection favorites.
+    
+    Returns:
+        Dictionnaire avec les statistiques de mise à jour
+    """
+    from collections import defaultdict
+    
+    stats = {
+        "total_favorites": 0,
+        "active_favorites": 0,
+        "restaurants_with_favorites": 0,
+        "updated": 0,
+        "errors": 0,
+        "zero_initialized": 0
+    }
+    
+    try:
+        # 1) Compter les favoris actifs par restaurantId
+        log("📊 Récupération des favoris actifs...", log_file)
+        favorites_ref = db.collection('favorites')
+        restaurant_counts = defaultdict(int)
+        
+        docs = favorites_ref.stream()
+        for doc in docs:
+            stats["total_favorites"] += 1
+            data = doc.to_dict()
+            
+            # Vérifier si le favori est actif
+            status = data.get('status', 'active')
+            if status != 'inactive':
+                stats["active_favorites"] += 1
+                restaurant_id = data.get('restaurantId')
+                if restaurant_id:
+                    restaurant_counts[restaurant_id] += 1
+        
+        stats["restaurants_with_favorites"] = len(restaurant_counts)
+        log(f"✅ {stats['total_favorites']} favoris trouvés, {stats['active_favorites']} actifs, {stats['restaurants_with_favorites']} restaurants concernés", log_file)
+        
+        # 2) Mettre à jour les compteurs dans les restaurants
+        log("🔄 Mise à jour des compteurs dans les restaurants...", log_file)
+        restaurants_ref = db.collection('restaurants')
+        
+        for restaurant_id, count in restaurant_counts.items():
+            try:
+                restaurant_ref = restaurants_ref.document(restaurant_id)
+                restaurant_doc = restaurant_ref.get()
+                
+                if restaurant_doc.exists:
+                    restaurant_ref.update({
+                        'favorite_count': count
+                    })
+                    stats["updated"] += 1
+                    if stats["updated"] % 50 == 0:
+                        log(f"   ✓ {stats['updated']} restaurants mis à jour...", log_file)
+                else:
+                    log(f"   ⚠️  Restaurant {restaurant_id} n'existe pas, ignoré", log_file)
+                    stats["errors"] += 1
+            except Exception as e:
+                log(f"   ❌ Erreur pour le restaurant {restaurant_id}: {e}", log_file)
+                stats["errors"] += 1
+        
+        log(f"✅ {stats['updated']} restaurants mis à jour avec succès", log_file)
+        
+        # 3) Initialiser à 0 les restaurants sans favoris
+        log("🔄 Initialisation des restaurants sans favoris à 0...", log_file)
+        restaurants_with_favorites = set(restaurant_counts.keys())
+        
+        all_restaurants = restaurants_ref.stream()
+        for restaurant_doc in all_restaurants:
+            restaurant_id = restaurant_doc.id
+            data = restaurant_doc.to_dict()
+            
+            # Si le restaurant n'a pas de favorite_count défini et n'a pas de favoris
+            if 'favorite_count' not in data and restaurant_id not in restaurants_with_favorites:
+                try:
+                    restaurant_doc.reference.update({
+                        'favorite_count': 0
+                    })
+                    stats["zero_initialized"] += 1
+                    if stats["zero_initialized"] % 50 == 0:
+                        log(f"   ✓ {stats['zero_initialized']} restaurants initialisés à 0...", log_file)
+                except Exception as e:
+                    log(f"   ❌ Erreur pour le restaurant {restaurant_id}: {e}", log_file)
+                    stats["errors"] += 1
+        
+        log(f"✅ {stats['zero_initialized']} restaurants initialisés à 0", log_file)
+        
+    except Exception as e:
+        log(f"❌ Erreur lors de la mise à jour des compteurs de favoris: {e}\n{traceback.format_exc()}", log_file)
+        stats["errors"] += 1
+        raise
+    
+    return stats
+
 # -------------------- Main --------------------
-def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None):
+def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None, log_file_path=None):
     """
     Fonction principale d'import adaptée pour Django
     
@@ -771,11 +991,17 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         excel_path: Chemin vers le fichier Excel
         sheet_name: Nom de la feuille Excel (défaut: "Feuil1")
         request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
+        log_file_path: Chemin du fichier de log (optionnel, sinon créé automatiquement)
     """
-    ts_dir = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}_{ts_dir}")
-    ensure_dir(backup_dir)
-    log_file = os.path.join(backup_dir, "import_run.log")
+    if log_file_path:
+        log_file = log_file_path
+        backup_dir = os.path.dirname(log_file)
+    else:
+        ts_dir = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}_{ts_dir}")
+        ensure_dir(backup_dir)
+        log_file = os.path.join(backup_dir, "import_run.log")
+    
     log("🚀 Démarrage import end-to-end", log_file)
     log(f"→ Excel: {excel_path}", log_file)
 
@@ -845,6 +1071,17 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
     except Exception as e:
         log(f"❌ Écriture du log d'import échouée: {e}\n{traceback.format_exc()}", log_file)
 
+    # 6) Mise à jour des compteurs de favoris
+    favorite_count_stats = {}
+    try:
+        log("❤️  Mise à jour des compteurs de favoris...", log_file)
+        favorite_count_stats = update_favorite_counts(db, log_file)
+        log(f"✅ Compteurs de favoris mis à jour: {favorite_count_stats.get('updated', 0)} restaurants", log_file)
+    except Exception as e:
+        log(f"⚠️  Erreur lors de la mise à jour des compteurs de favoris: {e}\n{traceback.format_exc()}", log_file)
+        # Ne pas faire échouer l'import si le comptage des favoris échoue
+        favorite_count_stats = {"error": str(e)}
+
     log("🎉 Fin de workflow end-to-end.", log_file)
     return {
         "success": True,
@@ -852,6 +1089,7 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         "backup_dir": backup_dir,
         "log_file": log_file,
         "duplicates": len(conv_report.get("duplicates", [])),
-        "missing_tag_rows": len(conv_report.get("missing_tag_rows", []))
+        "missing_tag_rows": len(conv_report.get("missing_tag_rows", [])),
+        "favorite_count_stats": favorite_count_stats
     }
 

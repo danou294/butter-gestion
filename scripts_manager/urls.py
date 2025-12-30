@@ -42,6 +42,8 @@ urlpatterns = [
     # Import Batch Restaurants
     path('import-restaurants/', views.import_restaurants_index, name='import_restaurants_index'),
     path('import-restaurants/run/', views.run_import_restaurants, name='run_import_restaurants'),
+    path('import-restaurants/dev/', views.dev_import_function, name='dev_import_function'),
+    path('import-restaurants/logs/', views.get_import_logs, name='get_import_logs'),
     
     # Restauration de Backups
     path('restore-backup/', views.restore_backup_index, name='restore_backup_index'),
