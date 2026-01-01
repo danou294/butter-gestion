@@ -28,7 +28,14 @@ from firebase_admin import credentials, auth
 
 # Ajouter le répertoire parent au path pour importer config
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import SERVICE_ACCOUNT_PATH, EXPORTS_DIR
+from config import EXPORTS_DIR
+
+# Utiliser GOOGLE_APPLICATION_CREDENTIALS de l'environnement si disponible
+# Sinon, fallback sur SERVICE_ACCOUNT_PATH (pour compatibilité)
+try:
+    from config import SERVICE_ACCOUNT_PATH
+except ImportError:
+    SERVICE_ACCOUNT_PATH = None
 
 
 def setup_logging() -> logging.Logger:
@@ -76,15 +83,25 @@ Exemples:
 
 def ensure_credentials(logger: logging.Logger) -> None:
     """Vérifie et configure les credentials Firebase"""
-    creds_path = SERVICE_ACCOUNT_PATH
+    # Priorité à GOOGLE_APPLICATION_CREDENTIALS (défini par Django selon l'environnement)
+    creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+    
+    # Fallback sur SERVICE_ACCOUNT_PATH si GOOGLE_APPLICATION_CREDENTIALS n'est pas défini
+    if not creds_path and SERVICE_ACCOUNT_PATH:
+        creds_path = SERVICE_ACCOUNT_PATH
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
+    
+    if not creds_path:
+        raise FileNotFoundError(
+            "Aucun fichier d'identifiants trouvé. "
+            "Définissez GOOGLE_APPLICATION_CREDENTIALS ou configurez SERVICE_ACCOUNT_PATH dans config.py"
+        )
+    
     if not Path(creds_path).exists():
         raise FileNotFoundError(
             f"Fichier des identifiants non trouvé : {creds_path}\n"
             f"💡 Vérifiez que le fichier existe dans {creds_path}"
         )
-    
-    if not os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
     
     logger.info(f"Identifiants: {creds_path}")
 
@@ -124,7 +141,10 @@ def export_firestore_collection(collection_name: str, logger: logging.Logger) ->
         try:
             # Initialisation Firebase Admin si nécessaire
             if not firebase_admin._apps:
-                cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+                creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or SERVICE_ACCOUNT_PATH
+                if not creds_path:
+                    raise FileNotFoundError("Aucun fichier d'identifiants trouvé")
+                cred = credentials.Certificate(creds_path)
                 firebase_admin.initialize_app(cred)
             
             # Récupérer tous les utilisateurs Auth
@@ -203,7 +223,10 @@ def export_firebase_auth(logger: logging.Logger) -> Path:
     
     # Initialisation Firebase Admin
     if not firebase_admin._apps:
-        cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+        creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or SERVICE_ACCOUNT_PATH
+        if not creds_path:
+            raise FileNotFoundError("Aucun fichier d'identifiants trouvé")
+        cred = credentials.Certificate(creds_path)
         firebase_admin.initialize_app(cred)
     
     # Récupération des utilisateurs

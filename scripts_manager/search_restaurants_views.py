@@ -331,3 +331,39 @@ def download_search_result(request):
         logger.error(f"Erreur download_search_result: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+@require_http_methods(["GET"])
+def download_search_logs(request):
+    """Télécharge le fichier de log de recherche"""
+    try:
+        log_file = request.GET.get('log_file')
+        if not log_file:
+            return JsonResponse({'error': 'Paramètre log_file manquant'}, status=400)
+        
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        
+        # Construire le chemin complet
+        if not log_file.startswith('/'):
+            # Chemin relatif depuis BASE_DIR
+            log_path = BASE_DIR / log_file
+        else:
+            # Chemin absolu
+            log_path = Path(log_file)
+        
+        if not log_path.exists():
+            return JsonResponse({'error': 'Fichier de log non trouvé'}, status=404)
+        
+        # Lire le fichier et le retourner en téléchargement
+        file_handle = open(log_path, 'rb')
+        response = HttpResponse(file_handle.read(), content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{log_path.name}"'
+        file_handle.close()
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Erreur download_search_logs: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+

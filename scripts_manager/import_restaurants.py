@@ -384,9 +384,10 @@ TAG_GROUPS = {
     "cuisine": ['Africain', 'Américain', 'Chinois', 'Coréen', 'Colombien', 'Français', 'Grec', 'Indien',
                  'Israélien', 'Italien', 'Japonais', 'Libanais', 'Mexicain', 'Oriental', 'Péruvien',
                  'Sud-Américain', 'Thaï', 'Vietnamien'],
-    "diet": ['Casher (certifié)', 'Casher friendly', 'Viande casher', 'Végétarien', 'Vegan',
-             'Hallal (certifié)', 'Viande hallal', 'Offre de vins casher'],
-    "terrace": ['Terrasse', 'Terrasse classique', 'Cour', 'Rooftop']
+    "preferences": ['Casher (certifié)', 'Casher friendly', 'Viande casher', 'Végétarien', 'Vegan',
+                   'Hallal (certifié)', 'Viande hallal', 'Offre de vins casher'],
+    "terrace": ['Terrasse', 'Terrasse classique', 'Cour', 'Rooftop'],
+    "recommended_by": []  # Pas de valeurs prédéfinies, ce sont des tags libres
 }
 
 def collect_type_tags_from_columns(row):
@@ -427,8 +428,9 @@ def collect_tags_from_excel_columns(row, tag_group_name):
             "ambiance": ['Ambiance_TAG'],
             "price_range": ['Prix_TAG'],
             "cuisine": ['Spécialité_TAG'],
-            "diet": ['Restrictions_TAG'],
-            "terrace": ['Lieu_TAG', 'Ambiance_TAG']
+            "preferences": ['Préférences_TAG', 'Restrictions_TAG'],  # Support ancien et nouveau nom
+            "terrace": ['Lieu_TAG', 'Ambiance_TAG'],
+            "recommended_by": ['recommandé par - TAG']
         }
         columns_to_check = column_mapping.get(tag_group_name, [])
         for col in columns_to_check:
@@ -442,13 +444,17 @@ def collect_tags_from_excel_columns(row, tag_group_name):
                             if "terrasse" in tag.lower() or "rooftop" in tag.lower() or "cour" in tag.lower():
                                 if tag not in results:
                                     results.append(tag)
-                        elif tag_group_name == "diet":
+                        elif tag_group_name == "preferences":
                             if "Casher" in tag:
                                 clean_tag = "Casher"
                             else:
                                 clean_tag = tag
                             if clean_tag not in results:
                                 results.append(clean_tag)
+                        elif tag_group_name == "recommended_by":
+                            # Tags libres pour "recommandé par"
+                            if tag not in results:
+                                results.append(tag)
                         else:
                             if tag not in results:
                                 results.append(tag)
@@ -463,7 +469,9 @@ def collect_affichage_tags(row):
         "Moment_AFFICHAGE",
         "Ambiance_AFFICHAGE", 
         "Lieu_AFFICHAGE",
-        "Restrictions_AFFICHAGE"
+        "Préférences_AFFICHAGE",
+        "Restrictions_AFFICHAGE",  # Support ancien nom pour compatibilité
+        "recommandé par - AFFICHAGE"
     ]
     for col in affichage_columns:
         if col in row.index:
@@ -624,13 +632,14 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         
         ambiance_tags = collect_tags_from_excel_columns(row, "ambiance")
         price_range = collect_tags_from_excel_columns(row, "price_range")
-        restrictions_tags = collect_tags_from_excel_columns(row, "diet")
+        preferences_tags = collect_tags_from_excel_columns(row, "preferences")
         lieu_tags = collect_tags_from_excel_columns(row, "lieu_tags")
         cuisines_tags = collect_tags_from_excel_columns(row, "cuisine")
         specialite_tag = string_to_tag_list(entry.get("Spécialité_TAG") or "")
         types_tags = collect_tags_from_excel_columns(row, "type_tags")
         moments_tags = collect_tags_from_excel_columns(row, "moment")
         terrace_tags = collect_tags_from_excel_columns(row, "terrace")
+        recommended_by_tags = collect_tags_from_excel_columns(row, "recommended_by")
         
         affichage_fusionne = collect_affichage_tags(row)
         specialite_affichage = collect_specialite_affichage(row)
@@ -639,7 +648,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         moment_tag = moments_tags
         lieu_tag = lieu_tags
         ambiance_tag = ambiance_tags
-        restriction_tag = restrictions_tags
+        preferences_tag = preferences_tags
         type_tag = types_tags
         
         has_terrace = any("terrasse" in x.lower() for x in (ambiance_tags + lieu_tags + terrace_tags))
@@ -685,7 +694,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "moment_tag": moment_tag,
             "lieu_tag": lieu_tag,
             "ambiance_tag": ambiance_tag,
-            "restriction_tag": restriction_tag,
+            "preferences_tag": preferences_tag,
             "type_tag": type_tag,
             "types": types_tags,
             "moments": moments_tags,
@@ -693,11 +702,11 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "ambiance": ambiance_tags,
             "price_range": price_range,
             "cuisines": cuisines_tags,
-            "restrictions": restrictions_tags,
+            "preferences": preferences_tags,
+            "recommended_by": recommended_by_tags,
             "tag_initial": [tag] if tag else [],
             "restaurant_type": types_tags,
             "location_type": lieu_tags,
-            "diet": restrictions_tags,
             "extras": terrace_tags,
             "has_terrace": bool(has_terrace),
             "terrace_locs": terrace_locs,
@@ -816,11 +825,11 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "ambiance": ", ".join(doc.get("ambiance", [])),
             "price_range": doc.get("price_range", ""),
             "cuisines": ", ".join(doc.get("cuisines", [])),
-            "restrictions": ", ".join(doc.get("restrictions", [])),
+            "preferences": ", ".join(doc.get("preferences", [])),
+            "recommended_by": ", ".join(doc.get("recommended_by", [])),
             "tag_initial": ", ".join(doc.get("tag_initial", [])),
             "restaurant_type": ", ".join(doc.get("restaurant_type", [])),
             "location_type": ", ".join(doc.get("location_type", [])),
-            "diet": ", ".join(doc.get("diet", [])),
             "extras": ", ".join(doc.get("extras", [])),
             "has_terrace": doc.get("has_terrace", False),
             "terrace_locs": ", ".join(doc.get("terrace_locs", [])),
@@ -830,7 +839,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
     
     with open(out_csv, "w", encoding="utf-8", newline="") as cf:
         writer = csv.DictWriter(cf, fieldnames=list(csv_rows[0].keys()) if csv_rows else 
-                                ["id","tag","name","raw_name","address","arrondissement","latitude","longitude","phone","website","google_link","reservation_link","instagram_link","instagram_video_link","lien_menu","more_info","hours","types","moments","lieux","ambiance","price_range","cuisines","restrictions","has_terrace","terrace_locs","specialite_tag","lieu_tag"])
+                                ["id","tag","name","raw_name","address","arrondissement","latitude","longitude","phone","website","google_link","reservation_link","instagram_link","instagram_video_link","lien_menu","more_info","hours","types","moments","lieux","ambiance","price_range","cuisines","preferences","recommended_by","has_terrace","terrace_locs","specialite_tag","lieu_tag"])
         writer.writeheader()
         for r in csv_rows:
             writer.writerow(r)

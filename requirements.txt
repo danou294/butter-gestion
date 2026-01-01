@@ -7,5 +7,7 @@ Pillow
 openpyxl
 python-dotenv
 requests
+beautifulsoup4
+googlemaps
 
 

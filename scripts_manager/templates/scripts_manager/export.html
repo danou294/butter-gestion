@@ -20,7 +20,6 @@
                     <option value="">-- Sélectionner --</option>
                     <option value="firestore">Collection Firestore</option>
                     <option value="auth">Utilisateurs Firebase Auth</option>
-                    <option value="revenuecat-mapping">Mapping RevenueCat (UID → App User ID)</option>
                 </select>
             </div>
             
@@ -69,29 +68,21 @@ document.getElementById('export-form').addEventListener('submit', function(e) {
     submitButton.disabled = true;
     showLoading();
     
-    // Déterminer l'URL selon le type d'export
-    let exportUrl;
-    if (exportType === 'revenuecat-mapping') {
-        exportUrl = '{% url "scripts_manager:export_revenuecat_mapping" %}';
-    } else {
-        exportUrl = '{% url "scripts_manager:run_export" %}';
-    }
+    // URL d'export
+    const exportUrl = '{% url "scripts_manager:run_export" %}';
     
-    // Pour RevenueCat mapping, utiliser GET, sinon POST avec body
+    // Options de requête
     const fetchOptions = {
-        method: exportType === 'revenuecat-mapping' ? 'GET' : 'POST',
+        method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    };
-    
-    if (exportType !== 'revenuecat-mapping') {
-        fetchOptions.headers['Content-Type'] = 'application/json';
-        fetchOptions.body = JSON.stringify({
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
             type: exportType,
             collection: collection
-        });
-    }
+        })
+    };
     
     fetch(exportUrl, fetchOptions)
     .then(response => {

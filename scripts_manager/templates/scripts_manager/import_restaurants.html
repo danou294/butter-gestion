@@ -171,10 +171,10 @@
             <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
             <h3>Glissez-déposez votre fichier Excel ici</h3>
             <p>ou</p>
-            <button type="button" class="btn" onclick="document.getElementById('excel_file').click()">
+            <button type="button" class="btn" onclick="console.log('🔘 Bouton cliqué'); document.getElementById('excel_file').click();">
                 Parcourir les fichiers
             </button>
-            <input type="file" id="excel_file" name="excel_file" class="file-input" accept=".xlsx,.xls" required>
+            <input type="file" id="excel_file" name="excel_file" class="file-input" accept=".xlsx,.xls" required onchange="console.log('📁 Input change détecté directement:', this.files.length);">
         </div>
         
         <div class="file-info" id="fileInfo">
@@ -185,17 +185,17 @@
         
         <div style="margin-top: 20px;">
             <label for="sheet_name" style="display: block; margin-bottom: 10px; font-weight: 500;">
-                Nom de la feuille Excel (optionnel) :
+                Feuille Excel à importer :
             </label>
-            <input 
-                type="text" 
+            <select 
                 id="sheet_name" 
                 name="sheet_name" 
-                value="Feuil1" 
-                placeholder="Feuil1"
-                style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px;"
+                style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
+                disabled
             >
-            <small style="color: #6c757d;">Laissez vide ou mettez "Feuil1" par défaut</small>
+                <option value="">Sélectionnez un fichier Excel d'abord</option>
+            </select>
+            <small style="color: #6c757d;">Les feuilles disponibles seront chargées automatiquement après la sélection du fichier</small>
         </div>
         
         <div class="progress-container" id="progressContainer">
@@ -303,13 +303,27 @@
 </div>
 
 <script>
+console.log('🚀 Script d\'import restaurants chargé');
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOMContentLoaded déclenché');
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('excel_file');
     const fileInfo = document.getElementById('fileInfo');
     const fileName = document.getElementById('fileName');
     const fileSize = document.getElementById('fileSize');
     const importForm = document.getElementById('importForm');
+    
+    // Test de base pour vérifier que les éléments existent
+    console.log('🔧 Initialisation - fileInput:', fileInput);
+    console.log('🔧 Initialisation - fileInfo:', fileInfo);
+    console.log('🔧 Initialisation - importForm:', importForm);
+    
+    if (!fileInput) {
+        console.error('❌ fileInput introuvable !');
+        return;
+    }
+    
+    console.log('✅ Tous les éléments trouvés, initialisation des event listeners');
     const progressContainer = document.getElementById('progressContainer');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
@@ -329,29 +343,149 @@ document.addEventListener('DOMContentLoaded', function() {
     
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         uploadArea.classList.remove('dragover');
         const files = e.dataTransfer.files;
+        console.log('📥 Fichiers déposés:', files.length);
         if (files.length > 0) {
-            fileInput.files = files;
+            // Créer un nouveau DataTransfer pour assigner les fichiers
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(files[0]);
+            fileInput.files = dataTransfer.files;
+            console.log('✅ Fichier assigné à l\'input:', fileInput.files.length);
             handleFileSelect(files[0]);
         }
     });
     
     fileInput.addEventListener('change', function(e) {
-        if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
+        console.log('📁 Event change déclenché');
+        console.log('📁 Fichier sélectionné:', e.target.files);
+        console.log('📁 Nombre de fichiers:', e.target.files.length);
+        
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            console.log('📄 Nom du fichier:', file.name);
+            console.log('📄 Taille du fichier:', file.size);
+            handleFileSelect(file);
+        } else {
+            console.warn('⚠️ Aucun fichier sélectionné ou files est null');
         }
     });
     
+    // Vérifier aussi si l'input est réinitialisé quelque part
+    const originalReset = importForm.reset;
+    importForm.reset = function() {
+        console.log('🔄 Formulaire réinitialisé');
+        originalReset.call(this);
+        // Réinitialiser le select aussi
+        const sheetSelect = document.getElementById('sheet_name');
+        if (sheetSelect) {
+            sheetSelect.disabled = true;
+            sheetSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+        }
+    };
+    
     function handleFileSelect(file) {
-        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-            alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+        console.log('🔍 handleFileSelect appelé avec:', file.name);
+        
+        if (!file) {
+            console.error('❌ Fichier est null ou undefined');
             return;
         }
         
+        const sheetSelect = document.getElementById('sheet_name');
+        
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+            console.warn('⚠️ Fichier non Excel:', file.name);
+            alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+            // Réinitialiser le select
+            if (sheetSelect) {
+                sheetSelect.disabled = true;
+                sheetSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+            }
+            // Réinitialiser l'affichage du fichier
+            fileName.textContent = '';
+            fileSize.textContent = '';
+            fileInfo.classList.remove('active');
+            return;
+        }
+        
+        console.log('✅ Fichier Excel valide, mise à jour de l\'affichage');
         fileName.textContent = file.name;
         fileSize.textContent = formatFileSize(file.size);
         fileInfo.classList.add('active');
+        
+        // Analyser les feuilles du fichier Excel (en arrière-plan, ne bloque pas)
+        try {
+            console.log('📊 Démarrage de l\'analyse des feuilles...');
+            analyzeExcelSheets(file);
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'analyse des feuilles:', error);
+            // En cas d'erreur, utiliser Feuil1 par défaut
+            if (sheetSelect) {
+                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+                sheetSelect.disabled = false;
+            }
+        }
+    }
+    
+    function analyzeExcelSheets(file) {
+        console.log('📋 analyzeExcelSheets appelé avec:', file.name);
+        const sheetSelect = document.getElementById('sheet_name');
+        
+        if (!sheetSelect) {
+            console.error('❌ Select sheet_name introuvable');
+            return;
+        }
+        
+        sheetSelect.disabled = true;
+        sheetSelect.innerHTML = '<option value="">⏳ Analyse des feuilles en cours...</option>';
+        
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        
+        console.log('📤 Envoi de la requête pour analyser les feuilles...');
+        
+        fetch('{% url "scripts_manager:analyze_excel_sheets" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            console.log('📥 Réponse reçue:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Données reçues:', data);
+            if (data.success && data.sheets && data.sheets.length > 0) {
+                console.log('✅ Feuilles trouvées:', data.sheets);
+                sheetSelect.innerHTML = '';
+                data.sheets.forEach(sheet => {
+                    const option = document.createElement('option');
+                    option.value = sheet;
+                    option.textContent = sheet;
+                    if (sheet === data.default_sheet) {
+                        option.selected = true;
+                    }
+                    sheetSelect.appendChild(option);
+                });
+                sheetSelect.disabled = false;
+                console.log('✅ Select mis à jour avec', data.sheets.length, 'feuilles');
+            } else {
+                console.warn('⚠️ Aucune feuille trouvée, utilisation de Feuil1 par défaut');
+                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+                sheetSelect.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de l\'analyse des feuilles:', error);
+            sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+            sheetSelect.disabled = false;
+            // Afficher un message d'avertissement mais permettre quand même l'import
+            console.warn('Impossible d\'analyser les feuilles, utilisation de "Feuil1" par défaut');
+        });
     }
     
     function formatFileSize(bytes) {
@@ -367,6 +501,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!fileInput.files.length) {
             alert('Veuillez sélectionner un fichier Excel');
+            return;
+        }
+        
+        const sheetSelect = document.getElementById('sheet_name');
+        // Vérifier seulement si le select est activé et a des options mais aucune sélectionnée
+        if (!sheetSelect.disabled && sheetSelect.options.length > 1 && !sheetSelect.value) {
+            alert('Veuillez sélectionner une feuille Excel');
             return;
         }
         
@@ -408,7 +549,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const formData = new FormData(importForm);
-        const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
+        // Récupérer la feuille sélectionnée, ou utiliser la première option, ou 'Feuil1' par défaut
+        // sheetSelect est déjà déclaré plus haut dans la fonction
+        let sheetName = 'Feuil1';
+        if (sheetSelect && !sheetSelect.disabled && sheetSelect.value) {
+            sheetName = sheetSelect.value;
+        } else if (sheetSelect && sheetSelect.options.length > 0 && sheetSelect.options[0].value) {
+            sheetName = sheetSelect.options[0].value;
+        }
         formData.set('sheet_name', sheetName);
         
         // Afficher le loader
@@ -682,6 +830,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function loadBackups() {
+        // Vérifier que les éléments existent avant de les utiliser
+        if (!backupsLoading || !backupsList || !backupsEmpty || !restoreResult) {
+            console.warn('⚠️ Éléments de backup introuvables, fonction loadBackups ignorée');
+            return;
+        }
+        
         backupsLoading.style.display = 'block';
         backupsList.style.display = 'none';
         backupsEmpty.style.display = 'none';
@@ -690,55 +844,66 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('{% url "scripts_manager:list_backups" %}')
             .then(response => response.json())
             .then(data => {
-                backupsLoading.style.display = 'none';
+                if (backupsLoading) {
+                    backupsLoading.style.display = 'none';
+                }
                 
                 if (data.success && data.backups && data.backups.length > 0) {
-                    backupsTableBody.innerHTML = '';
+                    if (backupsTableBody) {
+                        backupsTableBody.innerHTML = '';
+                        
+                        data.backups.forEach(backup => {
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid #e9ecef';
+                            
+                            const dateCell = document.createElement('td');
+                            dateCell.style.padding = '12px';
+                            dateCell.textContent = formatDate(backup.timestamp);
+                            
+                            const countCell = document.createElement('td');
+                            countCell.style.padding = '12px';
+                            countCell.textContent = backup.count || 'N/A';
+                            
+                            const sizeCell = document.createElement('td');
+                            sizeCell.style.padding = '12px';
+                            sizeCell.textContent = formatFileSize(backup.size || 0);
+                            
+                            const actionsCell = document.createElement('td');
+                            actionsCell.style.padding = '12px';
+                            actionsCell.style.textAlign = 'center';
+                            
+                            const restoreBtn = document.createElement('button');
+                            restoreBtn.className = 'btn';
+                            restoreBtn.style.padding = '8px 16px';
+                            restoreBtn.style.margin = '0 5px';
+                            restoreBtn.textContent = '🔄 Restaurer';
+                            restoreBtn.onclick = () => restoreBackup(backup.backup_dir, backup.backup_name);
+                            
+                            actionsCell.appendChild(restoreBtn);
+                            
+                            row.appendChild(dateCell);
+                            row.appendChild(countCell);
+                            row.appendChild(sizeCell);
+                            row.appendChild(actionsCell);
+                            
+                            backupsTableBody.appendChild(row);
+                        });
+                    }
                     
-                    data.backups.forEach(backup => {
-                        const row = document.createElement('tr');
-                        row.style.borderBottom = '1px solid #e9ecef';
-                        
-                        const dateCell = document.createElement('td');
-                        dateCell.style.padding = '12px';
-                        dateCell.textContent = formatDate(backup.timestamp);
-                        
-                        const countCell = document.createElement('td');
-                        countCell.style.padding = '12px';
-                        countCell.textContent = backup.count || 'N/A';
-                        
-                        const sizeCell = document.createElement('td');
-                        sizeCell.style.padding = '12px';
-                        sizeCell.textContent = formatFileSize(backup.size || 0);
-                        
-                        const actionsCell = document.createElement('td');
-                        actionsCell.style.padding = '12px';
-                        actionsCell.style.textAlign = 'center';
-                        
-                        const restoreBtn = document.createElement('button');
-                        restoreBtn.className = 'btn';
-                        restoreBtn.style.padding = '8px 16px';
-                        restoreBtn.style.margin = '0 5px';
-                        restoreBtn.textContent = '🔄 Restaurer';
-                        restoreBtn.onclick = () => restoreBackup(backup.backup_dir, backup.backup_name);
-                        
-                        actionsCell.appendChild(restoreBtn);
-                        
-                        row.appendChild(dateCell);
-                        row.appendChild(countCell);
-                        row.appendChild(sizeCell);
-                        row.appendChild(actionsCell);
-                        
-                        backupsTableBody.appendChild(row);
-                    });
-                    
-                    backupsList.style.display = 'block';
+                    if (backupsList) {
+                        backupsList.style.display = 'block';
+                    }
                 } else {
-                    backupsEmpty.style.display = 'block';
+                    if (backupsEmpty) {
+                        backupsEmpty.style.display = 'block';
+                    }
                 }
             })
             .catch(error => {
-                backupsLoading.style.display = 'none';
+                console.error('Erreur lors du chargement des backups:', error);
+                if (backupsLoading) {
+                    backupsLoading.style.display = 'none';
+                }
                 backupsEmpty.style.display = 'block';
                 backupsEmpty.innerHTML = `<p style="color: #dc3545;">Erreur lors du chargement: ${error.message}</p>`;
             });
@@ -792,10 +957,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    refreshBackupsBtn.addEventListener('click', loadBackups);
-    
-    // Charger les backups au chargement de la page
-    loadBackups();
+    if (refreshBackupsBtn) {
+        refreshBackupsBtn.addEventListener('click', loadBackups);
+        
+        // Charger les backups au chargement de la page
+        loadBackups();
+    } else {
+        console.log('ℹ️ Section backups non disponible sur cette page');
+    }
     
     {% if firebase_env == 'dev' %}
     // Fonctions DEV uniquement

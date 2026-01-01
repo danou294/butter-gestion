@@ -81,5 +81,6 @@ urlpatterns = [
     path('search/run/', search_restaurants_views.run_search_restaurants, name='run_search_restaurants'),
     path('search/logs/', search_restaurants_views.get_search_logs, name='get_search_logs'),
     path('search/download/', search_restaurants_views.download_search_result, name='download_search_result'),
+    path('search/download-logs/', search_restaurants_views.download_search_logs, name='download_search_logs'),
 ]
 
