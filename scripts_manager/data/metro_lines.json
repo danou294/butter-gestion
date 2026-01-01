@@ -1,0 +1,1794 @@
+{
+  "metadata": {
+    "source": "Données complètes des lignes de métro de Paris",
+    "date_creation": "2025-12-30T14:51:00.160493",
+    "total_lignes": 16,
+    "reseau": "RATP - Métro de Paris"
+  },
+  "lignes": [
+    {
+      "numero": "1",
+      "nom": "Ligne 1",
+      "couleur": "#FFCD00",
+      "couleur_hex": "#FFCD00",
+      "stations": 25,
+      "longueur_km": 16.6,
+      "ouverture": "1900",
+      "terminus": [
+        "La Défense",
+        "Château de Vincennes"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "La Défense",
+          "ordre": 1
+        },
+        {
+          "nom": "Esplanade de la Défense",
+          "ordre": 2
+        },
+        {
+          "nom": "Pont de Neuilly",
+          "ordre": 3
+        },
+        {
+          "nom": "Les Sablons",
+          "ordre": 4
+        },
+        {
+          "nom": "Porte Maillot",
+          "ordre": 5
+        },
+        {
+          "nom": "Argentine",
+          "ordre": 6
+        },
+        {
+          "nom": "Charles de Gaulle - Étoile",
+          "ordre": 7
+        },
+        {
+          "nom": "George V",
+          "ordre": 8
+        },
+        {
+          "nom": "Franklin D. Roosevelt",
+          "ordre": 9
+        },
+        {
+          "nom": "Champs-Élysées - Clemenceau",
+          "ordre": 10
+        },
+        {
+          "nom": "Concorde",
+          "ordre": 11
+        },
+        {
+          "nom": "Tuileries",
+          "ordre": 12
+        },
+        {
+          "nom": "Palais Royal - Musée du Louvre",
+          "ordre": 13
+        },
+        {
+          "nom": "Louvre - Rivoli",
+          "ordre": 14
+        },
+        {
+          "nom": "Châtelet",
+          "ordre": 15
+        },
+        {
+          "nom": "Hôtel de Ville",
+          "ordre": 16
+        },
+        {
+          "nom": "Saint-Paul",
+          "ordre": 17
+        },
+        {
+          "nom": "Bastille",
+          "ordre": 18
+        },
+        {
+          "nom": "Gare de Lyon",
+          "ordre": 19
+        },
+        {
+          "nom": "Reuilly - Diderot",
+          "ordre": 20
+        },
+        {
+          "nom": "Nation",
+          "ordre": 21
+        },
+        {
+          "nom": "Porte de Vincennes",
+          "ordre": 22
+        },
+        {
+          "nom": "Saint-Mandé",
+          "ordre": 23
+        },
+        {
+          "nom": "Bérault",
+          "ordre": 24
+        },
+        {
+          "nom": "Château de Vincennes",
+          "ordre": 25
+        }
+      ],
+      "nombre_stations": 25
+    },
+    {
+      "numero": "2",
+      "nom": "Ligne 2",
+      "couleur": "#003CA6",
+      "couleur_hex": "#003CA6",
+      "stations": 25,
+      "longueur_km": 12.3,
+      "ouverture": "1900",
+      "terminus": [
+        "Porte Dauphine",
+        "Nation"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Porte Dauphine",
+          "ordre": 1
+        },
+        {
+          "nom": "Victor Hugo",
+          "ordre": 2
+        },
+        {
+          "nom": "Charles de Gaulle - Étoile",
+          "ordre": 3
+        },
+        {
+          "nom": "Ternes",
+          "ordre": 4
+        },
+        {
+          "nom": "Courcelles",
+          "ordre": 5
+        },
+        {
+          "nom": "Monceau",
+          "ordre": 6
+        },
+        {
+          "nom": "Villiers",
+          "ordre": 7
+        },
+        {
+          "nom": "Rome",
+          "ordre": 8
+        },
+        {
+          "nom": "Place de Clichy",
+          "ordre": 9
+        },
+        {
+          "nom": "Blanche",
+          "ordre": 10
+        },
+        {
+          "nom": "Pigalle",
+          "ordre": 11
+        },
+        {
+          "nom": "Anvers",
+          "ordre": 12
+        },
+        {
+          "nom": "Barbès - Rochechouart",
+          "ordre": 13
+        },
+        {
+          "nom": "La Chapelle",
+          "ordre": 14
+        },
+        {
+          "nom": "Stalingrad",
+          "ordre": 15
+        },
+        {
+          "nom": "Jaurès",
+          "ordre": 16
+        },
+        {
+          "nom": "Colonel Fabien",
+          "ordre": 17
+        },
+        {
+          "nom": "Belleville",
+          "ordre": 18
+        },
+        {
+          "nom": "Couronnes",
+          "ordre": 19
+        },
+        {
+          "nom": "Ménilmontant",
+          "ordre": 20
+        },
+        {
+          "nom": "Père Lachaise",
+          "ordre": 21
+        },
+        {
+          "nom": "Philippe Auguste",
+          "ordre": 22
+        },
+        {
+          "nom": "Alexandre Dumas",
+          "ordre": 23
+        },
+        {
+          "nom": "Avron",
+          "ordre": 24
+        },
+        {
+          "nom": "Nation",
+          "ordre": 25
+        }
+      ],
+      "nombre_stations": 25
+    },
+    {
+      "numero": "3",
+      "nom": "Ligne 3",
+      "couleur": "#837902",
+      "couleur_hex": "#837902",
+      "stations": 25,
+      "longueur_km": 11.7,
+      "ouverture": "1904",
+      "terminus": [
+        "Pont de Levallois - Bécon",
+        "Gallieni"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Pont de Levallois - Bécon",
+          "ordre": 1
+        },
+        {
+          "nom": "Anatole France",
+          "ordre": 2
+        },
+        {
+          "nom": "Louise Michel",
+          "ordre": 3
+        },
+        {
+          "nom": "Porte de Champerret",
+          "ordre": 4
+        },
+        {
+          "nom": "Pereire",
+          "ordre": 5
+        },
+        {
+          "nom": "Wagram",
+          "ordre": 6
+        },
+        {
+          "nom": "Malesherbes",
+          "ordre": 7
+        },
+        {
+          "nom": "Villiers",
+          "ordre": 8
+        },
+        {
+          "nom": "Europe",
+          "ordre": 9
+        },
+        {
+          "nom": "Saint-Lazare",
+          "ordre": 10
+        },
+        {
+          "nom": "Havre - Caumartin",
+          "ordre": 11
+        },
+        {
+          "nom": "Opéra",
+          "ordre": 12
+        },
+        {
+          "nom": "Quatre-Septembre",
+          "ordre": 13
+        },
+        {
+          "nom": "Bourse",
+          "ordre": 14
+        },
+        {
+          "nom": "Sentier",
+          "ordre": 15
+        },
+        {
+          "nom": "Réaumur - Sébastopol",
+          "ordre": 16
+        },
+        {
+          "nom": "Arts et Métiers",
+          "ordre": 17
+        },
+        {
+          "nom": "Temple",
+          "ordre": 18
+        },
+        {
+          "nom": "République",
+          "ordre": 19
+        },
+        {
+          "nom": "Parmentier",
+          "ordre": 20
+        },
+        {
+          "nom": "Rue Saint-Maur",
+          "ordre": 21
+        },
+        {
+          "nom": "Père Lachaise",
+          "ordre": 22
+        },
+        {
+          "nom": "Gambetta",
+          "ordre": 23
+        },
+        {
+          "nom": "Porte de Bagnolet",
+          "ordre": 24
+        },
+        {
+          "nom": "Gallieni",
+          "ordre": 25
+        }
+      ],
+      "nombre_stations": 25
+    },
+    {
+      "numero": "3bis",
+      "nom": "Ligne 3bis",
+      "couleur": "#6EC4E8",
+      "couleur_hex": "#6EC4E8",
+      "stations": 4,
+      "longueur_km": 1.3,
+      "ouverture": "1971",
+      "terminus": [
+        "Porte des Lilas",
+        "Gambetta"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Porte des Lilas",
+          "ordre": 1
+        },
+        {
+          "nom": "Saint-Fargeau",
+          "ordre": 2
+        },
+        {
+          "nom": "Pelleport",
+          "ordre": 3
+        },
+        {
+          "nom": "Gambetta",
+          "ordre": 4
+        }
+      ],
+      "nombre_stations": 4
+    },
+    {
+      "numero": "4",
+      "nom": "Ligne 4",
+      "couleur": "#CF009E",
+      "couleur_hex": "#CF009E",
+      "stations": 27,
+      "longueur_km": 12.1,
+      "ouverture": "1908",
+      "terminus": [
+        "Porte de Clignancourt",
+        "Mairie de Montrouge"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Porte de Clignancourt",
+          "ordre": 1
+        },
+        {
+          "nom": "Simplon",
+          "ordre": 2
+        },
+        {
+          "nom": "Marcadet - Poissonniers",
+          "ordre": 3
+        },
+        {
+          "nom": "Château Rouge",
+          "ordre": 4
+        },
+        {
+          "nom": "Barbès - Rochechouart",
+          "ordre": 5
+        },
+        {
+          "nom": "Gare du Nord",
+          "ordre": 6
+        },
+        {
+          "nom": "Gare de l'Est",
+          "ordre": 7
+        },
+        {
+          "nom": "Château d'Eau",
+          "ordre": 8
+        },
+        {
+          "nom": "Strasbourg - Saint-Denis",
+          "ordre": 9
+        },
+        {
+          "nom": "Réaumur - Sébastopol",
+          "ordre": 10
+        },
+        {
+          "nom": "Étienne Marcel",
+          "ordre": 11
+        },
+        {
+          "nom": "Les Halles",
+          "ordre": 12
+        },
+        {
+          "nom": "Châtelet",
+          "ordre": 13
+        },
+        {
+          "nom": "Cité",
+          "ordre": 14
+        },
+        {
+          "nom": "Saint-Michel",
+          "ordre": 15
+        },
+        {
+          "nom": "Odéon",
+          "ordre": 16
+        },
+        {
+          "nom": "Saint-Germain-des-Prés",
+          "ordre": 17
+        },
+        {
+          "nom": "Saint-Sulpice",
+          "ordre": 18
+        },
+        {
+          "nom": "Saint-Placide",
+          "ordre": 19
+        },
+        {
+          "nom": "Montparnasse - Bienvenüe",
+          "ordre": 20
+        },
+        {
+          "nom": "Vavin",
+          "ordre": 21
+        },
+        {
+          "nom": "Raspail",
+          "ordre": 22
+        },
+        {
+          "nom": "Denfert-Rochereau",
+          "ordre": 23
+        },
+        {
+          "nom": "Mouton-Duvernet",
+          "ordre": 24
+        },
+        {
+          "nom": "Alesia",
+          "ordre": 25
+        },
+        {
+          "nom": "Porte d'Orléans",
+          "ordre": 26
+        },
+        {
+          "nom": "Mairie de Montrouge",
+          "ordre": 27
+        }
+      ],
+      "nombre_stations": 27
+    },
+    {
+      "numero": "5",
+      "nom": "Ligne 5",
+      "couleur": "#FF7E2E",
+      "couleur_hex": "#FF7E2E",
+      "stations": 22,
+      "longueur_km": 14.6,
+      "ouverture": "1906",
+      "terminus": [
+        "Bobigny - Pablo Picasso",
+        "Place d'Italie"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Bobigny - Pablo Picasso",
+          "ordre": 1
+        },
+        {
+          "nom": "Bobigny - Pantin - Raymond Queneau",
+          "ordre": 2
+        },
+        {
+          "nom": "Église de Pantin",
+          "ordre": 3
+        },
+        {
+          "nom": "Hoche",
+          "ordre": 4
+        },
+        {
+          "nom": "Porte de Pantin",
+          "ordre": 5
+        },
+        {
+          "nom": "Ourcq",
+          "ordre": 6
+        },
+        {
+          "nom": "Laumière",
+          "ordre": 7
+        },
+        {
+          "nom": "Jaurès",
+          "ordre": 8
+        },
+        {
+          "nom": "Stalingrad",
+          "ordre": 9
+        },
+        {
+          "nom": "Gare du Nord",
+          "ordre": 10
+        },
+        {
+          "nom": "Gare de l'Est",
+          "ordre": 11
+        },
+        {
+          "nom": "Jacques Bonsergent",
+          "ordre": 12
+        },
+        {
+          "nom": "République",
+          "ordre": 13
+        },
+        {
+          "nom": "Oberkampf",
+          "ordre": 14
+        },
+        {
+          "nom": "Richard-Lenoir",
+          "ordre": 15
+        },
+        {
+          "nom": "Bréguet - Sabin",
+          "ordre": 16
+        },
+        {
+          "nom": "Bastille",
+          "ordre": 17
+        },
+        {
+          "nom": "Quai de la Rapée",
+          "ordre": 18
+        },
+        {
+          "nom": "Gare d'Austerlitz",
+          "ordre": 19
+        },
+        {
+          "nom": "Saint-Marcel",
+          "ordre": 20
+        },
+        {
+          "nom": "Campo Formio",
+          "ordre": 21
+        },
+        {
+          "nom": "Place d'Italie",
+          "ordre": 22
+        }
+      ],
+      "nombre_stations": 22
+    },
+    {
+      "numero": "6",
+      "nom": "Ligne 6",
+      "couleur": "#6ECA97",
+      "couleur_hex": "#6ECA97",
+      "stations": 28,
+      "longueur_km": 13.6,
+      "ouverture": "1909",
+      "terminus": [
+        "Charles de Gaulle - Étoile",
+        "Nation"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Charles de Gaulle - Étoile",
+          "ordre": 1
+        },
+        {
+          "nom": "Kléber",
+          "ordre": 2
+        },
+        {
+          "nom": "Boissière",
+          "ordre": 3
+        },
+        {
+          "nom": "Trocadéro",
+          "ordre": 4
+        },
+        {
+          "nom": "Passy",
+          "ordre": 5
+        },
+        {
+          "nom": "Bir-Hakeim",
+          "ordre": 6
+        },
+        {
+          "nom": "Dupleix",
+          "ordre": 7
+        },
+        {
+          "nom": "La Motte-Picquet - Grenelle",
+          "ordre": 8
+        },
+        {
+          "nom": "Cambronne",
+          "ordre": 9
+        },
+        {
+          "nom": "Sèvres - Lecourbe",
+          "ordre": 10
+        },
+        {
+          "nom": "Pasteur",
+          "ordre": 11
+        },
+        {
+          "nom": "Montparnasse - Bienvenüe",
+          "ordre": 12
+        },
+        {
+          "nom": "Edgar Quinet",
+          "ordre": 13
+        },
+        {
+          "nom": "Raspail",
+          "ordre": 14
+        },
+        {
+          "nom": "Denfert-Rochereau",
+          "ordre": 15
+        },
+        {
+          "nom": "Saint-Jacques",
+          "ordre": 16
+        },
+        {
+          "nom": "Glacière",
+          "ordre": 17
+        },
+        {
+          "nom": "Corvisart",
+          "ordre": 18
+        },
+        {
+          "nom": "Place d'Italie",
+          "ordre": 19
+        },
+        {
+          "nom": "Nationale",
+          "ordre": 20
+        },
+        {
+          "nom": "Chevaleret",
+          "ordre": 21
+        },
+        {
+          "nom": "Quai de la Gare",
+          "ordre": 22
+        },
+        {
+          "nom": "Bercy",
+          "ordre": 23
+        },
+        {
+          "nom": "Dugommier",
+          "ordre": 24
+        },
+        {
+          "nom": "Daumesnil",
+          "ordre": 25
+        },
+        {
+          "nom": "Bel-Air",
+          "ordre": 26
+        },
+        {
+          "nom": "Picpus",
+          "ordre": 27
+        },
+        {
+          "nom": "Nation",
+          "ordre": 28
+        }
+      ],
+      "nombre_stations": 28
+    },
+    {
+      "numero": "7",
+      "nom": "Ligne 7",
+      "couleur": "#FA9ABA",
+      "couleur_hex": "#FA9ABA",
+      "stations": 38,
+      "longueur_km": 22.4,
+      "ouverture": "1910",
+      "terminus": [
+        "La Courneuve - 8 Mai 1945",
+        "Villejuif - Louis Aragon / Mairie d'Ivry"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "La Courneuve - 8 Mai 1945",
+          "ordre": 1
+        },
+        {
+          "nom": "Fort d'Aubervilliers",
+          "ordre": 2
+        },
+        {
+          "nom": "Aubervilliers - Pantin - Quatre Chemins",
+          "ordre": 3
+        },
+        {
+          "nom": "Porte de la Villette",
+          "ordre": 4
+        },
+        {
+          "nom": "Corentin Cariou",
+          "ordre": 5
+        },
+        {
+          "nom": "Crimée",
+          "ordre": 6
+        },
+        {
+          "nom": "Riquet",
+          "ordre": 7
+        },
+        {
+          "nom": "Stalingrad",
+          "ordre": 8
+        },
+        {
+          "nom": "Louis Blanc",
+          "ordre": 9
+        },
+        {
+          "nom": "Château-Landon",
+          "ordre": 10
+        },
+        {
+          "nom": "Gare de l'Est",
+          "ordre": 11
+        },
+        {
+          "nom": "Poissonnière",
+          "ordre": 12
+        },
+        {
+          "nom": "Cadet",
+          "ordre": 13
+        },
+        {
+          "nom": "Le Peletier",
+          "ordre": 14
+        },
+        {
+          "nom": "Chaussée d'Antin - La Fayette",
+          "ordre": 15
+        },
+        {
+          "nom": "Opéra",
+          "ordre": 16
+        },
+        {
+          "nom": "Pyramides",
+          "ordre": 17
+        },
+        {
+          "nom": "Palais Royal - Musée du Louvre",
+          "ordre": 18
+        },
+        {
+          "nom": "Pont Neuf",
+          "ordre": 19
+        },
+        {
+          "nom": "Châtelet",
+          "ordre": 20
+        },
+        {
+          "nom": "Pont Marie",
+          "ordre": 21
+        },
+        {
+          "nom": "Sully - Morland",
+          "ordre": 22
+        },
+        {
+          "nom": "Jussieu",
+          "ordre": 23
+        },
+        {
+          "nom": "Place Monge",
+          "ordre": 24
+        },
+        {
+          "nom": "Censier - Daubenton",
+          "ordre": 25
+        },
+        {
+          "nom": "Les Gobelins",
+          "ordre": 26
+        },
+        {
+          "nom": "Place d'Italie",
+          "ordre": 27
+        },
+        {
+          "nom": "Tolbiac",
+          "ordre": 28
+        },
+        {
+          "nom": "Maison Blanche",
+          "ordre": 29
+        },
+        {
+          "nom": "Porte d'Italie",
+          "ordre": 30
+        },
+        {
+          "nom": "Porte de Choisy",
+          "ordre": 31
+        },
+        {
+          "nom": "Porte d'Ivry",
+          "ordre": 32
+        },
+        {
+          "nom": "Pierre et Marie Curie",
+          "ordre": 33
+        },
+        {
+          "nom": "Mairie d'Ivry",
+          "ordre": 34
+        },
+        {
+          "nom": "Villejuif - Louis Aragon",
+          "ordre": 35
+        }
+      ],
+      "nombre_stations": 35
+    },
+    {
+      "numero": "7bis",
+      "nom": "Ligne 7bis",
+      "couleur": "#6ECA97",
+      "couleur_hex": "#6ECA97",
+      "stations": 8,
+      "longueur_km": 3.1,
+      "ouverture": "1967",
+      "terminus": [
+        "Louis Blanc",
+        "Pré Saint-Gervais"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Louis Blanc",
+          "ordre": 1
+        },
+        {
+          "nom": "Jaurès",
+          "ordre": 2
+        },
+        {
+          "nom": "Bolivar",
+          "ordre": 3
+        },
+        {
+          "nom": "Buttes Chaumont",
+          "ordre": 4
+        },
+        {
+          "nom": "Botzaris",
+          "ordre": 5
+        },
+        {
+          "nom": "Place des Fêtes",
+          "ordre": 6
+        },
+        {
+          "nom": "Pré Saint-Gervais",
+          "ordre": 7
+        },
+        {
+          "nom": "Danube",
+          "ordre": 8
+        },
+        {
+          "nom": "Haxo",
+          "ordre": 9
+        }
+      ],
+      "nombre_stations": 9
+    },
+    {
+      "numero": "8",
+      "nom": "Ligne 8",
+      "couleur": "#E19BDF",
+      "couleur_hex": "#E19BDF",
+      "stations": 38,
+      "longueur_km": 23.4,
+      "ouverture": "1913",
+      "terminus": [
+        "Balard",
+        "Pointe du Lac"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Balard",
+          "ordre": 1
+        },
+        {
+          "nom": "Lourmel",
+          "ordre": 2
+        },
+        {
+          "nom": "Boucicaut",
+          "ordre": 3
+        },
+        {
+          "nom": "Félix Faure",
+          "ordre": 4
+        },
+        {
+          "nom": "Commerce",
+          "ordre": 5
+        },
+        {
+          "nom": "La Motte-Picquet - Grenelle",
+          "ordre": 6
+        },
+        {
+          "nom": "École Militaire",
+          "ordre": 7
+        },
+        {
+          "nom": "La Tour-Maubourg",
+          "ordre": 8
+        },
+        {
+          "nom": "Invalides",
+          "ordre": 9
+        },
+        {
+          "nom": "Concorde",
+          "ordre": 10
+        },
+        {
+          "nom": "Madeleine",
+          "ordre": 11
+        },
+        {
+          "nom": "Opéra",
+          "ordre": 12
+        },
+        {
+          "nom": "Richelieu - Drouot",
+          "ordre": 13
+        },
+        {
+          "nom": "Grands Boulevards",
+          "ordre": 14
+        },
+        {
+          "nom": "Bonne Nouvelle",
+          "ordre": 15
+        },
+        {
+          "nom": "Strasbourg - Saint-Denis",
+          "ordre": 16
+        },
+        {
+          "nom": "République",
+          "ordre": 17
+        },
+        {
+          "nom": "Filles du Calvaire",
+          "ordre": 18
+        },
+        {
+          "nom": "Saint-Sébastien - Froissart",
+          "ordre": 19
+        },
+        {
+          "nom": "Chemin Vert",
+          "ordre": 20
+        },
+        {
+          "nom": "Bastille",
+          "ordre": 21
+        },
+        {
+          "nom": "Ledru-Rollin",
+          "ordre": 22
+        },
+        {
+          "nom": "Faidherbe - Chaligny",
+          "ordre": 23
+        },
+        {
+          "nom": "Reuilly - Diderot",
+          "ordre": 24
+        },
+        {
+          "nom": "Montgallet",
+          "ordre": 25
+        },
+        {
+          "nom": "Daumesnil",
+          "ordre": 26
+        },
+        {
+          "nom": "Michel Bizot",
+          "ordre": 27
+        },
+        {
+          "nom": "Porte Dorée",
+          "ordre": 28
+        },
+        {
+          "nom": "Porte de Charenton",
+          "ordre": 29
+        },
+        {
+          "nom": "Liberté",
+          "ordre": 30
+        },
+        {
+          "nom": "Charenton - Écoles",
+          "ordre": 31
+        },
+        {
+          "nom": "École Vétérinaire de Maisons-Alfort",
+          "ordre": 32
+        },
+        {
+          "nom": "Maisons-Alfort - Stade",
+          "ordre": 33
+        },
+        {
+          "nom": "Maisons-Alfort - Les Juilliottes",
+          "ordre": 34
+        },
+        {
+          "nom": "Créteil - L'Échat",
+          "ordre": 35
+        },
+        {
+          "nom": "Créteil - Université",
+          "ordre": 36
+        },
+        {
+          "nom": "Créteil - Préfecture",
+          "ordre": 37
+        },
+        {
+          "nom": "Pointe du Lac",
+          "ordre": 38
+        }
+      ],
+      "nombre_stations": 38
+    },
+    {
+      "numero": "9",
+      "nom": "Ligne 9",
+      "couleur": "#B6BD00",
+      "couleur_hex": "#B6BD00",
+      "stations": 37,
+      "longueur_km": 19.6,
+      "ouverture": "1922",
+      "terminus": [
+        "Pont de Sèvres",
+        "Mairie de Montreuil"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Pont de Sèvres",
+          "ordre": 1
+        },
+        {
+          "nom": "Billancourt",
+          "ordre": 2
+        },
+        {
+          "nom": "Marcel Sembat",
+          "ordre": 3
+        },
+        {
+          "nom": "Porte de Saint-Cloud",
+          "ordre": 4
+        },
+        {
+          "nom": "Exelmans",
+          "ordre": 5
+        },
+        {
+          "nom": "Michel-Ange - Molitor",
+          "ordre": 6
+        },
+        {
+          "nom": "Michel-Ange - Auteuil",
+          "ordre": 7
+        },
+        {
+          "nom": "Jasmin",
+          "ordre": 8
+        },
+        {
+          "nom": "Ranelagh",
+          "ordre": 9
+        },
+        {
+          "nom": "La Muette",
+          "ordre": 10
+        },
+        {
+          "nom": "Rue de la Pompe",
+          "ordre": 11
+        },
+        {
+          "nom": "Trocadéro",
+          "ordre": 12
+        },
+        {
+          "nom": "Iéna",
+          "ordre": 13
+        },
+        {
+          "nom": "Alma - Marceau",
+          "ordre": 14
+        },
+        {
+          "nom": "Franklin D. Roosevelt",
+          "ordre": 15
+        },
+        {
+          "nom": "Saint-Philippe du Roule",
+          "ordre": 16
+        },
+        {
+          "nom": "Miromesnil",
+          "ordre": 17
+        },
+        {
+          "nom": "Saint-Augustin",
+          "ordre": 18
+        },
+        {
+          "nom": "Havre - Caumartin",
+          "ordre": 19
+        },
+        {
+          "nom": "Chaussée d'Antin - La Fayette",
+          "ordre": 20
+        },
+        {
+          "nom": "Richelieu - Drouot",
+          "ordre": 21
+        },
+        {
+          "nom": "Grands Boulevards",
+          "ordre": 22
+        },
+        {
+          "nom": "Bonne Nouvelle",
+          "ordre": 23
+        },
+        {
+          "nom": "Strasbourg - Saint-Denis",
+          "ordre": 24
+        },
+        {
+          "nom": "République",
+          "ordre": 25
+        },
+        {
+          "nom": "Oberkampf",
+          "ordre": 26
+        },
+        {
+          "nom": "Saint-Ambroise",
+          "ordre": 27
+        },
+        {
+          "nom": "Voltaire",
+          "ordre": 28
+        },
+        {
+          "nom": "Charonne",
+          "ordre": 29
+        },
+        {
+          "nom": "Rue des Boulets",
+          "ordre": 30
+        },
+        {
+          "nom": "Nation",
+          "ordre": 31
+        },
+        {
+          "nom": "Buzenval",
+          "ordre": 32
+        },
+        {
+          "nom": "Maraîchers",
+          "ordre": 33
+        },
+        {
+          "nom": "Porte de Montreuil",
+          "ordre": 34
+        },
+        {
+          "nom": "Robespierre",
+          "ordre": 35
+        },
+        {
+          "nom": "Croix de Chavaux",
+          "ordre": 36
+        },
+        {
+          "nom": "Mairie de Montreuil",
+          "ordre": 37
+        }
+      ],
+      "nombre_stations": 37
+    },
+    {
+      "numero": "10",
+      "nom": "Ligne 10",
+      "couleur": "#E3B32A",
+      "couleur_hex": "#E3B32A",
+      "stations": 23,
+      "longueur_km": 11.7,
+      "ouverture": "1923",
+      "terminus": [
+        "Boulogne - Pont de Saint-Cloud",
+        "Gare d'Austerlitz"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Boulogne - Pont de Saint-Cloud",
+          "ordre": 1
+        },
+        {
+          "nom": "Boulogne - Jean Jaurès",
+          "ordre": 2
+        },
+        {
+          "nom": "Porte de Saint-Cloud",
+          "ordre": 3
+        },
+        {
+          "nom": "Michel-Ange - Molitor",
+          "ordre": 4
+        },
+        {
+          "nom": "Chardon-Lagache",
+          "ordre": 5
+        },
+        {
+          "nom": "Mirabeau",
+          "ordre": 6
+        },
+        {
+          "nom": "Javel - André Citroën",
+          "ordre": 7
+        },
+        {
+          "nom": "Charles Michels",
+          "ordre": 8
+        },
+        {
+          "nom": "Avenue Émile Zola",
+          "ordre": 9
+        },
+        {
+          "nom": "La Motte-Picquet - Grenelle",
+          "ordre": 10
+        },
+        {
+          "nom": "Ségur",
+          "ordre": 11
+        },
+        {
+          "nom": "Duroc",
+          "ordre": 12
+        },
+        {
+          "nom": "Vaneau",
+          "ordre": 13
+        },
+        {
+          "nom": "Sèvres - Babylone",
+          "ordre": 14
+        },
+        {
+          "nom": "Mabillon",
+          "ordre": 15
+        },
+        {
+          "nom": "Odéon",
+          "ordre": 16
+        },
+        {
+          "nom": "Cluny - La Sorbonne",
+          "ordre": 17
+        },
+        {
+          "nom": "Maubert - Mutualité",
+          "ordre": 18
+        },
+        {
+          "nom": "Cardinal Lemoine",
+          "ordre": 19
+        },
+        {
+          "nom": "Jussieu",
+          "ordre": 20
+        },
+        {
+          "nom": "Gare d'Austerlitz",
+          "ordre": 21
+        }
+      ],
+      "nombre_stations": 21
+    },
+    {
+      "numero": "11",
+      "nom": "Ligne 11",
+      "couleur": "#704B1C",
+      "couleur_hex": "#704B1C",
+      "stations": 13,
+      "longueur_km": 6.3,
+      "ouverture": "1935",
+      "terminus": [
+        "Châtelet",
+        "Mairie des Lilas"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Châtelet",
+          "ordre": 1
+        },
+        {
+          "nom": "Hôtel de Ville",
+          "ordre": 2
+        },
+        {
+          "nom": "Rambuteau",
+          "ordre": 3
+        },
+        {
+          "nom": "Arts et Métiers",
+          "ordre": 4
+        },
+        {
+          "nom": "République",
+          "ordre": 5
+        },
+        {
+          "nom": "Goncourt",
+          "ordre": 6
+        },
+        {
+          "nom": "Belleville",
+          "ordre": 7
+        },
+        {
+          "nom": "Pyrénées",
+          "ordre": 8
+        },
+        {
+          "nom": "Jourdain",
+          "ordre": 9
+        },
+        {
+          "nom": "Place des Fêtes",
+          "ordre": 10
+        },
+        {
+          "nom": "Télégraphe",
+          "ordre": 11
+        },
+        {
+          "nom": "Porte des Lilas",
+          "ordre": 12
+        },
+        {
+          "nom": "Mairie des Lilas",
+          "ordre": 13
+        }
+      ],
+      "nombre_stations": 13
+    },
+    {
+      "numero": "12",
+      "nom": "Ligne 12",
+      "couleur": "#007852",
+      "couleur_hex": "#007852",
+      "stations": 29,
+      "longueur_km": 15.3,
+      "ouverture": "1910",
+      "terminus": [
+        "Mairie d'Aubervilliers",
+        "Mairie d'Issy"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Mairie d'Aubervilliers",
+          "ordre": 1
+        },
+        {
+          "nom": "Aubervilliers - Pantin - Quatre Chemins",
+          "ordre": 2
+        },
+        {
+          "nom": "Porte de la Villette",
+          "ordre": 3
+        },
+        {
+          "nom": "Corentin Cariou",
+          "ordre": 4
+        },
+        {
+          "nom": "Crimée",
+          "ordre": 5
+        },
+        {
+          "nom": "Riquet",
+          "ordre": 6
+        },
+        {
+          "nom": "Stalingrad",
+          "ordre": 7
+        },
+        {
+          "nom": "Jaurès",
+          "ordre": 8
+        },
+        {
+          "nom": "Abbesses",
+          "ordre": 9
+        },
+        {
+          "nom": "Pigalle",
+          "ordre": 10
+        },
+        {
+          "nom": "Saint-Georges",
+          "ordre": 11
+        },
+        {
+          "nom": "Notre-Dame-de-Lorette",
+          "ordre": 12
+        },
+        {
+          "nom": "Trinité - d'Estienne d'Orves",
+          "ordre": 13
+        },
+        {
+          "nom": "Saint-Lazare",
+          "ordre": 14
+        },
+        {
+          "nom": "Madeleine",
+          "ordre": 15
+        },
+        {
+          "nom": "Concorde",
+          "ordre": 16
+        },
+        {
+          "nom": "Assemblée Nationale",
+          "ordre": 17
+        },
+        {
+          "nom": "Solférino",
+          "ordre": 18
+        },
+        {
+          "nom": "Rue du Bac",
+          "ordre": 19
+        },
+        {
+          "nom": "Sèvres - Babylone",
+          "ordre": 20
+        },
+        {
+          "nom": "Rennes",
+          "ordre": 21
+        },
+        {
+          "nom": "Notre-Dame-des-Champs",
+          "ordre": 22
+        },
+        {
+          "nom": "Montparnasse - Bienvenüe",
+          "ordre": 23
+        },
+        {
+          "nom": "Falguière",
+          "ordre": 24
+        },
+        {
+          "nom": "Pasteur",
+          "ordre": 25
+        },
+        {
+          "nom": "Volontaires",
+          "ordre": 26
+        },
+        {
+          "nom": "Vaugirard",
+          "ordre": 27
+        },
+        {
+          "nom": "Convention",
+          "ordre": 28
+        },
+        {
+          "nom": "Porte de Versailles",
+          "ordre": 29
+        },
+        {
+          "nom": "Corentin Celton",
+          "ordre": 30
+        },
+        {
+          "nom": "Mairie d'Issy",
+          "ordre": 31
+        }
+      ],
+      "nombre_stations": 31
+    },
+    {
+      "numero": "13",
+      "nom": "Ligne 13",
+      "couleur": "#6EC4E8",
+      "couleur_hex": "#6EC4E8",
+      "stations": 32,
+      "longueur_km": 24.3,
+      "ouverture": "1911",
+      "terminus": [
+        "Les Courtilles / Saint-Denis - Université",
+        "Châtillon - Montrouge"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Les Courtilles",
+          "ordre": 1
+        },
+        {
+          "nom": "Asnières - Gennevilliers - Les Courtilles",
+          "ordre": 2
+        },
+        {
+          "nom": "Les Agnettes",
+          "ordre": 3
+        },
+        {
+          "nom": "Gabriel Péri",
+          "ordre": 4
+        },
+        {
+          "nom": "Mairie de Clichy",
+          "ordre": 5
+        },
+        {
+          "nom": "Porte de Clichy",
+          "ordre": 6
+        },
+        {
+          "nom": "Brochant",
+          "ordre": 7
+        },
+        {
+          "nom": "La Fourche",
+          "ordre": 8
+        },
+        {
+          "nom": "Place de Clichy",
+          "ordre": 9
+        },
+        {
+          "nom": "Liège",
+          "ordre": 10
+        },
+        {
+          "nom": "Saint-Lazare",
+          "ordre": 11
+        },
+        {
+          "nom": "Miromesnil",
+          "ordre": 12
+        },
+        {
+          "nom": "Champs-Élysées - Clemenceau",
+          "ordre": 13
+        },
+        {
+          "nom": "Invalides",
+          "ordre": 14
+        },
+        {
+          "nom": "Varenne",
+          "ordre": 15
+        },
+        {
+          "nom": "Saint-François-Xavier",
+          "ordre": 16
+        },
+        {
+          "nom": "Duroc",
+          "ordre": 17
+        },
+        {
+          "nom": "Montparnasse - Bienvenüe",
+          "ordre": 18
+        },
+        {
+          "nom": "Gaîté",
+          "ordre": 19
+        },
+        {
+          "nom": "Pernety",
+          "ordre": 20
+        },
+        {
+          "nom": "Plaisance",
+          "ordre": 21
+        },
+        {
+          "nom": "Porte de Vanves",
+          "ordre": 22
+        },
+        {
+          "nom": "Malakoff - Plateau de Vanves",
+          "ordre": 23
+        },
+        {
+          "nom": "Malakoff - Rue Étienne Dolet",
+          "ordre": 24
+        },
+        {
+          "nom": "Châtillon - Montrouge",
+          "ordre": 25
+        }
+      ],
+      "nombre_stations": 25
+    },
+    {
+      "numero": "14",
+      "nom": "Ligne 14",
+      "couleur": "#62259D",
+      "couleur_hex": "#62259D",
+      "stations": 13,
+      "longueur_km": 15.3,
+      "ouverture": "1998",
+      "terminus": [
+        "Mairie de Saint-Ouen",
+        "Olympiades"
+      ],
+      "type": "métro",
+      "stations_detaillees": [
+        {
+          "nom": "Mairie de Saint-Ouen",
+          "ordre": 1
+        },
+        {
+          "nom": "Saint-Ouen",
+          "ordre": 2
+        },
+        {
+          "nom": "Porte de Clichy",
+          "ordre": 3
+        },
+        {
+          "nom": "Pont Cardinet",
+          "ordre": 4
+        },
+        {
+          "nom": "Saint-Lazare",
+          "ordre": 5
+        },
+        {
+          "nom": "Madeleine",
+          "ordre": 6
+        },
+        {
+          "nom": "Pyramides",
+          "ordre": 7
+        },
+        {
+          "nom": "Châtelet",
+          "ordre": 8
+        },
+        {
+          "nom": "Gare de Lyon",
+          "ordre": 9
+        },
+        {
+          "nom": "Bercy",
+          "ordre": 10
+        },
+        {
+          "nom": "Cour Saint-Émilion",
+          "ordre": 11
+        },
+        {
+          "nom": "Bibliothèque François Mitterrand",
+          "ordre": 12
+        },
+        {
+          "nom": "Olympiades",
+          "ordre": 13
+        }
+      ],
+      "nombre_stations": 13
+    }
+  ]
+}
