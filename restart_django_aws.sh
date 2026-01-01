@@ -74,7 +74,34 @@ echo -e "${BLUE}📁 Répertoire: $PROJECT_DIR${NC}"
 echo ""
 
 echo -e "${BLUE}📥 Mise à jour depuis Git...${NC}"
-git pull
+
+# Gérer le fichier .env avant le pull (éviter les conflits)
+if [ -f ".env" ]; then
+    echo -e "${YELLOW}  Sauvegarde du fichier .env local...${NC}"
+    cp .env .env.local.backup 2>/dev/null || true
+    # Retirer .env du suivi Git si nécessaire
+    git rm --cached .env 2>/dev/null || true
+    # Stash les modifications locales si elles existent
+    git stash push -m "Sauvegarde .env local" .env 2>/dev/null || true
+fi
+
+# Faire le pull
+git pull || {
+    echo -e "${YELLOW}  ⚠️  Conflit détecté, tentative de résolution...${NC}"
+    # Si le pull échoue à cause de .env, forcer la suppression du cache
+    git rm --cached .env 2>/dev/null || true
+    git pull || {
+        echo -e "${YELLOW}  ⚠️  Utilisation de git pull --rebase...${NC}"
+        git pull --rebase || true
+    }
+}
+
+# Restaurer le fichier .env local s'il existe
+if [ -f ".env.local.backup" ]; then
+    echo -e "${YELLOW}  Restauration du fichier .env local...${NC}"
+    mv .env.local.backup .env 2>/dev/null || true
+fi
+
 echo -e "${GREEN}✅ Git pull terminé${NC}"
 echo ""
 
