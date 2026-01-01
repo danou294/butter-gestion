@@ -931,7 +931,7 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
             log(f"📋 Colonnes disponibles: {', '.join(df.columns.tolist())}", log_file)
             raise ValueError(error_msg)
         
-        # Extraire les noms de restaurants (limité à 5 pour les tests)
+        # Extraire les noms de restaurants
         restaurants_data = []
         for idx, row in df.iterrows():
             name = str(row[name_column]).strip() if pd.notna(row[name_column]) else ''
@@ -940,11 +940,8 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
                     'name': name,
                     'reference_urls': []  # Pour l'instant, pas de URLs de référence
                 })
-                # Limiter à 5 restaurants pour les tests
-                if len(restaurants_data) >= 5:
-                    break
         
-        log(f"🍽️  {len(restaurants_data)} restaurants à rechercher (limité à 5 pour les tests)", log_file)
+        log(f"🍽️  {len(restaurants_data)} restaurants à rechercher", log_file)
         log("", log_file)
         
     except Exception as e:
