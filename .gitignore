@@ -39,3 +39,4 @@ media/exports/*.xlsx
 media/exports/*.xls
 scripts_manager/scripts/exports/*.xlsx
 
+.env
