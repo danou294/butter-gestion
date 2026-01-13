@@ -489,14 +489,19 @@ def restore_backup_index(request):
 @login_required
 @require_http_methods(["POST"])
 def run_import_restaurants(request):
-    """Traite l'upload d'un fichier Excel et lance l'import"""
+    """Traite l'upload d'un fichier Excel et lance l'import - UNIQUEMENT EN MODE DEV"""
     try:
-        # Vérifier l'environnement - bloquer l'import en PROD si nécessaire
+        # Vérifier l'environnement - BLOQUER l'import en PROD
         from .firebase_utils import get_firebase_env_from_session
         current_env = get_firebase_env_from_session(request)
         
-        # En PROD, on peut bloquer ou autoriser selon les besoins
-        # Pour l'instant, on autorise les deux mais on peut ajouter une vérification
+        # IMPORTANT: L'import n'est autorisé qu'en mode DEV
+        if current_env != 'dev':
+            logger.warning(f"🚫 Tentative d'import en mode PROD bloquée (env: {current_env})")
+            return JsonResponse({
+                'error': 'L\'import de restaurants est uniquement autorisé en mode développement (DEV). Veuillez basculer en mode DEV pour effectuer un import.',
+                'current_env': current_env
+            }, status=403)
         
         if 'excel_file' not in request.FILES:
             return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
