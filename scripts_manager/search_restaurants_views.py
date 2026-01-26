@@ -103,7 +103,18 @@ def run_search_restaurants(request):
         
         excel_file = request.FILES['excel_file']
         name_column = request.POST.get('name_column', '')
-        
+        limit_str = request.POST.get('limit', '')
+
+        # Convertir le limit en int si fourni
+        limit = None
+        if limit_str and limit_str.strip():
+            try:
+                limit = int(limit_str)
+                if limit <= 0:
+                    limit = None
+            except ValueError:
+                limit = None
+
         if not name_column:
             return JsonResponse({'error': 'Veuillez sélectionner une colonne pour les noms'}, status=400)
         
@@ -157,11 +168,12 @@ def run_search_restaurants(request):
                     f.write(f"🔧 Appel de search_restaurants_from_excel...\n")
                 
                 result = search_restaurants_from_excel(
-                    str(file_path), 
-                    name_column, 
+                    str(file_path),
+                    name_column,
                     request=request,
                     log_file_path=str(log_file),
-                    output_dir=str(search_dir)
+                    output_dir=str(search_dir),
+                    limit=limit
                 )
                 
                 with open(log_file, 'a', encoding='utf-8') as f:

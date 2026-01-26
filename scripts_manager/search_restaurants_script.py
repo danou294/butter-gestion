@@ -184,9 +184,11 @@ def search_restaurant(query, api_key, max_results=60, use_type_filter=False, log
                 'lien_reservation': '',
                 'instagram': '',
                 'facebook': '',
+                'specialite_culinaire': '',
+                'tranche_prix': '',
             }
             all_results.append(result_data)
-        
+
         # Si on a un token de pagination, continuer à chercher
         next_page_token = places_result.get('next_page_token')
         page_count = 1
@@ -237,9 +239,11 @@ def search_restaurant(query, api_key, max_results=60, use_type_filter=False, log
                             'lien_reservation': '',
                             'instagram': '',
                             'facebook': '',
+                            'specialite_culinaire': '',
+                            'tranche_prix': '',
                         }
                         all_results.append(result_data)
-                
+
                 next_page_token = places_result.get('next_page_token')
                 page_count += 1
             except Exception as e:
@@ -256,17 +260,17 @@ def search_restaurant(query, api_key, max_results=60, use_type_filter=False, log
 
 def scrape_website_links(website_url, log_file=None):
     """
-    Scrape un site web pour extraire les liens menu, réservation, Instagram, Facebook
-    
+    Scrape un site web pour extraire les liens menu, réservation, Instagram, Facebook,
+    ainsi que la spécialité culinaire et la tranche de prix.
+
     Args:
         website_url: URL du site web à scraper
         log_file: Chemin du fichier de log (optionnel)
-    
+
     Returns:
-        dict: Dictionnaire avec les liens trouvés
+        dict: Dictionnaire avec les liens et informations trouvés
     """
     # Toujours essayer d'importer les modules localement (même si l'import global a échoué)
-    # Cela permet de fonctionner même si les modules sont dans un environnement virtuel différent
     try:
         import requests
         from bs4 import BeautifulSoup
@@ -276,113 +280,297 @@ def scrape_website_links(website_url, log_file=None):
         if log_file:
             log(f"  ⚠️  Modules requests/beautifulsoup4 non disponibles: {str(e)}", log_file)
             log(f"  💡 Installez-les avec: pip install requests beautifulsoup4", log_file)
-        # Retourner immédiatement si les modules ne sont pas disponibles
         return {
             'lien_menu': '',
             'lien_reservation': '',
             'instagram': '',
-            'facebook': ''
+            'facebook': '',
+            'specialite_culinaire': '',
+            'tranche_prix': ''
         }
-    
+
     if not website_url or not website_url.startswith('http'):
         return {
             'lien_menu': '',
             'lien_reservation': '',
             'instagram': '',
-            'facebook': ''
+            'facebook': '',
+            'specialite_culinaire': '',
+            'tranche_prix': ''
         }
-    
+
     result = {
         'lien_menu': '',
         'lien_reservation': '',
         'instagram': '',
-        'facebook': ''
+        'facebook': '',
+        'specialite_culinaire': '',
+        'tranche_prix': ''
     }
-    
+
     try:
         # Headers pour éviter d'être bloqué
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
         }
-        
-        # Timeout de 5 secondes pour éviter les attentes trop longues
-        response = requests.get(website_url, headers=headers, timeout=5, allow_redirects=True)
+
+        # Timeout de 10 secondes pour avoir plus de temps
+        response = requests.get(website_url, headers=headers, timeout=10, allow_redirects=True)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.content, 'html.parser')
         base_url = response.url
-        
-        # Chercher tous les liens
+
+        # Récupérer tout le texte de la page pour l'analyse
+        page_text = soup.get_text(separator=' ', strip=True).lower()
+
+        # ================== EXTRACTION SPÉCIALITÉ CULINAIRE ==================
+        cuisine_keywords = {
+            'française': ['cuisine française', 'gastronomie française', 'french cuisine', 'bistrot français', 'brasserie française'],
+            'italienne': ['cuisine italienne', 'italian cuisine', 'pizzeria', 'trattoria', 'osteria', 'pasta', 'risotto'],
+            'japonaise': ['cuisine japonaise', 'japanese cuisine', 'sushi', 'ramen', 'izakaya', 'yakitori', 'tempura'],
+            'chinoise': ['cuisine chinoise', 'chinese cuisine', 'dim sum', 'cantonais'],
+            'thaïlandaise': ['cuisine thaïlandaise', 'thai cuisine', 'thaï', 'pad thai'],
+            'indienne': ['cuisine indienne', 'indian cuisine', 'curry', 'tandoori', 'naan'],
+            'mexicaine': ['cuisine mexicaine', 'mexican cuisine', 'tacos', 'burritos', 'guacamole'],
+            'libanaise': ['cuisine libanaise', 'lebanese cuisine', 'mezze', 'falafel', 'houmous'],
+            'méditerranéenne': ['cuisine méditerranéenne', 'mediterranean cuisine', 'mezze'],
+            'coréenne': ['cuisine coréenne', 'korean cuisine', 'bibimbap', 'kimchi', 'korean bbq'],
+            'vietnamienne': ['cuisine vietnamienne', 'vietnamese cuisine', 'pho', 'banh mi', 'nem'],
+            'péruvienne': ['cuisine péruvienne', 'peruvian cuisine', 'ceviche', 'lomo saltado'],
+            'grecque': ['cuisine grecque', 'greek cuisine', 'gyros', 'souvlaki', 'tzatziki'],
+            'espagnole': ['cuisine espagnole', 'spanish cuisine', 'tapas', 'paella'],
+            'américaine': ['cuisine américaine', 'american cuisine', 'burger', 'steakhouse', 'bbq'],
+            'africaine': ['cuisine africaine', 'african cuisine', 'mafé', 'thieboudienne'],
+            'marocaine': ['cuisine marocaine', 'moroccan cuisine', 'couscous', 'tajine', 'tagine'],
+            'végétarienne': ['végétarien', 'vegetarian', 'vegan', 'végan', 'plant-based'],
+            'fruits de mer': ['fruits de mer', 'seafood', 'poissons', 'crustacés', 'huîtres'],
+            'gastronomique': ['gastronomique', 'fine dining', 'étoilé', 'michelin', 'haute cuisine'],
+            'bistronomique': ['bistronomie', 'bistronomique', 'bistrot moderne'],
+            'street food': ['street food', 'food truck', 'fast casual'],
+            'brunch': ['brunch', 'breakfast', 'petit-déjeuner'],
+        }
+
+        specialites_trouvees = []
+        for specialite, keywords in cuisine_keywords.items():
+            for keyword in keywords:
+                if keyword in page_text:
+                    if specialite not in specialites_trouvees:
+                        specialites_trouvees.append(specialite)
+                    break
+
+        if specialites_trouvees:
+            result['specialite_culinaire'] = ', '.join(specialites_trouvees[:3])  # Max 3 spécialités
+            if log_file:
+                log(f"     🍽️  Spécialité(s) trouvée(s): {result['specialite_culinaire']}", log_file)
+
+        # ================== EXTRACTION TRANCHE DE PRIX ==================
+        # Patterns de prix
+        prix_patterns = [
+            # Format €€€€
+            (r'€{4}|€€€€', '€€€€'),
+            (r'€{3}|€€€', '€€€'),
+            (r'€{2}|€€', '€€'),
+            (r'€{1}|€', '€'),
+            # Mentions textuelles
+            (r'très haut de gamme|luxe|prestige|gastronomique étoilé', '€€€€'),
+            (r'haut de gamme|raffiné|gastronomique', '€€€'),
+            (r'prix moyens?|prix modérés?|abordable|rapport qualité.?prix', '€€'),
+            (r'petit budget|économique|bon marché|pas cher', '€'),
+            # Fourchettes de prix (menus, plats)
+            (r'menu[s]?\s*(?:à\s*partir\s*de\s*)?(\d+)\s*€', None),  # Sera analysé séparément
+            (r'plat[s]?\s*(?:à\s*partir\s*de\s*)?(\d+)\s*€', None),
+        ]
+
+        # Chercher les indicateurs de prix dans le texte
+        for pattern, prix_category in prix_patterns:
+            if prix_category:  # Patterns directs
+                if re.search(pattern, page_text, re.IGNORECASE):
+                    if not result['tranche_prix']:
+                        result['tranche_prix'] = prix_category
+                        if log_file:
+                            log(f"     💰 Tranche de prix trouvée: {prix_category}", log_file)
+                        break
+
+        # Si pas trouvé, chercher des prix numériques pour estimer
+        if not result['tranche_prix']:
+            prix_numeriques = re.findall(r'(\d{1,3})\s*€', page_text)
+            if prix_numeriques:
+                prix_moyens = [int(p) for p in prix_numeriques if 5 <= int(p) <= 500]
+                if prix_moyens:
+                    prix_moyen = sum(prix_moyens) / len(prix_moyens)
+                    if prix_moyen >= 80:
+                        result['tranche_prix'] = '€€€€'
+                    elif prix_moyen >= 40:
+                        result['tranche_prix'] = '€€€'
+                    elif prix_moyen >= 20:
+                        result['tranche_prix'] = '€€'
+                    else:
+                        result['tranche_prix'] = '€'
+                    if log_file:
+                        log(f"     💰 Tranche de prix estimée (moy: {prix_moyen:.0f}€): {result['tranche_prix']}", log_file)
+
+        # ================== EXTRACTION LIENS ==================
         all_links = soup.find_all('a', href=True)
-        
-        # Mots-clés pour identifier les liens
-        menu_keywords = ['menu', 'carte', 'card', 'menus', 'la-carte']
-        reservation_keywords = ['reservation', 'reserver', 'book', 'booking', 'table', 'reserve', 'réserver']
+
+        # Mots-clés améliorés pour identifier les liens
+        menu_keywords = ['menu', 'carte', 'card', 'menus', 'la-carte', 'notre-carte', 'nos-plats', 'food-menu']
+        reservation_keywords = [
+            'reservation', 'reserver', 'book', 'booking', 'table', 'reserve', 'réserver',
+            'thefork', 'lafourchette', 'opentable', 'resy', 'yelp', 'zenchef', 'guestonline'
+        ]
         instagram_keywords = ['instagram.com', 'instagr.am']
-        facebook_keywords = ['facebook.com', 'fb.com']
-        
+        facebook_keywords = ['facebook.com', 'fb.com', 'fb.me']
+
         for link in all_links:
-            href = link.get('href', '').lower()
+            href = link.get('href', '')
+            href_lower = href.lower()
             text = link.get_text().lower()
-            
+
             # Menu
             if not result['lien_menu']:
-                if any(keyword in href for keyword in menu_keywords) or any(keyword in text for keyword in menu_keywords):
-                    full_url = urljoin(base_url, link['href'])
+                if any(keyword in href_lower for keyword in menu_keywords) or any(keyword in text for keyword in menu_keywords):
+                    full_url = urljoin(base_url, href)
                     if full_url.startswith('http'):
                         result['lien_menu'] = full_url
                         if log_file:
                             log(f"     📋 Menu trouvé: {full_url[:80]}...", log_file)
-            
-            # Réservation
+
+            # Réservation (inclut les plateformes tierces)
             if not result['lien_reservation']:
-                if any(keyword in href for keyword in reservation_keywords) or any(keyword in text for keyword in reservation_keywords):
-                    full_url = urljoin(base_url, link['href'])
+                is_reservation = (
+                    any(keyword in href_lower for keyword in reservation_keywords) or
+                    any(keyword in text for keyword in reservation_keywords)
+                )
+                if is_reservation:
+                    full_url = urljoin(base_url, href)
                     if full_url.startswith('http'):
                         result['lien_reservation'] = full_url
                         if log_file:
                             log(f"     📅 Réservation trouvée: {full_url[:80]}...", log_file)
-            
+
             # Instagram
             if not result['instagram']:
-                if any(keyword in href for keyword in instagram_keywords):
-                    full_url = urljoin(base_url, link['href'])
+                if any(keyword in href_lower for keyword in instagram_keywords):
+                    full_url = urljoin(base_url, href)
                     if full_url.startswith('http'):
                         result['instagram'] = full_url
                         if log_file:
                             log(f"     📸 Instagram trouvé: {full_url[:80]}...", log_file)
-            
+
             # Facebook
             if not result['facebook']:
-                if any(keyword in href for keyword in facebook_keywords):
-                    full_url = urljoin(base_url, link['href'])
+                if any(keyword in href_lower for keyword in facebook_keywords):
+                    full_url = urljoin(base_url, href)
                     if full_url.startswith('http'):
                         result['facebook'] = full_url
                         if log_file:
                             log(f"     👥 Facebook trouvé: {full_url[:80]}...", log_file)
-        
-        # Chercher aussi dans les meta tags (pour les réseaux sociaux)
-        meta_tags = soup.find_all('meta', property=True)
+
+        # ================== RECHERCHE DANS LES META TAGS ==================
+        meta_tags = soup.find_all('meta')
         for meta in meta_tags:
             property_attr = meta.get('property', '').lower()
+            name_attr = meta.get('name', '').lower()
             content = meta.get('content', '')
-            
-            if 'og:image' in property_attr and not result.get('logo_url'):
-                # Image Open Graph (peut être un logo)
-                pass
-            
-            if 'instagram' in property_attr or 'instagram' in content.lower():
-                if content.startswith('http') and not result['instagram']:
-                    result['instagram'] = content
-                    if log_file:
-                        log(f"     📸 Instagram trouvé (meta): {content[:80]}...", log_file)
-            
-            if 'facebook' in property_attr or 'facebook' in content.lower():
-                if content.startswith('http') and not result['facebook']:
-                    result['facebook'] = content
-                    if log_file:
-                        log(f"     👥 Facebook trouvé (meta): {content[:80]}...", log_file)
-        
+            content_lower = content.lower()
+
+            # Instagram dans meta
+            if not result['instagram']:
+                if 'instagram' in property_attr or 'instagram' in name_attr or 'instagram.com' in content_lower:
+                    if 'instagram.com' in content_lower:
+                        # Extraire l'URL Instagram
+                        insta_match = re.search(r'https?://(?:www\.)?instagram\.com/[^\s"\'<>]+', content, re.IGNORECASE)
+                        if insta_match:
+                            result['instagram'] = insta_match.group(0)
+                            if log_file:
+                                log(f"     📸 Instagram trouvé (meta): {result['instagram'][:80]}...", log_file)
+
+            # Facebook dans meta
+            if not result['facebook']:
+                if 'facebook' in property_attr or 'facebook' in name_attr or 'facebook.com' in content_lower:
+                    if 'facebook.com' in content_lower or 'fb.com' in content_lower:
+                        fb_match = re.search(r'https?://(?:www\.)?(?:facebook\.com|fb\.com)/[^\s"\'<>]+', content, re.IGNORECASE)
+                        if fb_match:
+                            result['facebook'] = fb_match.group(0)
+                            if log_file:
+                                log(f"     👥 Facebook trouvé (meta): {result['facebook'][:80]}...", log_file)
+
+            # Description pour spécialité culinaire si pas encore trouvée
+            if not result['specialite_culinaire']:
+                if 'description' in property_attr or 'description' in name_attr:
+                    for specialite, keywords in cuisine_keywords.items():
+                        for keyword in keywords:
+                            if keyword in content_lower:
+                                result['specialite_culinaire'] = specialite
+                                if log_file:
+                                    log(f"     🍽️  Spécialité trouvée (meta): {specialite}", log_file)
+                                break
+                        if result['specialite_culinaire']:
+                            break
+
+        # ================== RECHERCHE DANS LES SCRIPTS JSON-LD ==================
+        scripts = soup.find_all('script', type='application/ld+json')
+        for script in scripts:
+            try:
+                json_data = json.loads(script.string)
+
+                # Gérer les listes de JSON-LD
+                if isinstance(json_data, list):
+                    items = json_data
+                else:
+                    items = [json_data]
+
+                for item in items:
+                    # Chercher les infos de restaurant dans le JSON-LD
+                    if item.get('@type') in ['Restaurant', 'FoodEstablishment', 'LocalBusiness']:
+                        # Cuisine
+                        if not result['specialite_culinaire']:
+                            serves_cuisine = item.get('servesCuisine', '')
+                            if serves_cuisine:
+                                if isinstance(serves_cuisine, list):
+                                    result['specialite_culinaire'] = ', '.join(serves_cuisine[:3])
+                                else:
+                                    result['specialite_culinaire'] = serves_cuisine
+                                if log_file:
+                                    log(f"     🍽️  Spécialité trouvée (JSON-LD): {result['specialite_culinaire']}", log_file)
+
+                        # Tranche de prix
+                        if not result['tranche_prix']:
+                            price_range = item.get('priceRange', '')
+                            if price_range:
+                                result['tranche_prix'] = price_range
+                                if log_file:
+                                    log(f"     💰 Tranche de prix trouvée (JSON-LD): {result['tranche_prix']}", log_file)
+
+                        # Menu
+                        if not result['lien_menu']:
+                            menu_url = item.get('hasMenu', '') or item.get('menu', '')
+                            if isinstance(menu_url, dict):
+                                menu_url = menu_url.get('url', '') or menu_url.get('@id', '')
+                            if menu_url and menu_url.startswith('http'):
+                                result['lien_menu'] = menu_url
+                                if log_file:
+                                    log(f"     📋 Menu trouvé (JSON-LD): {menu_url[:80]}...", log_file)
+
+                        # Réseaux sociaux
+                        same_as = item.get('sameAs', [])
+                        if isinstance(same_as, str):
+                            same_as = [same_as]
+                        for social_url in same_as:
+                            if not result['instagram'] and 'instagram.com' in social_url.lower():
+                                result['instagram'] = social_url
+                                if log_file:
+                                    log(f"     📸 Instagram trouvé (JSON-LD): {social_url[:80]}...", log_file)
+                            if not result['facebook'] and ('facebook.com' in social_url.lower() or 'fb.com' in social_url.lower()):
+                                result['facebook'] = social_url
+                                if log_file:
+                                    log(f"     👥 Facebook trouvé (JSON-LD): {social_url[:80]}...", log_file)
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                continue
+
     except requests.exceptions.Timeout:
         if log_file:
             log(f"  ⚠️  Timeout lors du scraping de {website_url[:50]}...", log_file)
@@ -392,7 +580,7 @@ def scrape_website_links(website_url, log_file=None):
     except Exception as e:
         if log_file:
             log(f"  ⚠️  Erreur inattendue lors du scraping: {str(e)[:100]}", log_file)
-    
+
     return result
 
 
@@ -745,10 +933,11 @@ def aggregate_results_by_restaurant(results):
         columns_to_aggregate = [
             'nom', 'adresse_formatee', 'arrondissement', 'telephone', 'site_web',
             'url_google_maps', 'note', 'nombre_avis', 'place_id',
-            'station_metro_1', 
+            'station_metro_1',
             'distance_station_1_metres', 'station_metro_2',
             'distance_station_2_metres', 'statut', 'logo_url',
-            'lien_menu', 'lien_reservation', 'instagram', 'facebook'
+            'lien_menu', 'lien_reservation', 'instagram', 'facebook',
+            'specialite_culinaire', 'tranche_prix'
         ]
         
         # Colonnes de lignes de métro : garder les lignes groupées par station
@@ -847,16 +1036,17 @@ def aggregate_results_by_restaurant(results):
     return aggregated_results
 
 
-def search_restaurants_from_excel(excel_path: str, name_column: str, request=None, log_file_path: str = None, output_dir: str = None):
+def search_restaurants_from_excel(excel_path: str, name_column: str, request=None, log_file_path: str = None, output_dir: str = None, limit: int = None):
     """
     Recherche des restaurants depuis un fichier Excel
-    
+
     Args:
         excel_path: Chemin vers le fichier Excel
         name_column: Nom de la colonne contenant les noms de restaurants
         request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
         log_file_path: Chemin du fichier de log
         output_dir: Répertoire de sortie pour le fichier Excel
+        limit: Nombre maximum de restaurants à traiter (None = tous, utile pour les tests)
     """
     if not log_file_path:
         from config import BACKUP_DIR
@@ -941,6 +1131,11 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
                     'reference_urls': []  # Pour l'instant, pas de URLs de référence
                 })
         
+        # Appliquer la limite si spécifiée (utile pour les tests)
+        if limit and limit > 0:
+            restaurants_data = restaurants_data[:limit]
+            log(f"🧪 Mode test: limitation à {limit} restaurant(s)", log_file)
+
         log(f"🍽️  {len(restaurants_data)} restaurants à rechercher", log_file)
         log("", log_file)
         
@@ -1061,7 +1256,7 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
                     result['lignes_metro_2'] = ''
                     result['distance_station_2_metres'] = ''
                 
-                # Scraper le site web pour extraire menu, réservation, Instagram, Facebook
+                # Scraper le site web pour extraire menu, réservation, Instagram, Facebook, spécialité, prix
                 website_url = result.get('site_web', '')
                 if website_url:
                     log(f"     🌐 Scraping du site web: {website_url[:60]}...", log_file)
@@ -1070,8 +1265,12 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
                     result['lien_reservation'] = scraped_links.get('lien_reservation', '')
                     result['instagram'] = scraped_links.get('instagram', '')
                     result['facebook'] = scraped_links.get('facebook', '')
+                    result['specialite_culinaire'] = scraped_links.get('specialite_culinaire', '')
+                    result['tranche_prix'] = scraped_links.get('tranche_prix', '')
                 else:
                     log(f"     ⚠️  Pas de site web disponible pour le scraping", log_file)
+                    result['specialite_culinaire'] = ''
+                    result['tranche_prix'] = ''
             
             all_results.extend(results_to_process)
             restaurants_trouves += 1

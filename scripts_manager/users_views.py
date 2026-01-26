@@ -17,6 +17,7 @@ from django.utils import timezone as django_timezone
 from django.contrib.auth.decorators import login_required
 from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials, firestore
+from google.api_core import exceptions as gcp_exceptions
 
 from config import SERVICE_ACCOUNT_PATH, EXPORTS_DIR
 from .firebase_utils import get_service_account_path
@@ -30,14 +31,14 @@ RECENT_THRESHOLD_DAYS = 7
 
 USERS_CACHE_KEY = 'users_merged_cache_v1'
 MERGE_USERS_CACHE_KEY = 'merged_users_cache_v1'
-MERGE_USERS_CACHE_TTL = int(os.getenv('MERGE_USERS_CACHE_TTL', 600))  # 10 minutes
+MERGE_USERS_CACHE_TTL = int(os.getenv('MERGE_USERS_CACHE_TTL', 1800))  # 30 minutes (augmenté pour éviter les quotas)
 USERS_CACHE_TTL = int(os.getenv('USERS_CACHE_TTL', os.getenv('CACHE_TTL', 180)))
 FIRESTORE_USERS_CACHE_KEY = 'firestore_users_cache_v1'
-FIRESTORE_USERS_CACHE_TTL = int(os.getenv('FIRESTORE_USERS_CACHE_TTL', 180))
+FIRESTORE_USERS_CACHE_TTL = int(os.getenv('FIRESTORE_USERS_CACHE_TTL', 1800))  # 30 minutes (augmenté)
 AUTH_USERS_CACHE_KEY = 'firebase_auth_users_cache_v1'
-AUTH_USERS_CACHE_TTL = int(os.getenv('AUTH_USERS_CACHE_TTL', 180))
+AUTH_USERS_CACHE_TTL = int(os.getenv('AUTH_USERS_CACHE_TTL', 1800))  # 30 minutes (augmenté)
 FCM_TOKENS_CACHE_KEY = 'fcm_tokens_cache_v1'
-FCM_TOKENS_CACHE_TTL = int(os.getenv('FCM_TOKENS_CACHE_TTL', 180))
+FCM_TOKENS_CACHE_TTL = int(os.getenv('FCM_TOKENS_CACHE_TTL', 1800))  # 30 minutes (augmenté)
 USERS_PAGE_SIZE = int(os.getenv('USERS_PAGE_SIZE', 50))
 
 
@@ -109,30 +110,104 @@ def fetch_firestore_users(request=None) -> Dict[str, dict]:
     Args:
         request: Objet request Django (optionnel) pour déterminer l'environnement
     """
+    logger.info("🔍 [fetch_firestore_users] Début de la fonction")
     # Inclure l'environnement dans la clé de cache pour éviter les mélanges
     from .firebase_utils import get_firebase_env_from_session
+    from google.api_core import exceptions as gcp_exceptions
     env = get_firebase_env_from_session(request)
+    logger.info(f"🌍 [fetch_firestore_users] Environnement: {env}")
     cache_key = f"{FIRESTORE_USERS_CACHE_KEY}_{env}"
+    logger.info(f"🔑 [fetch_firestore_users] Clé de cache: {cache_key}")
     
     cached = cache.get(cache_key)
     if cached is not None:
-        logger.info(f"📦 Firestore (cache): {len(cached)} utilisateurs")
+        logger.info(f"📦 [fetch_firestore_users] Cache trouvé: {len(cached)} utilisateurs")
         return cached
+    logger.info("❌ [fetch_firestore_users] Pas de cache, récupération depuis Firestore")
 
+    logger.info("🔧 [fetch_firestore_users] Récupération du client Firestore...")
     client = get_firestore_client(request)
     if not client:
+        logger.error("❌ [fetch_firestore_users] Pas de client Firestore disponible")
         return {}
+    logger.info("✅ [fetch_firestore_users] Client Firestore obtenu")
 
-    users_ref = client.collection('users')
-    documents = users_ref.stream()
-    firestore_users = {}
-    for doc in documents:
-        data = doc.to_dict() or {}
-        uid = data.get('uid') or doc.id
-        firestore_users[uid] = data
-    logger.info(f"📦 Firestore: {len(firestore_users)} utilisateurs chargés")
-    cache.set(cache_key, firestore_users, FIRESTORE_USERS_CACHE_TTL)
-    return firestore_users
+    try:
+        logger.info("📚 [fetch_firestore_users] Accès à la collection 'users'...")
+        users_ref = client.collection('users')
+        # Limiter le nombre de documents pour éviter les quotas (max 200 en DEV)
+        max_users = 200 if env == 'dev' else 1000
+        logger.info(f"📊 [fetch_firestore_users] Limite: {max_users} utilisateurs")
+        
+        logger.info("🔄 [fetch_firestore_users] Exécution de la requête Firestore (stream avec itération manuelle)...")
+        # Utiliser limit() pour éviter de charger trop de données
+        # Itérer manuellement pour éviter les blocages avec list()
+        documents = []
+        stream = users_ref.limit(max_users).stream()
+        count = 0
+        max_iterations = max_users + 10  # Limite de sécurité
+        
+        try:
+            logger.info("🔄 [fetch_firestore_users] Début de l'itération sur le stream...")
+            for doc in stream:
+                count += 1
+                if count % 10 == 0:
+                    logger.info(f"📊 [fetch_firestore_users] {count} documents traités...")
+                if count > max_users:
+                    logger.warning(f"⚠️  [fetch_firestore_users] Limite de {max_users} atteinte, arrêt")
+                    break
+                documents.append(doc)
+                if count >= max_iterations:
+                    logger.warning(f"⚠️  [fetch_firestore_users] Limite de sécurité {max_iterations} atteinte, arrêt")
+                    break
+            logger.info(f"✅ [fetch_firestore_users] Itération terminée: {count} documents parcourus")
+        except gcp_exceptions.ResourceExhausted as quota_error:
+            logger.error(f"❌ [fetch_firestore_users] Quota dépassé lors du stream: {quota_error}")
+            # Si on a déjà récupéré des documents, on les utilise
+            if documents:
+                logger.warning(f"⚠️  [fetch_firestore_users] Utilisation de {len(documents)} documents déjà récupérés malgré le quota")
+            else:
+                raise
+        except Exception as stream_error:
+            logger.error(f"❌ [fetch_firestore_users] Erreur lors du stream: {type(stream_error).__name__}: {stream_error}", exc_info=True)
+            # Si on a déjà récupéré des documents, on les utilise
+            if documents:
+                logger.warning(f"⚠️  [fetch_firestore_users] Utilisation de {len(documents)} documents déjà récupérés")
+            else:
+                raise
+        
+        logger.info(f"✅ [fetch_firestore_users] {len(documents)} documents récupérés depuis Firestore")
+        
+        firestore_users = {}
+        logger.info("🔄 [fetch_firestore_users] Traitement des documents...")
+        for doc in documents:
+            data = doc.to_dict() or {}
+            uid = data.get('uid') or doc.id
+            firestore_users[uid] = data
+        
+        logger.info(f"📦 [fetch_firestore_users] {len(firestore_users)} utilisateurs traités")
+        logger.info(f"💾 [fetch_firestore_users] Mise en cache pour {FIRESTORE_USERS_CACHE_TTL}s...")
+        cache.set(cache_key, firestore_users, FIRESTORE_USERS_CACHE_TTL)
+        logger.info("✅ [fetch_firestore_users] Cache mis à jour")
+        return firestore_users
+    except gcp_exceptions.ResourceExhausted as e:
+        logger.error(f"❌ Quota Firebase dépassé lors de la récupération des utilisateurs: {e}")
+        # Essayer de récupérer le cache même s'il est expiré
+        expired_cache = cache.get(cache_key)
+        if expired_cache is not None:
+            logger.warning(f"⚠️  Utilisation du cache expiré en raison du quota dépassé")
+            return expired_cache
+        logger.error(f"❌ Aucun cache disponible, retour d'une liste vide")
+        return {}
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la récupération des utilisateurs Firestore: {type(e).__name__}: {e}")
+        # Essayer de récupérer le cache même s'il est expiré
+        expired_cache = cache.get(cache_key)
+        if expired_cache is not None:
+            logger.warning(f"⚠️  Utilisation du cache expiré en raison d'une erreur")
+            return expired_cache
+        logger.error(f"❌ Aucun cache disponible, retour d'une liste vide")
+        return {}
 
 
 def fetch_auth_users(request=None) -> Dict[str, firebase_auth.UserRecord]:
@@ -158,13 +233,18 @@ def fetch_auth_users(request=None) -> Dict[str, firebase_auth.UserRecord]:
 
     users = {}
     try:
+        logger.info("🔄 [fetch_auth_users] Appel à list_users()...")
         page = firebase_auth.list_users(app=app)
+        logger.info("🔄 [fetch_auth_users] Itération sur les utilisateurs...")
         for user in page.iterate_all():
             users[user.uid] = user
+        logger.info(f"✅ [fetch_auth_users] {len(users)} utilisateurs récupérés")
     except Exception as exc:
-        logger.error(f"Erreur lors de la récupération des utilisateurs Firebase Auth: {exc}")
-    logger.info(f"🔐 Firebase Auth: {len(users)} utilisateurs chargés")
+        logger.error(f"❌ [fetch_auth_users] Erreur lors de la récupération: {type(exc).__name__}: {exc}", exc_info=True)
+    logger.info(f"🔐 [fetch_auth_users] {len(users)} utilisateurs chargés")
+    logger.info(f"💾 [fetch_auth_users] Mise en cache pour {AUTH_USERS_CACHE_TTL}s...")
     cache.set(cache_key, users, AUTH_USERS_CACHE_TTL)
+    logger.info("✅ [fetch_auth_users] Cache mis à jour")
     return users
 
 
@@ -175,33 +255,43 @@ def fetch_fcm_tokens(request=None) -> Dict[str, List[dict]]:
     Args:
         request: Objet request Django (optionnel) pour déterminer l'environnement
     """
+    logger.info("🔍 [fetch_fcm_tokens] Début de la fonction")
     # Inclure l'environnement dans la clé de cache
     from .firebase_utils import get_firebase_env_from_session
     env = get_firebase_env_from_session(request)
+    logger.info(f"🌍 [fetch_fcm_tokens] Environnement: {env}")
     cache_key = f"{FCM_TOKENS_CACHE_KEY}_{env}"
     
     cached = cache.get(cache_key)
     if cached is not None:
-        logger.info(f"🔔 FCM tokens (cache): {len(cached)} utilisateurs avec token")
+        logger.info(f"🔔 [fetch_fcm_tokens] Cache trouvé: {len(cached)} utilisateurs avec token")
         return cached
+    logger.info("❌ [fetch_fcm_tokens] Pas de cache, récupération depuis Firestore")
 
+    logger.info("🔧 [fetch_fcm_tokens] Récupération du client Firestore...")
     client = get_firestore_client(request)
     if not client:
+        logger.error("❌ [fetch_fcm_tokens] Pas de client Firestore disponible")
         return {}
 
+    logger.info("📚 [fetch_fcm_tokens] Accès à la collection 'fcm_tokens'...")
     tokens_ref = client.collection('fcm_tokens')
+    logger.info("🔄 [fetch_fcm_tokens] Exécution de la requête Firestore (stream)...")
     documents = tokens_ref.stream()
     tokens_by_user = {}
     count = 0
+    logger.info("🔄 [fetch_fcm_tokens] Traitement des documents...")
     for doc in documents:
+        count += 1
         data = doc.to_dict() or {}
         user_id = data.get('userId')
         if not user_id:
             continue
         tokens_by_user.setdefault(user_id, []).append(data)
-        count += 1
-    logger.info(f"🔔 FCM tokens chargés: {count} tokens pour {len(tokens_by_user)} utilisateurs")
+    logger.info(f"✅ [fetch_fcm_tokens] {count} documents traités, {len(tokens_by_user)} utilisateurs avec token")
+    logger.info(f"💾 [fetch_fcm_tokens] Mise en cache pour {FCM_TOKENS_CACHE_TTL}s...")
     cache.set(cache_key, tokens_by_user, FCM_TOKENS_CACHE_TTL)
+    logger.info("✅ [fetch_fcm_tokens] Cache mis à jour")
     return tokens_by_user
 
 
@@ -317,15 +407,48 @@ def merge_users_data(force_refresh=False, request=None) -> List[dict]:
     env = get_firebase_env_from_session(request)
     cache_key = f"{MERGE_USERS_CACHE_KEY}_{env}"
     
+    logger.info(f"🔄 [merge_users_data] Début - force_refresh={force_refresh}, env={env}")
+    
     if not force_refresh:
+        logger.info(f"🔍 [merge_users_data] Vérification du cache...")
         cached = cache.get(cache_key)
         if cached is not None:
-            logger.info(f"📊 Utilisateurs fusionnés (cache): {len(cached)} utilisateurs")
+            logger.info(f"📊 [merge_users_data] Cache trouvé: {len(cached)} utilisateurs")
             return cached
+        logger.info("❌ [merge_users_data] Pas de cache valide")
 
-    firestore_users = fetch_firestore_users(request)
-    auth_users = fetch_auth_users(request)
-    fcm_tokens = fetch_fcm_tokens(request)
+    # En DEV, privilégier le cache même expiré pour éviter les quotas
+    if env == 'dev':
+        logger.info("🔍 [merge_users_data] Mode DEV: vérification du cache expiré...")
+        expired_cache = cache.get(cache_key)
+        if expired_cache is not None and not force_refresh:
+            logger.warning(f"⚠️  [merge_users_data] Mode DEV: utilisation du cache même expiré pour éviter les quotas")
+            return expired_cache
+        logger.info("❌ [merge_users_data] Pas de cache expiré disponible")
+
+    try:
+        logger.info("📥 [merge_users_data] Récupération des données Firestore...")
+        firestore_users = fetch_firestore_users(request)
+        logger.info(f"✅ [merge_users_data] Firestore: {len(firestore_users)} utilisateurs")
+        
+        logger.info("📥 [merge_users_data] Récupération des données Auth...")
+        auth_users = fetch_auth_users(request)
+        logger.info(f"✅ [merge_users_data] Auth: {len(auth_users)} utilisateurs")
+        
+        logger.info("📥 [merge_users_data] Récupération des tokens FCM...")
+        fcm_tokens = fetch_fcm_tokens(request)
+        logger.info(f"✅ [merge_users_data] FCM: {len(fcm_tokens)} utilisateurs avec tokens")
+    except Exception as e:
+        logger.error(f"❌ [merge_users_data] Erreur lors de la récupération des données utilisateurs: {type(e).__name__}: {e}", exc_info=True)
+        # En cas d'erreur, retourner le cache même s'il est expiré
+        logger.info("🔍 [merge_users_data] Tentative de récupération du cache expiré...")
+        expired_cache = cache.get(cache_key)
+        if expired_cache is not None:
+            logger.warning(f"⚠️  [merge_users_data] Utilisation du cache expiré en raison d'une erreur: {len(expired_cache)} utilisateurs")
+            return expired_cache
+        # Si pas de cache, retourner une liste vide plutôt que de planter
+        logger.error(f"❌ [merge_users_data] Aucun cache disponible, retour d'une liste vide")
+        return []
 
     combined = []
     handled_uids = set()
@@ -435,25 +558,49 @@ def build_query_without_page(request):
 @login_required
 def users_list(request):
     """Page principale listant les utilisateurs avec recherche et filtres (optimisé)."""
+    logger.info("=" * 80)
+    logger.info("🚀 [users_list] DÉBUT de la vue users_list")
+    logger.info("=" * 80)
+    
     query = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', 'all')
     page_number = request.GET.get('page', 1)
     force_refresh = request.GET.get('refresh') == '1'
+    
+    logger.info(f"📋 [users_list] Paramètres: query='{query}', status='{status_filter}', page={page_number}, refresh={force_refresh}")
 
     # Utiliser le cache sauf si refresh explicite
-    users = merge_users_data(force_refresh=force_refresh, request=request)
+    error_message = None
+    try:
+        logger.info("🔄 [users_list] Appel à merge_users_data...")
+        users = merge_users_data(force_refresh=force_refresh, request=request)
+        logger.info(f"✅ [users_list] merge_users_data terminé: {len(users)} utilisateurs")
+    except Exception as e:
+        logger.error(f"❌ [users_list] Erreur lors de la récupération des utilisateurs: {type(e).__name__}: {e}", exc_info=True)
+        # En cas d'erreur, retourner une liste vide plutôt que de planter
+        users = []
+        error_message = f"Erreur lors du chargement des utilisateurs: {type(e).__name__}. Les données en cache sont affichées si disponibles."
     
+    logger.info(f"🔄 [users_list] Filtrage des utilisateurs...")
     # Filtrer d'abord, puis paginer (plus efficace)
     filtered_users = filter_users(users, query, status_filter)
     filtered_count = len(filtered_users)
+    logger.info(f"✅ [users_list] {filtered_count} utilisateurs après filtrage")
     
+    logger.info(f"🔄 [users_list] Pagination...")
     # Pagination optimisée
     paginator = Paginator(filtered_users, USERS_PAGE_SIZE)
-    page_obj = paginator.get_page(page_number)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except Exception:
+        page_obj = paginator.get_page(1)
+    logger.info(f"✅ [users_list] Page {page_obj.number}/{paginator.num_pages} avec {len(page_obj.object_list)} utilisateurs")
     
+    logger.info(f"🔄 [users_list] Calcul des métriques...")
     # Calculer les métriques uniquement si nécessaire (ou depuis le cache)
     metrics = compute_status_metrics(users)
     base_query = build_query_without_page(request)
+    logger.info(f"✅ [users_list] Métriques calculées: {metrics}")
 
     context = {
         'users': page_obj.object_list,
@@ -465,7 +612,12 @@ def users_list(request):
         'query_string': base_query,
         'status_options': [
             ('all', 'Tous'),
-        ]
+        ],
+        'error_message': error_message,
     }
+    
+    logger.info("=" * 80)
+    logger.info("✅ [users_list] FIN de la vue users_list - Rendu du template")
+    logger.info("=" * 80)
     
     return render(request, 'scripts_manager/users/list.html', context)

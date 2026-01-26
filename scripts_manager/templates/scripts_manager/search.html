@@ -48,9 +48,9 @@
                     <label for="name_column" class="block text-sm font-medium text-[#111111] mb-2">
                         Colonne contenant les noms de restaurants *
                     </label>
-                    <select 
-                        id="name_column" 
-                        name="name_column" 
+                    <select
+                        id="name_column"
+                        name="name_column"
                         required
                         disabled
                         style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
@@ -59,7 +59,24 @@
                     </select>
                     <small style="color: #6c757d;">La colonne sera détectée automatiquement après la sélection du fichier</small>
                 </div>
-                
+
+                <!-- Limite de restaurants (pour tests) -->
+                <div>
+                    <label for="limit" class="block text-sm font-medium text-[#111111] mb-2">
+                        🧪 Limite de restaurants (optionnel - pour tests)
+                    </label>
+                    <input
+                        type="number"
+                        id="limit"
+                        name="limit"
+                        min="1"
+                        max="1000"
+                        placeholder="Ex: 5 (laissez vide pour tous)"
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
+                    >
+                    <small style="color: #6c757d;">Limiter le nombre de restaurants à traiter (utile pour tester le scraping). Laissez vide pour traiter tous les restaurants.</small>
+                </div>
+
                 <!-- Bouton de recherche -->
                 <button type="submit" class="btn-primary w-full" id="searchBtn">
                     🔍 Lancer la recherche

@@ -375,17 +375,16 @@ TAG_GROUPS = {
                          'Brasserie', 'Cave à manger', 'Fast',
                          'Boulangerie/pâtisserie', 'Concept brunch', 'Concept goûter',
                          'Coffee shop/salon de thé', 'Bar'],
-    "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Apéro', 'Dîner'],
-    "location_type": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop'],
+    "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Apéro', 'Dîner', 'Sans réservation'],
+    "location_type": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop', 'Salle privatisable', 'Terrasse'],
     "location_name": [],
-    "lieu_tags": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop'],
-    "ambiance": ['Classique', 'Convivial', 'Intimiste/tamisé', 'Familial', 'Festif'],
+    "lieu_tags": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop', 'Salle privatisable', 'Terrasse'],
+    "ambiance": ['Entre amis', 'En famille', 'Date', 'Festif'],
     "price_range": ['€', '€€', '€€€', '€€€€'],
     "cuisine": ['Africain', 'Américain', 'Chinois', 'Coréen', 'Colombien', 'Français', 'Grec', 'Indien',
                  'Israélien', 'Italien', 'Japonais', 'Libanais', 'Mexicain', 'Oriental', 'Péruvien',
                  'Sud-Américain', 'Thaï', 'Vietnamien'],
-    "preferences": ['Casher (certifié)', 'Casher friendly', 'Viande casher', 'Végétarien', 'Vegan',
-                   'Hallal (certifié)', 'Viande hallal', 'Offre de vins casher'],
+    "preferences": ['Casher', '100% végétarien', 'Healthy'],
     "terrace": ['Terrasse', 'Terrasse classique', 'Cour', 'Rooftop'],
     "recommended_by": []  # Pas de valeurs prédéfinies, ce sont des tags libres
 }
@@ -428,7 +427,7 @@ def collect_tags_from_excel_columns(row, tag_group_name):
             "ambiance": ['Ambiance_TAG'],
             "price_range": ['Prix_TAG'],
             "cuisine": ['Spécialité_TAG'],
-            "preferences": ['Préférences_TAG', 'Restrictions_TAG'],  # Support ancien et nouveau nom
+            "preferences": ['Préférences_TAG', 'Restrictions_TAG', 'Préférences'],  # Support ancien et nouveau nom, et format sans _TAG
             "terrace": ['Lieu_TAG', 'Ambiance_TAG'],
             "recommended_by": ['recommandé par - TAG']
         }
@@ -445,9 +444,16 @@ def collect_tags_from_excel_columns(row, tag_group_name):
                                 if tag not in results:
                                     results.append(tag)
                         elif tag_group_name == "preferences":
-                            if "Casher" in tag:
+                            # Normalisation des préférences
+                            tag_lower = tag.lower().strip()
+                            if "casher" in tag_lower:
                                 clean_tag = "Casher"
+                            elif "végétarien" in tag_lower or "vegetarien" in tag_lower:
+                                clean_tag = "100% végétarien"
+                            elif "healthy" in tag_lower:
+                                clean_tag = "Healthy"
                             else:
+                                # Garder la valeur telle quelle si elle correspond aux nouvelles valeurs
                                 clean_tag = tag
                             if clean_tag not in results:
                                 results.append(clean_tag)
@@ -650,6 +656,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         ambiance_tag = ambiance_tags
         preferences_tag = preferences_tags
         type_tag = types_tags
+        recommended_by_tag = recommended_by_tags
         
         has_terrace = any("terrasse" in x.lower() for x in (ambiance_tags + lieu_tags + terrace_tags))
         terrace_locs = [x for x in (lieu_tags + terrace_tags) if "terrasse" in x.lower()]
@@ -696,6 +703,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "ambiance_tag": ambiance_tag,
             "preferences_tag": preferences_tag,
             "type_tag": type_tag,
+            "recommended_by_tag": recommended_by_tag,
             "types": types_tags,
             "moments": moments_tags,
             "lieux": lieu_tags,

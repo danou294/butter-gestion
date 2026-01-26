@@ -77,43 +77,80 @@ def send_push_notification_to_multiple(tokens, title, body, data=None):
         logger.info(f"📝 [MULTIPLE] Titre: \"{title}\"")
         logger.info(f"📝 [MULTIPLE] Corps: \"{body}\"")
         
+        # Limite FCM pour MulticastMessage (500 tokens maximum)
+        # Mais on utilise 100 pour éviter "Too many open files"
+        MAX_TOKENS_PER_BATCH = 100
+        
         # Convertir les données en strings
         fcm_data = {}
         if data:
             fcm_data = {str(key): str(value) for key, value in data.items()}
         
-        message = messaging.MulticastMessage(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-            data=fcm_data,
-            apns=messaging.APNSConfig(
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(
-                        sound=DEFAULT_SOUND,
-                        badge=DEFAULT_BADGE,
-                    )
-                )
-            ),
-            tokens=tokens,
-        )
+        # Diviser les tokens en batches de 500 maximum
+        total_success = 0
+        total_failure = 0
+        total_batches = (len(tokens) + MAX_TOKENS_PER_BATCH - 1) // MAX_TOKENS_PER_BATCH
         
-        logger.info("🚀 [MULTIPLE] Envoi via Firebase Admin SDK (send_each_for_multicast)...")
-        response = messaging.send_each_for_multicast(message)
+        logger.info(f"📦 [MULTIPLE] Division en {total_batches} batch(s) de maximum {MAX_TOKENS_PER_BATCH} tokens")
         
-        logger.info(f"✅ [MULTIPLE] {response.success_count} notifications envoyées avec succès")
-        if response.failure_count > 0:
-            logger.warning(f"❌ [MULTIPLE] {response.failure_count} notifications ont échoué")
+        for batch_num in range(total_batches):
+            start_idx = batch_num * MAX_TOKENS_PER_BATCH
+            end_idx = min(start_idx + MAX_TOKENS_PER_BATCH, len(tokens))
+            batch_tokens = tokens[start_idx:end_idx]
             
-            # Afficher les détails des échecs
-            for idx, resp in enumerate(response.responses):
-                if not resp.success:
-                    logger.error(f"   ❌ Échec token {idx + 1}: {resp.exception}")
+            logger.info(f"📤 [MULTIPLE] Envoi du batch {batch_num + 1}/{total_batches} ({len(batch_tokens)} tokens)...")
+            
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                ),
+                data=fcm_data,
+                apns=messaging.APNSConfig(
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            sound=DEFAULT_SOUND,
+                            badge=DEFAULT_BADGE,
+                        )
+                    )
+                ),
+                tokens=batch_tokens,
+            )
+            
+            logger.info(f"🚀 [MULTIPLE] Envoi du batch {batch_num + 1} via Firebase Admin SDK...")
+            response = messaging.send_each_for_multicast(message)
+            
+            batch_success = response.success_count
+            batch_failure = response.failure_count
+            total_success += batch_success
+            total_failure += batch_failure
+            
+            logger.info(f"✅ [MULTIPLE] Batch {batch_num + 1}: {batch_success} succès, {batch_failure} échecs")
+            
+            if response.failure_count > 0:
+                logger.warning(f"⚠️  [MULTIPLE] Batch {batch_num + 1}: {batch_failure} notifications échouées")
+                # Afficher les détails des échecs (limité à 5 pour éviter trop de logs)
+                error_count = 0
+                for idx, resp in enumerate(response.responses):
+                    if not resp.success:
+                        error_count += 1
+                        if error_count <= 5:
+                            logger.error(f"   ❌ Échec token {idx + 1} du batch {batch_num + 1}: {resp.exception}")
+                if error_count > 5:
+                    logger.warning(f"   ... et {error_count - 5} autres échecs")
+            
+            # Ajouter un petit délai entre les batches pour permettre la fermeture des connexions
+            if batch_num < total_batches - 1:  # Pas de délai après le dernier batch
+                import time
+                time.sleep(0.5)  # 500ms de délai entre les batches
+        
+        logger.info(f"✅ [MULTIPLE] Total: {total_success} notifications envoyées avec succès")
+        if total_failure > 0:
+            logger.warning(f"❌ [MULTIPLE] Total: {total_failure} notifications échouées")
         
         return {
-            'successCount': response.success_count,
-            'failureCount': response.failure_count,
+            'successCount': total_success,
+            'failureCount': total_failure,
         }
     except Exception as error:
         logger.error(f"❌ [MULTIPLE] Erreur lors de l'envoi des notifications: {error}")
