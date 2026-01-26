@@ -1036,7 +1036,7 @@ def aggregate_results_by_restaurant(results):
     return aggregated_results
 
 
-def search_restaurants_from_excel(excel_path: str, name_column: str, request=None, log_file_path: str = None, output_dir: str = None, limit: int = None):
+def search_restaurants_from_excel(excel_path: str, name_column: str, request=None, log_file_path: str = None, output_dir: str = None, limit: int = None, url_column: str = None):
     """
     Recherche des restaurants depuis un fichier Excel
 
@@ -1047,6 +1047,7 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
         log_file_path: Chemin du fichier de log
         output_dir: Répertoire de sortie pour le fichier Excel
         limit: Nombre maximum de restaurants à traiter (None = tous, utile pour les tests)
+        url_column: Nom de la colonne contenant les URLs Google Maps (optionnel, pour matcher les résultats)
     """
     if not log_file_path:
         from config import BACKUP_DIR
@@ -1070,6 +1071,10 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
     log("=" * 60, log_file)
     log(f"📁 Fichier Excel: {excel_path}", log_file)
     log(f"📋 Colonne des noms: {name_column}", log_file)
+    if url_column:
+        log(f"🔗 Colonne des URLs: {url_column} (matching activé)", log_file)
+    else:
+        log(f"⚠️  Pas de colonne URL - toutes les occurrences seront retournées", log_file)
     log("", log_file)
     
     # Récupérer la clé API Google depuis les variables d'environnement Django
@@ -1121,14 +1126,26 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
             log(f"📋 Colonnes disponibles: {', '.join(df.columns.tolist())}", log_file)
             raise ValueError(error_msg)
         
-        # Extraire les noms de restaurants
+        if url_column and url_column not in df.columns:
+            error_msg = f"❌ Colonne '{url_column}' non trouvée dans le fichier Excel"
+            log(error_msg, log_file)
+            log(f"📋 Colonnes disponibles: {', '.join(df.columns.tolist())}", log_file)
+            raise ValueError(error_msg)
+        
+        # Extraire les noms de restaurants et URLs
         restaurants_data = []
         for idx, row in df.iterrows():
             name = str(row[name_column]).strip() if pd.notna(row[name_column]) else ''
             if name and name.lower() not in ['nan', '']:
+                reference_url = ''
+                if url_column and pd.notna(row.get(url_column)):
+                    reference_url = str(row[url_column]).strip()
+                    if reference_url.lower() in ['nan', '']:
+                        reference_url = ''
+                
                 restaurants_data.append({
                     'name': name,
-                    'reference_urls': []  # Pour l'instant, pas de URLs de référence
+                    'reference_url': reference_url
                 })
         
         # Appliquer la limite si spécifiée (utile pour les tests)
@@ -1201,10 +1218,113 @@ def search_restaurants_from_excel(excel_path: str, name_column: str, request=Non
         if results:
             log(f"  ✅ Total: {len(results)} résultat(s) unique(s) trouvé(s)", log_file)
             
-            # Limiter à 3 meilleurs résultats par restaurant pour éviter trop de données
-            results_to_process = results[:3]
-            if len(results) > 3:
-                log(f"  📊 Limitation à 3 meilleurs résultats sur {len(results)} trouvés", log_file)
+            # Si une URL de référence est fournie, matcher avec les résultats
+            reference_url = restaurant_info.get('reference_url', '')
+            if reference_url:
+                log(f"  🔗 URL de référence fournie: {reference_url[:80]}...", log_file)
+                matched_result = None
+                
+                # Extraire le place_id depuis l'URL de référence
+                def extract_place_id_from_url(url):
+                    """Extrait le place_id depuis une URL Google Maps"""
+                    if not url:
+                        return None
+                    import re
+                    # Format 1: place_id=ChIJ...
+                    match = re.search(r'place_id=([^&]+)', url)
+                    if match:
+                        return match.group(1)
+                    # Format 2: /place/.../data=...
+                    match = re.search(r'/place/[^/]+/data=([^&]+)', url)
+                    if match:
+                        # Le place_id peut être dans les paramètres data
+                        data_param = match.group(1)
+                        place_match = re.search(r'place_id["\']?\s*[:=]\s*["\']?([^"\'&]+)', data_param)
+                        if place_match:
+                            return place_match.group(1)
+                    # Format 3: cid=... (Customer ID)
+                    match = re.search(r'cid=([^&]+)', url)
+                    if match:
+                        return match.group(1)
+                    return None
+                
+                # Extraire le place_id de l'URL de référence
+                ref_place_id = extract_place_id_from_url(reference_url)
+                if ref_place_id:
+                    log(f"  🔍 Place ID extrait de l'URL de référence: {ref_place_id[:30]}...", log_file)
+                
+                log(f"  🔍 Recherche du match avec l'URL de référence...", log_file)
+                
+                for result in results:
+                    result_url = result.get('url_google_maps', '')
+                    result_place_id = result.get('place_id', '')
+                    
+                    # Méthode 1: Comparer les place_id (le plus fiable)
+                    if ref_place_id and result_place_id:
+                        if ref_place_id == result_place_id:
+                            matched_result = result
+                            log(f"  ✅ Match trouvé par place_id: {result_place_id[:30]}...", log_file)
+                            break
+                    
+                    # Méthode 2: Extraire le place_id depuis l'URL du résultat et comparer
+                    if ref_place_id and result_url:
+                        result_place_id_from_url = extract_place_id_from_url(result_url)
+                        if result_place_id_from_url and ref_place_id == result_place_id_from_url:
+                            matched_result = result
+                            log(f"  ✅ Match trouvé par place_id extrait de l'URL du résultat", log_file)
+                            break
+                    
+                    # Méthode 3: Comparer les URLs directement (moins fiable mais utile)
+                    if reference_url and result_url:
+                        # Normaliser les URLs (enlever les paramètres de tracking, etc.)
+                        def normalize_for_comparison(url):
+                            """Normalise une URL pour la comparaison"""
+                            if not url:
+                                return ''
+                            url = url.strip().lower()
+                            # Enlever les paramètres de tracking
+                            url = re.sub(r'[?&]utm_[^&]*', '', url)
+                            url = re.sub(r'[?&]gclid=[^&]*', '', url)
+                            # Extraire juste le domaine et le chemin principal
+                            if 'maps.google.com' in url or 'google.com/maps' in url:
+                                # Garder seulement la partie importante
+                                if '/place/' in url:
+                                    parts = url.split('/place/')
+                                    if len(parts) > 1:
+                                        return '/place/' + parts[1].split('?')[0].split('/')[0]
+                            return url
+                        
+                        norm_ref = normalize_for_comparison(reference_url)
+                        norm_result = normalize_for_comparison(result_url)
+                        
+                        # Comparer les URLs normalisées
+                        if norm_ref and norm_result:
+                            # Vérifier si une URL contient l'autre (pour gérer les variations)
+                            if norm_ref in norm_result or norm_result in norm_ref:
+                                matched_result = result
+                                log(f"  ✅ Match trouvé par comparaison d'URL normalisée", log_file)
+                                break
+                        
+                        # Comparaison directe (fallback)
+                        if reference_url.lower() in result_url.lower() or result_url.lower() in reference_url.lower():
+                            matched_result = result
+                            log(f"  ✅ Match trouvé par comparaison directe d'URL", log_file)
+                            break
+                
+                if matched_result:
+                    results_to_process = [matched_result]
+                    log(f"  ✅ Résultat matché trouvé: {matched_result.get('nom', 'N/A')}", log_file)
+                else:
+                    log(f"  ⚠️  Aucun match trouvé avec l'URL de référence. Tous les résultats seront retournés.", log_file)
+                    # Si pas de match, limiter à 3 meilleurs résultats
+                    results_to_process = results[:3]
+                    if len(results) > 3:
+                        log(f"  📊 Limitation à 3 meilleurs résultats sur {len(results)} trouvés", log_file)
+            else:
+                # Pas d'URL de référence, limiter à 3 meilleurs résultats par restaurant
+                results_to_process = results[:3]
+                if len(results) > 3:
+                    log(f"  📊 Limitation à 3 meilleurs résultats sur {len(results)} trouvés", log_file)
             
             # Pour chaque résultat, trouver les stations de métro, extraire l'arrondissement et scraper le site web
             for result_idx, result in enumerate(results_to_process, 1):

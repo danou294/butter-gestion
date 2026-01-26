@@ -103,6 +103,7 @@ def run_search_restaurants(request):
         
         excel_file = request.FILES['excel_file']
         name_column = request.POST.get('name_column', '')
+        url_column = request.POST.get('url_column', '').strip()  # Colonne URL optionnelle
         limit_str = request.POST.get('limit', '')
 
         # Convertir le limit en int si fourni
@@ -117,6 +118,10 @@ def run_search_restaurants(request):
 
         if not name_column:
             return JsonResponse({'error': 'Veuillez sélectionner une colonne pour les noms'}, status=400)
+        
+        # URL column est optionnelle
+        if url_column and not url_column.strip():
+            url_column = None
         
         # Vérifier l'extension
         if not excel_file.name.endswith(('.xlsx', '.xls')):
@@ -173,7 +178,8 @@ def run_search_restaurants(request):
                     request=request,
                     log_file_path=str(log_file),
                     output_dir=str(search_dir),
-                    limit=limit
+                    limit=limit,
+                    url_column=url_column if url_column else None
                 )
                 
                 with open(log_file, 'a', encoding='utf-8') as f:

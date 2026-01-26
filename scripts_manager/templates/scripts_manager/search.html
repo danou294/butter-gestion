@@ -43,7 +43,7 @@
                     </div>
                 </div>
                 
-                <!-- Sélection de la colonne -->
+                <!-- Sélection de la colonne nom -->
                 <div>
                     <label for="name_column" class="block text-sm font-medium text-[#111111] mb-2">
                         Colonne contenant les noms de restaurants *
@@ -58,6 +58,22 @@
                         <option value="">Sélectionnez un fichier Excel d'abord</option>
                     </select>
                     <small style="color: #6c757d;">La colonne sera détectée automatiquement après la sélection du fichier</small>
+                </div>
+
+                <!-- Sélection de la colonne URL (optionnelle) -->
+                <div>
+                    <label for="url_column" class="block text-sm font-medium text-[#111111] mb-2">
+                        🔗 Colonne contenant les URLs Google Maps (optionnel - pour matcher les résultats)
+                    </label>
+                    <select
+                        id="url_column"
+                        name="url_column"
+                        disabled
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
+                    >
+                        <option value="">Aucune (retourner toutes les occurrences)</option>
+                    </select>
+                    <small style="color: #6c757d;">Si fournie, seul le résultat dont l'URL Google Maps correspond sera retourné</small>
                 </div>
 
                 <!-- Limite de restaurants (pour tests) -->
@@ -133,6 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileName = document.getElementById('fileName');
     const fileSize = document.getElementById('fileSize');
     const nameColumnSelect = document.getElementById('name_column');
+    const urlColumnSelect = document.getElementById('url_column');
     const searchForm = document.getElementById('searchForm');
     const searchBtn = document.getElementById('searchBtn');
     const progressContainer = document.getElementById('progressContainer');
@@ -173,6 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
             nameColumnSelect.disabled = true;
             nameColumnSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+            urlColumnSelect.disabled = true;
+            urlColumnSelect.innerHTML = '<option value="">Aucune (retourner toutes les occurrences)</option>';
             return;
         }
         
@@ -195,6 +214,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function analyzeExcelColumns(file) {
         nameColumnSelect.disabled = true;
         nameColumnSelect.innerHTML = '<option value="">⏳ Analyse des colonnes en cours...</option>';
+        urlColumnSelect.disabled = true;
+        urlColumnSelect.innerHTML = '<option value="">⏳ Analyse des colonnes en cours...</option>';
         
         const formData = new FormData();
         formData.append('excel_file', file);
@@ -209,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.columns && data.columns.length > 0) {
+                // Remplir le select des noms
                 nameColumnSelect.innerHTML = '';
                 data.columns.forEach(col => {
                     const option = document.createElement('option');
@@ -221,15 +243,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     nameColumnSelect.appendChild(option);
                 });
                 nameColumnSelect.disabled = false;
+                
+                // Remplir le select des URLs
+                urlColumnSelect.innerHTML = '<option value="">Aucune (retourner toutes les occurrences)</option>';
+                data.columns.forEach(col => {
+                    const option = document.createElement('option');
+                    option.value = col;
+                    option.textContent = col;
+                    // Sélectionner automatiquement les colonnes qui contiennent "url", "maps", "google"
+                    if (col.toLowerCase().includes('url') || col.toLowerCase().includes('maps') || col.toLowerCase().includes('google')) {
+                        option.selected = true;
+                    }
+                    urlColumnSelect.appendChild(option);
+                });
+                urlColumnSelect.disabled = false;
             } else {
                 nameColumnSelect.innerHTML = '<option value="">Aucune colonne trouvée</option>';
                 nameColumnSelect.disabled = false;
+                urlColumnSelect.innerHTML = '<option value="">Aucune (retourner toutes les occurrences)</option>';
+                urlColumnSelect.disabled = false;
             }
         })
         .catch(error => {
             console.error('Erreur lors de l\'analyse des colonnes:', error);
             nameColumnSelect.innerHTML = '<option value="">Erreur lors de l\'analyse</option>';
             nameColumnSelect.disabled = false;
+            urlColumnSelect.innerHTML = '<option value="">Aucune (retourner toutes les occurrences)</option>';
+            urlColumnSelect.disabled = false;
         });
     }
     
