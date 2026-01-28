@@ -1003,31 +1003,21 @@ def update_favorite_counts(db, log_file: str) -> Dict[str, Any]:
 def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None, log_file_path=None):
     """
     Fonction principale d'import adaptée pour Django
-    ⚠️ UNIQUEMENT EN MODE DÉVELOPPEMENT (DEV) ⚠️
+    Fonctionne en DEV et en PROD - seule la base de données Firebase change selon l'environnement
     
     Args:
         excel_path: Chemin vers le fichier Excel
         sheet_name: Nom de la feuille Excel (défaut: "Feuil1")
         request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
         log_file_path: Chemin du fichier de log (optionnel, sinon créé automatiquement)
-    
-    Raises:
-        ValueError: Si l'environnement n'est pas 'dev'
     """
-    # Vérifier que nous sommes en mode DEV
+    # Détecter l'environnement Firebase (dev ou prod)
     try:
         from scripts_manager.firebase_utils import get_firebase_env_from_session
         current_env = get_firebase_env_from_session(request)
     except ImportError:
         # Fallback si firebase_utils n'est pas disponible
         current_env = os.getenv('FIREBASE_ENV', 'prod').lower()
-    
-    if current_env != 'dev':
-        error_msg = f"❌ ERREUR: L'import de restaurants est uniquement autorisé en mode DÉVELOPPEMENT (DEV). Environnement actuel: {current_env}"
-        if log_file_path:
-            with open(log_file_path, 'a', encoding='utf-8') as f:
-                f.write(error_msg + "\n")
-        raise ValueError(error_msg)
     
     if log_file_path:
         log_file = log_file_path
@@ -1038,9 +1028,9 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         ensure_dir(backup_dir)
         log_file = os.path.join(backup_dir, "import_run.log")
     
-    log("🚀 Démarrage import end-to-end (MODE DEV)", log_file)
+    log("🚀 Démarrage import end-to-end", log_file)
     log(f"→ Excel: {excel_path}", log_file)
-    log(f"→ Environnement: DEV (vérifié)", log_file)
+    log(f"→ Environnement: {current_env.upper()}", log_file)
 
     try:
         db = init_firestore(log_file, request)
