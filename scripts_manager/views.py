@@ -83,9 +83,8 @@ def _get_daniel_image_base64():
     return None
 
 
-@login_required
 def augmenter_daniel(request):
-    """Page troll : combien tu veux augmenter Daniel ?"""
+    """Page troll : combien tu veux augmenter Daniel ? (public, sans authentification)"""
     # URL absolue pour l'image (évite les data URL trop longues)
     from django.urls import reverse
     daniel_url = request.build_absolute_uri(reverse('scripts_manager:serve_daniel_image'))
