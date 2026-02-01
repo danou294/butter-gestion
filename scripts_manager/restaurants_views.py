@@ -70,15 +70,20 @@ def get_storage_client(request=None):
         return None
 
 
-def get_restaurants_with_missing_photos():
+def get_restaurants_with_missing_photos(request=None):
     """Retourne la liste des IDs de restaurants avec photos manquantes"""
     try:
-        cached = cache.get(MISSING_PHOTOS_CACHE_KEY)
+        # Inclure l'environnement dans la clé de cache
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
+        cache_key = f"{MISSING_PHOTOS_CACHE_KEY}_{env}"
+        
+        cached = cache.get(cache_key)
         if cached is not None:
             return cached
 
-        # Note: Cette fonction n'a pas accès à request, donc utilisera l'env par défaut
-        client = get_storage_client()
+        # Utiliser l'environnement de la session pour accéder à la bonne base
+        client = get_storage_client(request)
         if not client:
             return set()
         
@@ -86,8 +91,8 @@ def get_restaurants_with_missing_photos():
         prefix = "Photos restaurants/"
         blobs = list(bucket.list_blobs(prefix=prefix))
         
-        # Récupérer tous les restaurants depuis Firestore
-        firestore_client = get_firestore_client()
+        # Récupérer tous les restaurants depuis Firestore avec le bon environnement
+        firestore_client = get_firestore_client(request)
         restaurants_ref = firestore_client.collection('restaurants')
         restaurant_ids = set()
         for doc in restaurants_ref.stream():
@@ -128,20 +133,26 @@ def get_restaurants_with_missing_photos():
                 # Restaurant sans aucune photo
                 missing_photos_ids.add(restaurant_id)
         
-        cache.set(MISSING_PHOTOS_CACHE_KEY, missing_photos_ids, MISSING_CACHE_TTL)
+        cache.set(cache_key, missing_photos_ids, MISSING_CACHE_TTL)
         return missing_photos_ids
     except Exception as e:
         logger.error(f"Erreur lors de la vérification des photos manquantes : {e}")
         return set()
 
 
-def get_restaurants_with_missing_logos():
+def get_restaurants_with_missing_logos(request=None):
     """Retourne la liste des IDs de restaurants sans logo"""
     try:
-        cached = cache.get(MISSING_LOGOS_CACHE_KEY)
+        # Inclure l'environnement dans la clé de cache
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
+        cache_key = f"{MISSING_LOGOS_CACHE_KEY}_{env}"
+        
+        cached = cache.get(cache_key)
         if cached is not None:
             return cached
 
+        # Utiliser l'environnement de la session pour accéder à la bonne base
         client = get_storage_client(request)
         if not client:
             return set()
@@ -150,8 +161,8 @@ def get_restaurants_with_missing_logos():
         prefix = "Logos/"
         blobs = list(bucket.list_blobs(prefix=prefix))
         
-        # Récupérer tous les restaurants depuis Firestore
-        firestore_client = get_firestore_client()
+        # Récupérer tous les restaurants depuis Firestore avec le bon environnement
+        firestore_client = get_firestore_client(request)
         restaurants_ref = firestore_client.collection('restaurants')
         restaurant_ids = set()
         for doc in restaurants_ref.stream():
@@ -176,7 +187,7 @@ def get_restaurants_with_missing_logos():
             if not found_logo:
                 missing_logos_ids.add(restaurant_id)
         
-        cache.set(MISSING_LOGOS_CACHE_KEY, missing_logos_ids, MISSING_CACHE_TTL)
+        cache.set(cache_key, missing_logos_ids, MISSING_CACHE_TTL)
         return missing_logos_ids
     except Exception as e:
         logger.error(f"Erreur lors de la vérification des logos manquants : {e}")
@@ -325,11 +336,11 @@ def restaurants_list(request):
         
         # Appliquer les filtres (photos/logos manquants)
         if filter_type == 'missing_photos':
-            missing_ids = get_restaurants_with_missing_photos()
+            missing_ids = get_restaurants_with_missing_photos(request)
             logger.info(f"📸 Restaurants avec photos manquantes: {len(missing_ids)}")
             restaurants = [r for r in restaurants if r.get('id') in missing_ids]
         elif filter_type == 'missing_logos':
-            missing_ids = get_restaurants_with_missing_logos()
+            missing_ids = get_restaurants_with_missing_logos(request)
             logger.info(f"🖼️ Restaurants sans logo: {len(missing_ids)}")
             restaurants = [r for r in restaurants if r.get('id') in missing_ids]
         

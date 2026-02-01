@@ -57,7 +57,7 @@ def send_push_notification(token, title, body, data=None):
         raise
 
 
-def send_push_notification_to_multiple(tokens, title, body, data=None):
+def send_push_notification_to_multiple(tokens, title, body, data=None, request=None):
     """
     Envoie une notification à plusieurs utilisateurs
     
@@ -66,12 +66,13 @@ def send_push_notification_to_multiple(tokens, title, body, data=None):
         title (str): Le titre de la notification
         body (str): Le corps de la notification
         data (dict): Données supplémentaires (optionnel)
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
     
     Returns:
         dict: Résultat avec successCount et failureCount
     """
     try:
-        get_firebase_app()
+        get_firebase_app(request)
         
         logger.info(f"📤 [MULTIPLE] Préparation de l'envoi à {len(tokens)} tokens")
         logger.info(f"📝 [MULTIPLE] Titre: \"{title}\"")
@@ -157,7 +158,7 @@ def send_push_notification_to_multiple(tokens, title, body, data=None):
         raise
 
 
-def send_push_notification_to_all(title, body, data=None):
+def send_push_notification_to_all(title, body, data=None, request=None):
     """
     Envoie une notification à tous les utilisateurs (sans personnalisation)
     
@@ -165,17 +166,23 @@ def send_push_notification_to_all(title, body, data=None):
         title (str): Le titre de la notification
         body (str): Le corps de la notification
         data (dict): Données supplémentaires (optionnel)
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
     
     Returns:
         dict: Résultat avec successCount et failureCount
     """
     try:
-        get_firebase_app()
+        get_firebase_app(request)
         from firebase_admin import firestore
+        
+        # Détecter l'environnement pour les logs
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
         
         logger.info("🚀 [ENVOI À TOUS] Début du processus")
         logger.info(f"📝 [ENVOI À TOUS] Titre: \"{title}\"")
         logger.info(f"📝 [ENVOI À TOUS] Corps: \"{body}\"")
+        logger.info(f"🌍 [ENVOI À TOUS] Environnement: {env.upper()}")
         
         db = firestore.client()
         logger.info("🔗 [ENVOI À TOUS] Connexion à Firestore établie")
@@ -218,7 +225,7 @@ def send_push_notification_to_all(title, body, data=None):
         
         # Envoyer les notifications via multicast
         logger.info("📤 [ENVOI À TOUS] Envoi des notifications via FCM...")
-        response = send_push_notification_to_multiple(tokens, title, body, data)
+        response = send_push_notification_to_multiple(tokens, title, body, data, request=request)
         
         logger.info("📊 [ENVOI À TOUS] Résultats de l'envoi:")
         logger.info(f"   ✅ Notifications envoyées avec succès: {response['successCount']}")
@@ -238,7 +245,7 @@ def send_push_notification_to_all(title, body, data=None):
         raise
 
 
-def send_push_notification_to_all_with_prenom(title_template, body_template, data=None):
+def send_push_notification_to_all_with_prenom(title_template, body_template, data=None, request=None):
     """
     Envoie une notification personnalisée à tous les utilisateurs avec leurs prénoms
     Chaque notification est personnalisée avec le prénom de l'utilisateur
@@ -247,17 +254,23 @@ def send_push_notification_to_all_with_prenom(title_template, body_template, dat
         title_template (str): Template du titre (peut contenir {prenom})
         body_template (str): Template du corps (peut contenir {prenom})
         data (dict): Données supplémentaires (optionnel)
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
     
     Returns:
         dict: Résultat avec successCount et failureCount
     """
     try:
-        get_firebase_app()
+        get_firebase_app(request)
         from firebase_admin import firestore
+        
+        # Détecter l'environnement pour les logs
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
         
         logger.info("🚀 [ENVOI À TOUS AVEC PRÉNOM] Début du processus")
         logger.info(f"📝 [ENVOI À TOUS AVEC PRÉNOM] Template titre: \"{title_template}\"")
         logger.info(f"📝 [ENVOI À TOUS AVEC PRÉNOM] Template corps: \"{body_template}\"")
+        logger.info(f"🌍 [ENVOI À TOUS AVEC PRÉNOM] Environnement: {env.upper()}")
         
         db = firestore.client()
         logger.info("🔗 [ENVOI À TOUS AVEC PRÉNOM] Connexion à Firestore établie")
@@ -373,7 +386,7 @@ def send_push_notification_to_all_with_prenom(title_template, body_template, dat
         raise
 
 
-def send_push_notification_to_group(user_ids, title, body, data=None):
+def send_push_notification_to_group(user_ids, title, body, data=None, request=None):
     """
     Envoie une notification à un groupe d'utilisateurs spécifiques
     
@@ -382,17 +395,23 @@ def send_push_notification_to_group(user_ids, title, body, data=None):
         title (str): Le titre de la notification
         body (str): Le corps de la notification
         data (dict): Données supplémentaires (optionnel)
+        request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
     
     Returns:
         dict: Résultat avec successCount et failureCount
     """
     try:
-        get_firebase_app()
+        get_firebase_app(request)
         from firebase_admin import firestore
+        
+        # Détecter l'environnement pour les logs
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
         
         logger.info(f"👥 [ENVOI À GROUPE] Début pour {len(user_ids)} utilisateurs")
         logger.info(f"📝 [ENVOI À GROUPE] Titre: \"{title}\"")
         logger.info(f"📝 [ENVOI À GROUPE] Corps: \"{body}\"")
+        logger.info(f"🌍 [ENVOI À GROUPE] Environnement: {env.upper()}")
         
         db = firestore.client()
         
@@ -437,7 +456,7 @@ def send_push_notification_to_group(user_ids, title, body, data=None):
         
         # Envoyer les notifications via multicast
         logger.info("📤 [ENVOI À GROUPE] Envoi des notifications via FCM...")
-        response = send_push_notification_to_multiple(tokens, title, body, data)
+        response = send_push_notification_to_multiple(tokens, title, body, data, request=request)
         
         logger.info("📊 [ENVOI À GROUPE] Résultats de l'envoi:")
         logger.info(f"   ✅ Notifications envoyées avec succès: {response['successCount']}")

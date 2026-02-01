@@ -4,6 +4,7 @@ import subprocess
 import json
 import logging
 import re
+import base64
 from pathlib import Path
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, FileResponse, HttpResponse
@@ -30,6 +31,66 @@ logger = logging.getLogger(__name__)
 
 # Stockage des tâches en cours
 running_tasks = {}
+
+
+def serve_daniel_image(request):
+    """Sert l'image de la page troll : IMG_5849.HEIC (converti en JPEG) ou daniel.jpg."""
+    import io
+    heic_paths = [
+        Path(settings.BASE_DIR) / 'scripts_manager' / 'static' / 'scripts_manager' / 'IMG_5849.HEIC',
+        Path(settings.BASE_DIR) / 'IMG_5849.HEIC',
+    ]
+    for path in heic_paths:
+        if path.exists():
+            try:
+                import pillow_heif
+                from PIL import Image
+                pillow_heif.register_heif_opener()
+                img = Image.open(path)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=90)
+                buf.seek(0)
+                response = HttpResponse(buf.getvalue(), content_type='image/jpeg')
+                response['Cache-Control'] = 'public, max-age=86400'
+                return response
+            except (ImportError, Exception):
+                continue
+    for path in [
+        Path(settings.BASE_DIR) / 'scripts_manager' / 'static' / 'scripts_manager' / 'daniel.jpg',
+        Path(settings.BASE_DIR) / 'daniel.jpg',
+    ]:
+        if path.exists():
+            response = FileResponse(open(path, 'rb'), content_type='image/jpeg')
+            response['Cache-Control'] = 'public, max-age=86400'
+            return response
+    return HttpResponse(status=404)
+
+
+def _get_daniel_image_base64():
+    """Lit daniel.jpg et retourne son contenu en base64, ou None si absent."""
+    for path in [
+        Path(settings.BASE_DIR) / 'scripts_manager' / 'static' / 'scripts_manager' / 'daniel.jpg',
+        Path(settings.BASE_DIR) / 'daniel.jpg',
+    ]:
+        if path.exists():
+            try:
+                with open(path, 'rb') as f:
+                    return base64.b64encode(f.read()).decode('ascii')
+            except Exception:
+                continue
+    return None
+
+
+@login_required
+def augmenter_daniel(request):
+    """Page troll : combien tu veux augmenter Daniel ?"""
+    # URL absolue pour l'image (évite les data URL trop longues)
+    from django.urls import reverse
+    daniel_url = request.build_absolute_uri(reverse('scripts_manager:serve_daniel_image'))
+    context = {'daniel_image_url': daniel_url}
+    return render(request, 'scripts_manager/augmenter_daniel.html', context)
 
 
 @login_required

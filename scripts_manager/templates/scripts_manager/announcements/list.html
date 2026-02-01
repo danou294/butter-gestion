@@ -1,0 +1,129 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Annonces (Événements + Sondages) - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">🎪 Annonces</h1>
+                <p class="text-[#535353]">
+                    {{ total_count }} annonce(s)
+                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">{{ events_count }} événement(s)</span>
+                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F1EFEB] text-[#535353]">{{ polls_count }} sondage(s)</span>
+                    {% if premium_count %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{{ premium_count }} Premium</span>{% endif %}
+                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F1EFEB] text-[#535353]">{{ active_count }} actif(s)</span>
+                </p>
+            </div>
+            <a href="{% url 'scripts_manager:announcement_create' %}" class="btn-primary">➕ Nouvelle annonce</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if announcements %}
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-[#F1EFEB] border-b border-[#C9C1B1]">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-24">Type</th>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium">Titre</th>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-28">ID</th>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-24">Statut</th>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-24">Période</th>
+                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-48">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in announcements %}
+                    <tr class="border-b border-[#C9C1B1] hover:bg-[#F1EFEB]">
+                        <td class="py-3 px-4">
+                            {% if a.type == 'event' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Événement</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F1EFEB] text-[#535353]">Sondage</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <strong class="text-[#111111]">{{ a.title }}</strong>
+                            {% if a.isPremium %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+                            {% if a.description %}<br><span class="text-sm text-[#535353]">{{ a.description|truncatewords:12 }}</span>{% endif %}
+                        </td>
+                        <td class="py-3 px-4"><code class="text-sm bg-[#F1EFEB] px-2 py-1 rounded">{{ a.id }}</code></td>
+                        <td class="py-3 px-4">
+                            {% if a.isActive %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Actif</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F1EFEB] text-[#535353]">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-sm text-[#535353]">
+                            {% if a.startDate %}{{ a.startDate|date:"d/m/y" }}{% else %}-{% endif %}
+                            → {% if a.endDate %}{{ a.endDate|date:"d/m/y" }}{% else %}-{% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{% url 'scripts_manager:announcement_detail' a.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#535353] text-[#535353] hover:bg-[#535353] hover:text-white">Voir</a>
+                                <a href="{% url 'scripts_manager:announcement_edit' a.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#C9C1B1] text-[#535353] hover:bg-[#C9C1B1]">Éditer</a>
+                                <a href="{% url 'scripts_manager:announcement_get_json' a.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#60BC81] text-[#60BC81] hover:bg-[#D4F2DA]" target="_blank">JSON</a>
+                                {% if a.type == 'poll' %}
+                                <a href="{% url 'scripts_manager:poll_export_answers' a.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#60BC81] text-[#60BC81] hover:bg-[#D4F2DA]">Export CSV</a>
+                                {% endif %}
+                                <button type="button" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#D3695E] text-[#D3695E] hover:bg-[#F2D7D4]" onclick="confirmDelete('{{ a.id }}', '{{ a.title|escapejs }}')">Supprimer</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-6 text-[#111111]">
+        Aucune annonce. <a href="{% url 'scripts_manager:announcement_create' %}" class="font-medium text-[#60BC81] hover:underline ml-1">Créer la première</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal suppression -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-[#111111] bg-opacity-50 z-0" aria-hidden="true" id="deleteModalOverlay"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="relative z-10 inline-block align-bottom bg-[#FFFFFF] rounded-[14px] text-left overflow-hidden shadow-xl border border-[#C9C1B1] sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="px-6 py-4">
+                <h3 class="text-lg font-serif font-bold text-[#111111]">Confirmer la suppression</h3>
+                <p class="mt-2 text-[#535353]">Supprimer l'annonce <strong id="deleteName"></strong> ?</p>
+                <p class="mt-2 text-sm text-[#D3695E]">Cette action est irréversible.</p>
+            </div>
+            <div class="px-6 py-4 bg-[#F1EFEB] flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('deleteModal').classList.add('hidden')" class="btn-secondary">Annuler</button>
+                <form id="deleteForm" method="post" action="" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary bg-[#D3695E] hover:opacity-90">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(id, title) {
+    document.getElementById('deleteName').textContent = title;
+    document.getElementById('deleteForm').action = '/announcements/' + id + '/delete/';
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+document.getElementById('deleteModalOverlay').addEventListener('click', function() {
+    document.getElementById('deleteModal').classList.add('hidden');
+});
+</script>
+{% endblock %}

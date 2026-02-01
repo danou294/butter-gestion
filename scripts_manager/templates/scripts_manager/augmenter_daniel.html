@@ -1,0 +1,61 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Combien tu veux augmenter Daniel ? - Butter{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex flex-col items-center justify-center p-6">
+    {% if daniel_image_url %}
+    <img src="{{ daniel_image_url }}" alt="Daniel" class="w-32 h-32 md:w-40 md:h-40 rounded-[14px] object-cover border-2 border-[#C9C1B1] shadow-md mb-6">
+{% else %}
+    <div class="w-32 h-32 md:w-40 md:h-40 rounded-[14px] border-2 border-[#C9C1B1] bg-[#F1EFEB] flex items-center justify-center text-[#535353] text-sm mb-6">Image absente</div>
+{% endif %}
+    <h1 class="text-3xl md:text-4xl font-serif font-bold text-[#111111] text-center mb-2">
+        Combien tu veux augmenter Daniel ?
+    </h1>
+    <p id="montant-display" class="text-6xl md:text-8xl font-bold text-[#60BC81] my-8 tabular-nums">0</p>
+    <p id="message-erreur" class="text-lg text-[#D3695E] font-medium mb-4 hidden">Erreur, essayez une autre action.</p>
+
+    <div class="flex flex-wrap gap-4 justify-center">
+        <button type="button" id="btn-plus" class="px-8 py-4 rounded-[14px] text-lg font-bold bg-[#60BC81] text-white hover:opacity-90 shadow-md">
+            +
+        </button>
+        <button type="button" id="btn-non" class="px-8 py-4 rounded-[14px] text-lg font-bold bg-[#C9C1B1] text-[#111111] hover:opacity-90">
+            non
+        </button>
+        <button type="button" id="btn-quitter" class="px-8 py-4 rounded-[14px] text-lg font-bold bg-[#C9C1B1] text-[#111111] hover:opacity-90">
+            quitter
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    var montant = 0;
+    var display = document.getElementById('montant-display');
+    var messageErreur = document.getElementById('message-erreur');
+
+    function afficherMontant() {
+        display.textContent = montant.toLocaleString('fr-FR');
+    }
+
+    document.getElementById('btn-plus').addEventListener('click', function() {
+        messageErreur.classList.add('hidden');
+        montant += 1000;
+        afficherMontant();
+    });
+
+    document.getElementById('btn-non').addEventListener('click', function() {
+        messageErreur.classList.remove('hidden');
+        messageErreur.textContent = 'Erreur, essayez une autre action.';
+    });
+
+    document.getElementById('btn-quitter').addEventListener('click', function() {
+        messageErreur.classList.remove('hidden');
+        messageErreur.textContent = 'Erreur, essayez une autre action.';
+    });
+
+    afficherMontant();
+})();
+</script>
+{% endblock %}

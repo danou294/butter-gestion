@@ -1,0 +1,314 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if mode == 'create' %}Créer une annonce{% else %}Éditer {{ announcement.title }}{% endif %} - Butter Backoffice
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <nav class="text-sm text-[#535353] mb-2">
+            <a href="{% url 'scripts_manager:announcements_list' %}" class="hover:text-[#111111]">Annonces</a>
+            {% if mode == 'edit' %}
+            <span class="mx-1">/</span>
+            <a href="{% url 'scripts_manager:announcement_detail' announcement_id %}" class="hover:text-[#111111]">{{ announcement.title }}</a>
+            <span class="mx-1">/</span>
+            <span class="text-[#111111]">Éditer</span>
+            {% else %}
+            <span class="mx-1">/</span>
+            <span class="text-[#111111]">Nouvelle</span>
+            {% endif %}
+        </nav>
+        <h1 class="text-3xl font-serif font-bold text-[#111111]">
+            {% if mode == 'create' %}Créer une annonce{% else %}Éditer : {{ announcement.title }}{% endif %}
+        </h1>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <form method="post" id="announcement-form">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-[#535353] mb-2">Type <span class="text-[#D3695E]">*</span></label>
+                <div class="flex gap-4">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="type" value="event" {% if mode == 'create' %}checked{% elif mode == 'edit' and announcement.type == 'event' %}checked{% endif %} class="form-announcement-type">
+                        <span>Événement</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="type" value="poll" {% if mode == 'edit' and announcement.type == 'poll' %}checked{% endif %} class="form-announcement-type">
+                        <span>Sondage</span>
+                    </label>
+                </div>
+            </div>
+
+            {% if mode == 'edit' %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-[#535353] mb-1">ID</label>
+                <input type="text" value="{{ announcement.id }}" disabled class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#535353]">
+            </div>
+            {% endif %}
+            {% if mode == 'create' %}
+            <p class="mb-4 text-sm text-[#535353]">L'ID sera généré automatiquement (EVENT001, POLL001, …) selon le type.</p>
+            {% endif %}
+
+            <div class="mb-4">
+                <label for="title" class="block text-sm font-medium text-[#535353] mb-1">Titre <span class="text-[#D3695E]">*</span></label>
+                <input type="text" id="title" name="title" value="{% if mode == 'edit' %}{{ announcement.title }}{% elif form_data %}{{ form_data.title }}{% endif %}" required class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+            </div>
+
+            <div class="mb-4">
+                <label for="description" class="block text-sm font-medium text-[#535353] mb-1">Description</label>
+                <textarea id="description" name="description" rows="3" class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">{% if mode == 'edit' %}{{ announcement.description }}{% elif form_data %}{{ form_data.description }}{% endif %}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-[#535353] mb-2">Image de couverture</label>
+                <input type="hidden" id="imageRef" name="imageRef" value="">
+                <input type="url" id="imageUrl" name="imageUrl" value="{% if mode == 'edit' %}{{ announcement.imageUrl }}{% elif form_data %}{{ form_data.imageUrl }}{% endif %}" placeholder="URL manuelle ou choisir ci‑dessous" class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] mb-2">
+                <p class="text-xs text-[#535353] mb-2">Ou choisir une image depuis le Storage (photos restaurants) :</p>
+                <div class="flex flex-wrap gap-2 items-end mb-2">
+                    <div>
+                        <label for="storage-restaurant-id" class="block text-xs text-[#535353] mb-1">ID restaurant</label>
+                        <input type="text" id="storage-restaurant-id" placeholder="ex: CHEJ" class="w-32 px-3 py-2 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] uppercase" maxlength="20">
+                    </div>
+                    <button type="button" id="btn-search-storage" class="px-4 py-2 rounded-[14px] text-sm font-medium bg-[#C9C1B1] text-[#111111] hover:opacity-90">Rechercher</button>
+                </div>
+                <div id="storage-images-result" class="flex flex-wrap gap-2 mt-2 hidden">
+                    <!-- miniatures chargées en JS -->
+                </div>
+                <div id="storage-images-loading" class="hidden text-sm text-[#535353] mt-2">Chargement…</div>
+                <div id="storage-images-error" class="hidden text-sm text-[#D3695E] mt-2"></div>
+
+                <p class="text-xs text-[#535353] mt-4 mb-2">Ou importer une image depuis votre ordinateur :</p>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <input type="file" id="upload-image-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+                    <button type="button" id="btn-upload-image" class="px-4 py-2 rounded-[14px] text-sm font-medium bg-[#C9C1B1] text-[#111111] hover:opacity-90">Choisir un fichier</button>
+                    <span id="upload-filename" class="text-sm text-[#535353]"></span>
+                </div>
+                <div id="upload-image-loading" class="hidden text-sm text-[#535353] mt-2">Envoi en cours…</div>
+                <div id="upload-image-error" class="hidden text-sm text-[#D3695E] mt-2"></div>
+
+                <div id="image-selected-preview" class="mt-2 hidden">
+                    <span class="text-sm text-[#535353]">Image sélectionnée : </span>
+                    <img id="image-selected-thumb" src="" alt="" class="inline-block w-16 h-16 object-cover rounded-[14px] border border-[#C9C1B1] ml-2">
+                    <span id="image-selected-ref" class="text-sm font-medium text-[#60BC81] ml-2"></span>
+                </div>
+            </div>
+
+            <!-- Champs Événement -->
+            <div id="event-fields" class="space-y-4 mb-4">
+                <h3 class="font-serif font-bold text-[#111111] text-sm">Événement</h3>
+                <div>
+                    <label for="ctaText" class="block text-sm font-medium text-[#535353] mb-1">Texte du bouton (CTA)</label>
+                    <input type="text" id="ctaText" name="ctaText" value="{% if mode == 'edit' %}{{ announcement.ctaText }}{% elif form_data %}{{ form_data.ctaText }}{% else %}Je m'inscris{% endif %}" placeholder="Je m'inscris" class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+                <div>
+                    <label for="ctaLink" class="block text-sm font-medium text-[#535353] mb-1">Lien (CTA)</label>
+                    <input type="url" id="ctaLink" name="ctaLink" value="{% if mode == 'edit' %}{{ announcement.ctaLink }}{% elif form_data %}{{ form_data.ctaLink }}{% endif %}" placeholder="https://luma.com/event/..." class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+                <div>
+                    <label for="eventDate" class="block text-sm font-medium text-[#535353] mb-1">Date de l'événement</label>
+                    <input type="date" id="eventDate" name="eventDate" value="{% if mode == 'edit' %}{{ announcement.eventDate_formatted }}{% elif form_data %}{{ form_data.eventDate }}{% endif %}" class="w-full max-w-xs px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+            </div>
+
+            <!-- Champs Sondage -->
+            <div id="poll-fields" class="space-y-4 mb-4 hidden">
+                <h3 class="font-serif font-bold text-[#111111] text-sm">Sondage</h3>
+                <div>
+                    <label for="pollQuestion" class="block text-sm font-medium text-[#535353] mb-1">Question du sondage</label>
+                    <input type="text" id="pollQuestion" name="pollQuestion" value="{% if mode == 'edit' %}{{ announcement.pollQuestion }}{% elif form_data %}{{ form_data.pollQuestion }}{% endif %}" placeholder="Les meilleures pâtes à la vodka..." class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+            </div>
+
+            <!-- Période d'affichage -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="startDate" class="block text-sm font-medium text-[#535353] mb-1">Début affichage</label>
+                    <input type="date" id="startDate" name="startDate" value="{% if mode == 'edit' %}{{ announcement.startDate_formatted }}{% elif form_data %}{{ form_data.startDate }}{% endif %}" class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+                <div>
+                    <label for="endDate" class="block text-sm font-medium text-[#535353] mb-1">Fin affichage</label>
+                    <input type="date" id="endDate" name="endDate" value="{% if mode == 'edit' %}{{ announcement.endDate_formatted }}{% elif form_data %}{{ form_data.endDate }}{% endif %}" class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 mb-6">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="isPremium" {% if mode == 'edit' and announcement.isPremium %}checked{% elif form_data and form_data.isPremium %}checked{% endif %} class="rounded border-[#C9C1B1]">
+                    <span class="text-sm text-[#535353]">Réservé aux membres Premium</span>
+                </label>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="isActive" {% if mode == 'edit' and announcement.isActive %}checked{% elif mode == 'create' %}checked{% elif form_data and form_data.isActive %}checked{% endif %} class="rounded border-[#C9C1B1]">
+                    <span class="text-sm text-[#535353]">Actif (visible dans l'app)</span>
+                </label>
+            </div>
+
+            <div class="flex gap-3 justify-end">
+                <a href="{% url 'scripts_manager:announcements_list' %}" class="btn-secondary">Annuler</a>
+                <button type="submit" class="btn-primary">{% if mode == 'create' %}Créer{% else %}Enregistrer{% endif %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    var form = document.getElementById('announcement-form');
+    var eventFields = document.getElementById('event-fields');
+    var pollFields = document.getElementById('poll-fields');
+    var radios = form.querySelectorAll('input[name="type"]');
+
+    function toggleType() {
+        var type = form.querySelector('input[name="type"]:checked');
+        if (!type) return;
+        if (type.value === 'event') {
+            eventFields.classList.remove('hidden');
+            pollFields.classList.add('hidden');
+        } else {
+            eventFields.classList.add('hidden');
+            pollFields.classList.remove('hidden');
+        }
+    }
+
+    radios.forEach(function(r) { r.addEventListener('change', toggleType); });
+    toggleType();
+})();
+
+document.getElementById('storage-restaurant-id').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+
+var firebaseBucket = '{{ firebase_bucket|default:"" }}';
+var listStorageUrl = '{% url "scripts_manager:list_storage_images" %}';
+var uploadImageUrl = '{% url "scripts_manager:announcement_upload_image" %}';
+
+document.getElementById('btn-search-storage').addEventListener('click', function() {
+    var restaurantId = document.getElementById('storage-restaurant-id').value.trim().toUpperCase();
+    if (!restaurantId) {
+        document.getElementById('storage-images-error').textContent = 'Saisissez un ID restaurant (ex: CHEJ).';
+        document.getElementById('storage-images-error').classList.remove('hidden');
+        return;
+    }
+    var resultEl = document.getElementById('storage-images-result');
+    var loadingEl = document.getElementById('storage-images-loading');
+    var errorEl = document.getElementById('storage-images-error');
+    resultEl.classList.add('hidden');
+    resultEl.innerHTML = '';
+    errorEl.classList.add('hidden');
+    loadingEl.classList.remove('hidden');
+
+    fetch(listStorageUrl + '?restaurant_id=' + encodeURIComponent(restaurantId))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            loadingEl.classList.add('hidden');
+            if (data.error) {
+                errorEl.textContent = data.error;
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            var images = data.images || [];
+            var bucket = data.bucket || firebaseBucket;
+            if (!images.length) {
+                errorEl.textContent = 'Aucune image trouvée pour cet ID.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            var baseUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/Photos%20restaurants%2F';
+            images.forEach(function(ref) {
+                var url = baseUrl + ref + '.webp?alt=media';
+                var wrap = document.createElement('button');
+                wrap.type = 'button';
+                wrap.className = 'block w-20 h-20 rounded-[14px] border-2 border-[#C9C1B1] overflow-hidden hover:border-[#60BC81] focus:border-[#60BC81] focus:ring-2 focus:ring-[#60BC81]';
+                wrap.title = ref;
+                wrap.dataset.ref = ref;
+                wrap.dataset.url = url;
+                var img = document.createElement('img');
+                img.src = url;
+                img.alt = ref;
+                img.className = 'w-full h-full object-cover';
+                img.onerror = function() { wrap.style.background = '#F1EFEB'; wrap.innerHTML = '<span class="text-xs text-[#535353]">' + ref + '</span>'; };
+                wrap.appendChild(img);
+                wrap.addEventListener('click', function() {
+                    document.getElementById('imageRef').value = this.dataset.ref;
+                    document.getElementById('imageUrl').value = this.dataset.url;
+                    document.getElementById('image-selected-ref').textContent = this.dataset.ref;
+                    document.getElementById('image-selected-thumb').src = this.dataset.url;
+                    document.getElementById('image-selected-preview').classList.remove('hidden');
+                    document.querySelectorAll('#storage-images-result button').forEach(function(b) { b.classList.remove('border-[#60BC81]', 'ring-2', 'ring-[#60BC81]'); });
+                    this.classList.add('border-[#60BC81]', 'ring-2', 'ring-[#60BC81]');
+                });
+                resultEl.appendChild(wrap);
+            });
+            resultEl.classList.remove('hidden');
+        })
+        .catch(function(err) {
+            document.getElementById('storage-images-loading').classList.add('hidden');
+            document.getElementById('storage-images-error').textContent = 'Erreur : ' + (err.message || 'réseau');
+            document.getElementById('storage-images-error').classList.remove('hidden');
+        });
+});
+
+// Importer une image depuis l'ordinateur
+(function() {
+    var fileInput = document.getElementById('upload-image-file');
+    var btnUpload = document.getElementById('btn-upload-image');
+    var uploadFilename = document.getElementById('upload-filename');
+    var uploadLoading = document.getElementById('upload-image-loading');
+    var uploadError = document.getElementById('upload-image-error');
+
+    btnUpload.addEventListener('click', function() { fileInput.click(); });
+
+    fileInput.addEventListener('change', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+
+        uploadError.classList.add('hidden');
+        uploadFilename.textContent = file.name;
+        uploadLoading.classList.remove('hidden');
+
+        var formData = new FormData();
+        formData.append('image_file', file);
+        var form = document.getElementById('announcement-form');
+        var csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) formData.append(csrfInput.name, csrfInput.value);
+
+        fetch(uploadImageUrl, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            uploadLoading.classList.add('hidden');
+            if (data.error) {
+                uploadError.textContent = data.error;
+                uploadError.classList.remove('hidden');
+                return;
+            }
+            document.getElementById('imageRef').value = '';
+            document.getElementById('imageUrl').value = data.url || '';
+            document.getElementById('image-selected-ref').textContent = data.filename || 'Importée';
+            document.getElementById('image-selected-thumb').src = data.url || '';
+            document.getElementById('image-selected-preview').classList.remove('hidden');
+            document.querySelectorAll('#storage-images-result button').forEach(function(b) {
+                b.classList.remove('border-[#60BC81]', 'ring-2', 'ring-[#60BC81]');
+            });
+        })
+        .catch(function(err) {
+            uploadLoading.classList.add('hidden');
+            uploadError.textContent = 'Erreur : ' + (err.message || 'réseau');
+            uploadError.classList.remove('hidden');
+        });
+
+        fileInput.value = '';
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Importer des guides - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <nav class="text-sm text-[#535353] mb-2">
+            <a href="{% url 'scripts_manager:guides_list' %}" class="hover:text-[#111111]">Guides</a>
+            <span class="mx-1">/</span>
+            <span class="text-[#111111]">Importer Excel</span>
+        </nav>
+        <h1 class="text-3xl font-serif font-bold text-[#111111]">📤 Importer des guides depuis un Excel</h1>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}" style="white-space: pre-line;">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+            <h3 class="font-serif font-bold text-[#111111] mb-4">Import</h3>
+            <form method="post" enctype="multipart/form-data" id="guides-import-form">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <span class="block text-sm font-medium text-[#535353] mb-1">Fichier Excel <span class="text-[#D3695E]">*</span></span>
+                    <label for="excel_file" class="flex flex-col items-center justify-center w-full min-h-[120px] border-2 border-dashed border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] cursor-pointer hover:bg-[#C9C1B1] hover:border-[#535353] hover:text-[#111111] transition-colors">
+                        <span class="text-[#535353] text-center px-4" id="file-label-text">Cliquez ici ou déposez un fichier .xlsx</span>
+                        <span class="text-sm text-[#535353] mt-1" id="file-name"></span>
+                        <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required
+                               class="sr-only" aria-label="Choisir un fichier Excel">
+                    </label>
+                    <p class="mt-1 text-xs text-[#535353]">Format .xlsx (template_guides_v3.xlsx / template_guide_v3.xlsx)</p>
+                </div>
+                <div class="mb-4 p-3 rounded-[14px] border border-[#C9C1B1] bg-[#F1EFEB] text-sm text-[#535353]">
+                    <strong>Attention :</strong>
+                    <ul class="mt-2 list-disc list-inside">
+                        <li>Les guides existants seront mis à jour</li>
+                        <li>Les nouveaux seront créés</li>
+                        <li>L'ordre suit l'ordre des lignes du fichier</li>
+                    </ul>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <a href="{% url 'scripts_manager:guides_list' %}" class="btn-secondary">Annuler</a>
+                    <button type="submit" class="btn-primary">📤 Importer</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-[#F1EFEB] rounded-[14px] p-6 border border-[#C9C1B1]">
+            <h3 class="font-serif font-bold text-[#111111] mb-4">Format attendu (Excel)</h3>
+            <p class="text-sm text-[#535353] mb-3">1ère ligne = en-têtes de colonnes :</p>
+            <table class="w-full text-sm border border-[#C9C1B1] rounded-[14px] overflow-hidden">
+                <thead class="bg-[#FFFFFF]">
+                    <tr><th class="text-left p-2">Colonne</th><th class="text-left p-2">Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Nom</code></td><td class="p-2">Nom du guide</td></tr>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Ref</code></td><td class="p-2">ID unique (ex: MACHOC)</td></tr>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Description</code></td><td class="p-2">Description</td></tr>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Restaurants</code></td><td class="p-2">IDs séparés par virgules</td></tr>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Photo couverture</code></td><td class="p-2">Référence (ex: CHEJ3)</td></tr>
+                    <tr class="bg-[#FFFFFF]"><td class="p-2"><code>Premium</code></td><td class="p-2">oui/non (optionnel)</td></tr>
+                </tbody>
+            </table>
+            <p class="text-sm text-[#535353] mt-4">Utilisez le fichier exemple <code class="bg-[#FFFFFF] px-1 rounded">template_guides_v3.xlsx</code> ou <code class="bg-[#FFFFFF] px-1 rounded">template_guide_v3.xlsx</code>.</p>
+            <p class="text-xs text-[#535353] mt-3">Éditez avec Excel ou Google Sheets, enregistrez en .xlsx.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var input = document.getElementById('excel_file');
+    var fileNameEl = document.getElementById('file-name');
+    var labelText = document.getElementById('file-label-text');
+    if (input && fileNameEl) {
+        input.addEventListener('change', function() {
+            if (this.files && this.files.length) {
+                fileNameEl.textContent = this.files[0].name;
+                fileNameEl.classList.add('font-medium', 'text-[#60BC81]');
+            } else {
+                fileNameEl.textContent = '';
+                fileNameEl.classList.remove('font-medium', 'text-[#60BC81]');
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

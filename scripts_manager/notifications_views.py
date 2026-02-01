@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 @login_required
 def notifications_index(request):
     """Page principale pour l'envoi de notifications"""
-    # Récupérer la liste des utilisateurs pour le sélecteur de groupe
-    firestore_users = fetch_firestore_users()
-    auth_users = fetch_auth_users()
-    fcm_tokens = fetch_fcm_tokens()  # Dict[userId, List[dict]]
+    # Récupérer la liste des utilisateurs pour le sélecteur de groupe (avec le bon environnement)
+    firestore_users = fetch_firestore_users(request)
+    auth_users = fetch_auth_users(request)
+    fcm_tokens = fetch_fcm_tokens(request)  # Dict[userId, List[dict]]
     
     # Créer une liste d'utilisateurs avec leurs infos
     # UNIQUEMENT ceux qui ont un token FCM
@@ -86,7 +86,7 @@ def send_notification_to_all(request):
             }, status=400)
         
         response = notifications_services.send_push_notification_to_all(
-            title, body, notification_data
+            title, body, notification_data, request=request
         )
         
         return JsonResponse({
@@ -124,7 +124,7 @@ def send_notification_to_all_with_prenom(request):
             }, status=400)
         
         response = notifications_services.send_push_notification_to_all_with_prenom(
-            title, body, notification_data
+            title, body, notification_data, request=request
         )
         
         return JsonResponse({
@@ -168,7 +168,7 @@ def send_notification_to_group(request):
             }, status=400)
         
         response = notifications_services.send_push_notification_to_group(
-            user_ids, title, body, notification_data
+            user_ids, title, body, notification_data, request=request
         )
         
         return JsonResponse({

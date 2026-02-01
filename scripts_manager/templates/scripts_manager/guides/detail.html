@@ -1,0 +1,136 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}{{ guide.name }} - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <nav class="text-sm text-[#535353] mb-2">
+            <a href="{% url 'scripts_manager:guides_list' %}" class="hover:text-[#111111]">Guides</a>
+            <span class="mx-1">/</span>
+            <span class="text-[#111111]">{{ guide.name }}</span>
+        </nav>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h1 class="text-3xl font-serif font-bold text-[#111111]">
+                {{ guide.name }}
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-[#F1EFEB] text-[#535353]">{{ guide.id }}</span>
+                {% if guide.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'scripts_manager:guide_edit' guide.id %}" class="btn-secondary">✏️ Éditer</a>
+                <a href="{% url 'scripts_manager:guide_get_json' guide.id %}" class="px-4 py-2 rounded-[14px] text-sm font-medium bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81] hover:opacity-90" target="_blank">JSON</a>
+                <button type="button" onclick="confirmDelete()" class="px-4 py-2 rounded-[14px] text-sm font-medium border border-[#D3695E] text-[#D3695E] hover:bg-[#F2D7D4]">🗑 Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Infos + Photo -->
+        <div class="space-y-6">
+            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+                <h3 class="font-serif font-bold text-[#111111] mb-4">Informations</h3>
+                <dl class="space-y-2 text-sm">
+                    <div><dt class="text-[#535353]">ID</dt><dd><code class="bg-[#F1EFEB] px-1 rounded">{{ guide.id }}</code></dd></div>
+                    <div><dt class="text-[#535353]">Ordre</dt><dd><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F1EFEB] text-[#535353]">{{ guide.order }}</span></dd></div>
+                    <div><dt class="text-[#535353]">Photo</dt><dd>{% if guide.coverImageRef %}<code>{{ guide.coverImageRef }}</code>{% else %}-{% endif %}</dd></div>
+                    <div><dt class="text-[#535353]">Type</dt><dd>{% if guide.isPremium %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% else %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Gratuit</span>{% endif %}</dd></div>
+                    <div><dt class="text-[#535353]">Restaurants</dt><dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">{{ restaurants|length }}</span></dd></div>
+                    <div><dt class="text-[#535353]">Créé</dt><dd>{{ guide.createdAt|date:"d/m/Y H:i" }}</dd></div>
+                    <div><dt class="text-[#535353]">Modifié</dt><dd>{{ guide.updatedAt|date:"d/m/Y H:i" }}</dd></div>
+                </dl>
+            </div>
+
+            {% if guide.coverImageRef and firebase_bucket %}
+            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+                <h3 class="font-serif font-bold text-[#111111] mb-3">Photo de couverture</h3>
+                <p class="text-xs text-[#535353] mb-2">Photos restaurants/{{ guide.coverImageRef }}.webp</p>
+                <img src="https://firebasestorage.googleapis.com/v0/b/{{ firebase_bucket }}/o/Photos%20restaurants%2F{{ guide.coverImageRef }}.webp?alt=media"
+                     alt="{{ guide.name }}" class="w-full rounded-[14px] border border-[#C9C1B1]"
+                     onerror="this.src='https://via.placeholder.com/400x500?text=Image+non+trouv%C3%A9e'">
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Description + Restaurants -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+                <h3 class="font-serif font-bold text-[#111111] mb-3">Description</h3>
+                {% if guide.description %}
+                <p class="text-[#535353]">{{ guide.description }}</p>
+                {% else %}
+                <p class="text-[#535353] italic">Aucune description</p>
+                {% endif %}
+            </div>
+
+            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+                <h3 class="font-serif font-bold text-[#111111] mb-3">Restaurants <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">{{ restaurants|length }}</span></h3>
+                {% if restaurants %}
+                <p class="text-sm text-[#535353] mb-4">L'ordre défini ici est respecté dans l'app.</p>
+                <ul class="space-y-3">
+                    {% for restaurant in restaurants %}
+                    <li class="flex items-center justify-between gap-4 p-3 rounded-[14px] border border-[#C9C1B1] bg-[#F1EFEB]">
+                        <div>
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#C9C1B1] text-white text-xs font-medium mr-2">{{ forloop.counter }}</span>
+                            {% if restaurant.missing %}
+                            <span class="text-[#D3695E]">{{ restaurant.name }}</span>
+                            <br><small class="text-[#535353]"><code>{{ restaurant.id }}</code> — non trouvé</small>
+                            {% else %}
+                            <strong class="text-[#111111]">{{ restaurant.name }}</strong>
+                            <br><small class="text-[#535353]"><code>{{ restaurant.id }}</code>{% if restaurant.arrondissement %} • {{ restaurant.arrondissement }}{% endif %}{% if restaurant.address %} • {{ restaurant.address }}{% endif %}</small>
+                            {% endif %}
+                        </div>
+                        {% if not restaurant.missing %}
+                        <a href="{% url 'scripts_manager:restaurant_detail' restaurant.id %}" class="btn-secondary text-sm" target="_blank">Voir</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-[#535353]">Aucun restaurant dans ce guide.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal suppression -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-[#111111] bg-opacity-50" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-[#FFFFFF] rounded-[14px] text-left overflow-hidden shadow-xl border border-[#C9C1B1] sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="px-6 py-4">
+                <h3 class="text-lg font-serif font-bold text-[#111111]">Confirmer la suppression</h3>
+                <p class="mt-2 text-[#535353]">Êtes-vous sûr de vouloir supprimer le guide <strong>{{ guide.name }}</strong> ?</p>
+                <p class="mt-2 text-sm text-[#D3695E]">Cette action est irréversible.</p>
+            </div>
+            <div class="px-6 py-4 bg-[#F1EFEB] flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('deleteModal').classList.add('hidden')" class="btn-secondary">Annuler</button>
+                <form method="post" action="{% url 'scripts_manager:guide_delete' guide.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary bg-[#D3695E] hover:opacity-90">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+document.getElementById('deleteModal').querySelector('.fixed.inset-0.bg-opacity-50').addEventListener('click', function() {
+    document.getElementById('deleteModal').classList.add('hidden');
+});
+</script>
+{% endblock %}

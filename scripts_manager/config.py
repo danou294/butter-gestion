@@ -27,8 +27,9 @@ EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 # CONFIGURATION FIREBASE
 # =============================================================================
 
-# Bucket Firebase Storage
-FIREBASE_BUCKET = "butter-vdef.firebasestorage.app"
+# Buckets Firebase Storage (un par environnement)
+FIREBASE_BUCKET_DEV = "butter-def.firebasestorage.app"
+FIREBASE_BUCKET_PROD = "butter-vdef.firebasestorage.app"
 
 # Collection Firestore
 FIRESTORE_COLLECTION = "restaurants"
@@ -52,12 +53,14 @@ if FIREBASE_ENV not in ['dev', 'prod']:
 SERVICE_ACCOUNT_PATH_DEV = str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.dev.json")
 SERVICE_ACCOUNT_PATH_PROD = str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.prod.json")
 
-# Chemin actuel selon l'environnement
+# Chemin et bucket selon l'environnement
 if FIREBASE_ENV == 'dev':
     SERVICE_ACCOUNT_PATH = SERVICE_ACCOUNT_PATH_DEV
+    FIREBASE_BUCKET = FIREBASE_BUCKET_DEV
     FIREBASE_ENV_LABEL = "🔧 DEV"
 else:
     SERVICE_ACCOUNT_PATH = SERVICE_ACCOUNT_PATH_PROD
+    FIREBASE_BUCKET = FIREBASE_BUCKET_PROD
     FIREBASE_ENV_LABEL = "🚀 PROD"
 
 # Exporter l'environnement actif pour utilisation dans les templates

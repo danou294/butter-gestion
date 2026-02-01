@@ -7,6 +7,8 @@ from . import notifications_views
 from . import auth_views
 from . import firebase_env_views
 from . import search_restaurants_views
+from . import guides_views
+from . import announcements_views
 
 app_name = 'scripts_manager'
 
@@ -17,7 +19,9 @@ urlpatterns = [
     path('logout/', auth_views.logout_view, name='logout'),
     
     path('', views.index, name='index'),
-    
+    path('combien-tu-veux-augmenter-daniel/', views.augmenter_daniel, name='augmenter_daniel'),
+    path('img-daniel-troll.jpg', views.serve_daniel_image, name='serve_daniel_image'),
+
     # Export
     path('export/', views.export_index, name='export_index'),
     path('export/run/', views.run_export, name='run_export'),
@@ -75,6 +79,26 @@ urlpatterns = [
     path('notifications/send-all-prenom/', notifications_views.send_notification_to_all_with_prenom, name='send_notification_to_all_with_prenom'),
     path('notifications/send-group/', notifications_views.send_notification_to_group, name='send_notification_to_group'),
     
+    # Annonces (Événements + Sondages)
+    path('announcements/', announcements_views.announcements_list, name='announcements_list'),
+    path('announcements/create/', announcements_views.announcement_create, name='announcement_create'),
+    path('announcements/list-storage-images/', announcements_views.list_storage_images, name='list_storage_images'),
+    path('announcements/upload-image/', announcements_views.announcement_upload_image, name='announcement_upload_image'),
+    path('announcements/<str:announcement_id>/', announcements_views.announcement_detail, name='announcement_detail'),
+    path('announcements/<str:announcement_id>/edit/', announcements_views.announcement_edit, name='announcement_edit'),
+    path('announcements/<str:announcement_id>/delete/', announcements_views.announcement_delete, name='announcement_delete'),
+    path('announcements/<str:announcement_id>/json/', announcements_views.announcement_get_json, name='announcement_get_json'),
+    path('announcements/<str:announcement_id>/export/', announcements_views.poll_export_answers, name='poll_export_answers'),
+
+    # Guides
+    path('guides/', guides_views.guides_list, name='guides_list'),
+    path('guides/create/', guides_views.guide_create, name='guide_create'),
+    path('guides/import/', guides_views.guides_import_csv, name='guides_import_csv'),
+    path('guides/<str:guide_id>/', guides_views.guide_detail, name='guide_detail'),
+    path('guides/<str:guide_id>/edit/', guides_views.guide_edit, name='guide_edit'),
+    path('guides/<str:guide_id>/delete/', guides_views.guide_delete, name='guide_delete'),
+    path('guides/<str:guide_id>/json/', guides_views.guide_get_json, name='guide_get_json'),
+
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
     path('search/analyze-columns/', search_restaurants_views.analyze_excel_columns, name='analyze_excel_columns'),
