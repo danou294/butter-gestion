@@ -14,18 +14,12 @@ import json
 import csv
 import os
 
-from .restaurants_views import get_firestore_client, get_storage_client
-from .firebase_utils import get_firebase_env_from_session
-from .config import FIREBASE_BUCKET_DEV, FIREBASE_BUCKET_PROD
+from google.cloud import firestore
+from .restaurants_views import get_firestore_client
+from .config import FIREBASE_BUCKET_PROD
 
 PHOTOS_PREFIX = "Photos restaurants/"
 ANNOUNCEMENTS_STORAGE_PREFIX = "Annonces/"
-
-
-def _get_firebase_bucket(request):
-    """Retourne le nom du bucket Storage selon l'environnement (dev/prod)."""
-    env = get_firebase_env_from_session(request)
-    return FIREBASE_BUCKET_DEV if env == 'dev' else FIREBASE_BUCKET_PROD
 
 
 def _build_image_url(bucket, image_ref):
@@ -42,9 +36,16 @@ def _get_next_announcement_id(db, announcement_type):
     retourne le prochain ID : EVENT001, POLL001, etc.
     """
     counter_ref = db.collection('_meta').document('announcements_counters')
+    transaction = db.transaction()
 
-    def _increment(transaction):
-        snapshot = transaction.get(counter_ref)
+    @firestore.transactional
+    def _increment(transaction, counter_ref, announcement_type):
+        result = transaction.get(counter_ref)
+        # transaction.get() renvoie un générateur ou une liste, pas un snapshot unique
+        if hasattr(result, 'to_dict'):
+            snapshot = result
+        else:
+            snapshot = next(iter(result))
         data = snapshot.to_dict() or {}
         if announcement_type == 'event':
             seq = (data.get('eventSeq') or 0) + 1
@@ -57,8 +58,7 @@ def _get_next_announcement_id(db, announcement_type):
             transaction.set(counter_ref, new_data, merge=True)
             return f"POLL{str(seq).zfill(3)}"
 
-    transaction = db.transaction()
-    return transaction.run(_increment)
+    return _increment(transaction, counter_ref, announcement_type)
 
 
 def _date_for_input(value):
@@ -251,7 +251,7 @@ def announcement_create(request):
                 return render(request, 'scripts_manager/announcements/form.html', {
                     'form_data': request.POST,
                     'mode': 'create',
-                    'firebase_bucket': _get_firebase_bucket(request),
+                    'firebase_bucket': FIREBASE_BUCKET_PROD,
                 })
 
             # ID auto-incrémenté (EVENT001, POLL001, ...)
@@ -259,7 +259,7 @@ def announcement_create(request):
 
             # Image : priorité à la ref Storage (depuis le sélecteur) puis URL manuelle
             if image_ref:
-                bucket = _get_firebase_bucket(request)
+                bucket = FIREBASE_BUCKET_PROD
                 image_url = _build_image_url(bucket, image_ref) or image_url
             if not image_url:
                 image_url = None
@@ -309,19 +309,19 @@ def announcement_create(request):
             return render(request, 'scripts_manager/announcements/form.html', {
                 'form_data': request.POST,
                 'mode': 'create',
-                'firebase_bucket': _get_firebase_bucket(request),
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
         except Exception as e:
             messages.error(request, f"Erreur lors de la création : {str(e)}")
             return render(request, 'scripts_manager/announcements/form.html', {
                 'form_data': request.POST,
                 'mode': 'create',
-                'firebase_bucket': _get_firebase_bucket(request),
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
 
     return render(request, 'scripts_manager/announcements/form.html', {
         'mode': 'create',
-        'firebase_bucket': _get_firebase_bucket(request),
+        'firebase_bucket': FIREBASE_BUCKET_PROD,
     })
 
 
@@ -349,7 +349,7 @@ def announcement_edit(request, announcement_id):
             image_ref = request.POST.get('imageRef', '').strip()
 
             if image_ref:
-                bucket = _get_firebase_bucket(request)
+                bucket = FIREBASE_BUCKET_PROD
                 image_url = _build_image_url(bucket, image_ref) or image_url
             if not image_url:
                 image_url = None
@@ -423,7 +423,7 @@ def announcement_edit(request, announcement_id):
             'announcement': announcement_data,
             'announcement_id': announcement_id,
             'mode': 'edit',
-            'firebase_bucket': _get_firebase_bucket(request),
+            'firebase_bucket': FIREBASE_BUCKET_PROD,
         }
 
         return render(request, 'scripts_manager/announcements/form.html', context)
@@ -435,12 +435,27 @@ def announcement_edit(request, announcement_id):
 
 # ==================== UPLOAD IMAGE ANNONCE (DEPUIS L'ORDINATEUR) ====================
 
+def _get_storage_client_prod():
+    """Client Storage PROD uniquement (pas de doublon photos dev/prod)."""
+    from google.cloud import storage
+    from google.oauth2 import service_account
+    from .config import FIREBASE_CREDENTIALS_DIR
+    path = str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.prod.json")
+    if not os.path.exists(path):
+        return None
+    creds = service_account.Credentials.from_service_account_file(
+        path,
+        scopes=['https://www.googleapis.com/auth/cloud-platform']
+    )
+    return storage.Client(credentials=creds, project=creds.project_id)
+
+
 @require_http_methods(["POST"])
 @login_required
 def announcement_upload_image(request):
     """
-    Upload une image depuis l'ordinateur vers le bucket PROD (dossier Annonces/).
-    Retourne JSON { "url": "...", "filename": "..." }.
+    Upload une image depuis l'ordinateur vers le bucket PROD uniquement (dossier Annonces/).
+    Le bucket Storage est toujours PROD pour ne pas dupliquer les photos.
     """
     if 'image_file' not in request.FILES:
         return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
@@ -456,7 +471,7 @@ def announcement_upload_image(request):
     try:
         client = _get_storage_client_prod()
         if not client:
-            return JsonResponse({'error': 'Storage prod indisponible'}, status=503)
+            return JsonResponse({'error': 'Storage PROD indisponible'}, status=503)
 
         base_name = os.path.splitext((upload_file.name or 'image').replace(' ', '_'))[0]
         safe_base = "".join(c for c in base_name if c.isalnum() or c in '-_')[:50] or 'image'
@@ -494,29 +509,11 @@ def _build_image_url_announcement(bucket, storage_path):
 
 # ==================== LISTE IMAGES STORAGE (PAR ID RESTAURANT) ====================
 
-def _get_storage_client_prod():
-    """
-    Retourne un client Storage connecté au projet PROD (pour le sélecteur d'images).
-    Toujours utiliser le bucket prod pour choisir les photos restaurants.
-    """
-    from google.cloud import storage
-    from google.oauth2 import service_account
-    from .config import FIREBASE_CREDENTIALS_DIR, FIREBASE_BUCKET_PROD
-    path = str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.prod.json")
-    if not os.path.exists(path):
-        return None
-    creds = service_account.Credentials.from_service_account_file(
-        path,
-        scopes=['https://www.googleapis.com/auth/cloud-platform']
-    )
-    return storage.Client(credentials=creds, project=creds.project_id)
-
-
 @login_required
 def list_storage_images(request):
     """
     API JSON : liste les images du Storage PROD pour un restaurant donné.
-    Toujours utilise le bucket prod (photos restaurants) comme demandé.
+    Le bucket est toujours PROD (pas de photos en dev).
     GET ?restaurant_id=CHEJ → { "images": ["CHEJ1", "CHEJ2"], "bucket": "..." }
     """
     restaurant_id = (request.GET.get('restaurant_id') or '').strip().upper()
@@ -526,10 +523,8 @@ def list_storage_images(request):
     try:
         client = _get_storage_client_prod()
         if not client:
-            return JsonResponse({'error': 'Credentials prod Storage indisponibles', 'images': [], 'bucket': ''}, status=503)
-
-        bucket_name = FIREBASE_BUCKET_PROD
-        bucket = client.bucket(bucket_name)
+            return JsonResponse({'error': 'Storage PROD indisponible', 'images': [], 'bucket': ''}, status=503)
+        bucket = client.bucket(FIREBASE_BUCKET_PROD)
         prefix = f"{PHOTOS_PREFIX}{restaurant_id}"
         blobs = list(bucket.list_blobs(prefix=prefix))
 
@@ -544,7 +539,7 @@ def list_storage_images(request):
 
         return JsonResponse({
             'images': images,
-            'bucket': bucket_name,
+            'bucket': FIREBASE_BUCKET_PROD,
         })
     except Exception as e:
         return JsonResponse({'error': str(e), 'images': [], 'bucket': ''}, status=500)

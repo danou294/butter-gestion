@@ -12,8 +12,7 @@ from datetime import datetime
 import json
 
 from .restaurants_views import get_firestore_client
-from .firebase_utils import get_firebase_env_from_session
-from .config import FIREBASE_BUCKET_DEV, FIREBASE_BUCKET_PROD
+from .config import FIREBASE_BUCKET_PROD
 
 
 # ==================== LISTE DES GUIDES ====================
@@ -101,13 +100,10 @@ def guide_detail(request, guide_id):
                         'missing': True
                     })
 
-        env = get_firebase_env_from_session(request)
-        firebase_bucket = FIREBASE_BUCKET_DEV if env == 'dev' else FIREBASE_BUCKET_PROD
-
         context = {
             'guide': guide_data,
             'restaurants': restaurants,
-            'firebase_bucket': firebase_bucket,
+            'firebase_bucket': FIREBASE_BUCKET_PROD,
         }
 
         return render(request, 'scripts_manager/guides/detail.html', context)
@@ -142,14 +138,16 @@ def guide_create(request):
                 messages.error(request, "L'ID du guide est requis")
                 return render(request, 'scripts_manager/guides/form.html', {
                     'form_data': request.POST,
-                    'mode': 'create'
+                    'mode': 'create',
+                    'firebase_bucket': FIREBASE_BUCKET_PROD,
                 })
 
             if not name:
                 messages.error(request, "Le nom du guide est requis")
                 return render(request, 'scripts_manager/guides/form.html', {
                     'form_data': request.POST,
-                    'mode': 'create'
+                    'mode': 'create',
+                    'firebase_bucket': FIREBASE_BUCKET_PROD,
                 })
 
             # Vérifier que l'ID n'existe pas déjà
@@ -158,7 +156,8 @@ def guide_create(request):
                 messages.error(request, f"Un guide avec l'ID '{guide_id}' existe déjà")
                 return render(request, 'scripts_manager/guides/form.html', {
                     'form_data': request.POST,
-                    'mode': 'create'
+                    'mode': 'create',
+                    'firebase_bucket': FIREBASE_BUCKET_PROD,
                 })
 
             # Parser les IDs de restaurants (séparés par virgule ou espace)
@@ -193,17 +192,22 @@ def guide_create(request):
             messages.error(request, f"Erreur de validation : {str(e)}")
             return render(request, 'scripts_manager/guides/form.html', {
                 'form_data': request.POST,
-                'mode': 'create'
+                'mode': 'create',
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
         except Exception as e:
             messages.error(request, f"Erreur lors de la création du guide : {str(e)}")
             return render(request, 'scripts_manager/guides/form.html', {
                 'form_data': request.POST,
-                'mode': 'create'
+                'mode': 'create',
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
 
     # GET request
-    return render(request, 'scripts_manager/guides/form.html', {'mode': 'create'})
+    return render(request, 'scripts_manager/guides/form.html', {
+        'mode': 'create',
+        'firebase_bucket': FIREBASE_BUCKET_PROD,
+    })
 
 
 # ==================== ÉDITER UN GUIDE ====================
@@ -238,7 +242,8 @@ def guide_edit(request, guide_id):
                 return render(request, 'scripts_manager/guides/form.html', {
                     'guide': doc.to_dict(),
                     'guide_id': guide_id,
-                    'mode': 'edit'
+                    'mode': 'edit',
+                    'firebase_bucket': FIREBASE_BUCKET_PROD,
                 })
 
             # Parser les IDs de restaurants
@@ -274,7 +279,8 @@ def guide_edit(request, guide_id):
             return render(request, 'scripts_manager/guides/form.html', {
                 'guide': guide_data,
                 'guide_id': guide_id,
-                'mode': 'edit'
+                'mode': 'edit',
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
         except Exception as e:
             messages.error(request, f"Erreur lors de la mise à jour : {str(e)}")
@@ -283,7 +289,8 @@ def guide_edit(request, guide_id):
             return render(request, 'scripts_manager/guides/form.html', {
                 'guide': guide_data,
                 'guide_id': guide_id,
-                'mode': 'edit'
+                'mode': 'edit',
+                'firebase_bucket': FIREBASE_BUCKET_PROD,
             })
 
     # GET request
@@ -303,7 +310,8 @@ def guide_edit(request, guide_id):
         context = {
             'guide': guide_data,
             'guide_id': guide_id,
-            'mode': 'edit'
+            'mode': 'edit',
+            'firebase_bucket': FIREBASE_BUCKET_PROD,
         }
 
         return render(request, 'scripts_manager/guides/form.html', context)
