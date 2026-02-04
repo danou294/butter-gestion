@@ -120,13 +120,6 @@
 <div class="card import-container">
     <h2>📥 Import Batch de Restaurants</h2>
     
-    {% if firebase_env == 'dev' %}
-    <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107; margin-bottom: 20px;">
-        <strong>🔧 Mode DEV actif</strong>
-        <p style="margin: 10px 0 0 0;">Vous êtes en mode développement. Des fonctions supplémentaires sont disponibles ci-dessous.</p>
-    </div>
-    {% endif %}
-    
     <div class="info-box">
         <strong>ℹ️ Instructions :</strong>
         <ul>
@@ -138,13 +131,12 @@
             <li><strong>Environnement actif :</strong> {{ firebase_env_label }}</li>
         </ul>
     </div>
-    
-    {% if firebase_env == 'dev' %}
-    <!-- Fonctions supplémentaires DEV uniquement -->
+
+    <!-- Fonctions d'analyse -->
     <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-left: 4px solid #667eea; border-radius: 8px;">
-        <h3 style="margin-top: 0; color: #667eea;">🔧 Fonctions DEV</h3>
-        <p style="color: #535353; margin-bottom: 15px;">Ces fonctions sont disponibles uniquement en mode développement :</p>
-        
+        <h3 style="margin-top: 0; color: #667eea;">🔧 Outils d'analyse</h3>
+        <p style="color: #535353; margin-bottom: 15px;">Analysez et validez votre fichier avant l'import :</p>
+
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
             <button type="button" class="btn" onclick="devFunction1()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
                 🔍 Analyser le fichier Excel
@@ -159,10 +151,9 @@
                 🔄 Valider les données
             </button>
         </div>
-        
+
         <div id="devResult" style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none;"></div>
     </div>
-    {% endif %}
     
     <form id="importForm" enctype="multipart/form-data">
         {% csrf_token %}
@@ -966,8 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('ℹ️ Section backups non disponible sur cette page');
     }
     
-    {% if firebase_env == 'dev' %}
-    // Fonctions DEV uniquement
+    // Fonctions d'analyse (disponibles en DEV et PROD)
     function devFunction1() {
         const fileInput = document.getElementById('excel_file');
         if (!fileInput.files.length) {
@@ -1160,7 +1150,6 @@ document.addEventListener('DOMContentLoaded', function() {
             devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
         });
     }
-    {% endif %}
 });
 </script>
 {% endblock %}

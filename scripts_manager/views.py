@@ -643,17 +643,14 @@ def run_import_restaurants(request):
 @login_required
 @require_http_methods(["POST"])
 def dev_import_function(request):
-    """Fonctions supplémentaires pour l'import en mode DEV uniquement"""
+    """Fonctions supplémentaires pour l'import (disponible en DEV et PROD)"""
     try:
-        # Vérifier que nous sommes en DEV
         from .firebase_utils import get_firebase_env_from_session
         current_env = get_firebase_env_from_session(request)
-        
-        if current_env != 'dev':
-            return JsonResponse({
-                'error': 'Cette fonction est disponible uniquement en mode DEV'
-            }, status=403)
-        
+
+        # Fonctions disponibles en DEV et PROD
+        logger.info(f"📊 Fonction import auxiliaire - Environnement: {current_env.upper()}")
+
         action = request.POST.get('action')
         
         if action == 'analyze':
@@ -892,10 +889,10 @@ def get_import_logs(request):
         log_file = request.GET.get('log_file')
         if not log_file:
             return JsonResponse({'error': 'Paramètre log_file manquant'}, status=400)
-        
+
         from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
-        
+
         # Construire le chemin complet
         if not log_file.startswith('/'):
             # Chemin relatif depuis BASE_DIR
@@ -903,15 +900,15 @@ def get_import_logs(request):
         else:
             # Chemin absolu
             log_path = Path(log_file)
-        
+
         if not log_path.exists():
             return JsonResponse({'error': 'Fichier de log non trouvé'}, status=404)
-        
+
         # Lire le fichier de log
         try:
             with open(log_path, 'r', encoding='utf-8') as f:
                 logs = f.read()
-            
+
             return JsonResponse({
                 'success': True,
                 'logs': logs,
@@ -920,9 +917,54 @@ def get_import_logs(request):
         except Exception as e:
             logger.error(f"Erreur lors de la lecture du log: {e}")
             return JsonResponse({'error': f'Erreur lors de la lecture: {str(e)}'}, status=500)
-            
+
     except Exception as e:
         logger.error(f"Erreur get_import_logs: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def download_import_logs(request):
+    """Télécharge les logs d'import en format txt"""
+    try:
+        log_file = request.GET.get('log_file')
+        if not log_file:
+            return JsonResponse({'error': 'Paramètre log_file manquant'}, status=400)
+
+        from pathlib import Path
+        from datetime import datetime
+        BASE_DIR = Path(__file__).resolve().parent.parent
+
+        # Construire le chemin complet
+        if not log_file.startswith('/'):
+            log_path = BASE_DIR / log_file
+        else:
+            log_path = Path(log_file)
+
+        if not log_path.exists():
+            return JsonResponse({'error': 'Fichier de log non trouvé'}, status=404)
+
+        # Lire le fichier de log
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                logs_content = f.read()
+
+            # Générer un nom de fichier basé sur la date
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"import_logs_{timestamp}.txt"
+
+            # Créer la réponse HTTP avec le fichier
+            response = HttpResponse(logs_content, content_type='text/plain; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            logger.error(f"Erreur lors du téléchargement du log: {e}")
+            return JsonResponse({'error': f'Erreur lors du téléchargement: {str(e)}'}, status=500)
+
+    except Exception as e:
+        logger.error(f"Erreur download_import_logs: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
