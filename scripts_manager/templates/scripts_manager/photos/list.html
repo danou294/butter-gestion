@@ -51,7 +51,7 @@
         </form>
     </div>
     
-    <!-- Bouton de conversion PNG → WebP (uniquement pour Photos restaurants) -->
+    <!-- Actions Photos restaurants : conversion + export sans photo WebP -->
     {% if folder == 'photos' %}
     <div class="bg-[#60BC81] rounded-[14px] shadow-sm p-6 border border-[#60BC81]">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -68,6 +68,20 @@
             </button>
         </div>
         <div id="convertStatus" class="mt-4 hidden"></div>
+    </div>
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="text-[#111111]">
+                <h3 class="text-lg font-serif font-bold mb-2">📋 Restaurants sans photo WebP</h3>
+                <p class="text-sm text-[#535353]">Compare Firestore (env. actif) et le bucket PROD : télécharge un Excel des restaurants sans aucune photo .webp</p>
+            </div>
+            <a 
+                href="{% url 'scripts_manager:photo_export_restaurants_without_webp' %}" 
+                class="btn-primary inline-flex items-center justify-center whitespace-nowrap"
+            >
+                ⬇️ Export Excel (sans photo WebP)
+            </a>
+        </div>
     </div>
     {% endif %}
     

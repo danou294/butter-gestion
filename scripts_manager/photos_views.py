@@ -15,8 +15,9 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import storage
 from google.oauth2 import service_account
 from PIL import Image, ImageOps
-from config import FIREBASE_BUCKET
+from config import FIREBASE_BUCKET, FIREBASE_BUCKET_PROD, SERVICE_ACCOUNT_PATH_PROD
 from .firebase_utils import get_service_account_path
+from .restaurants_views import get_firestore_client
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,7 @@ def photos_list(request):
         })
 
 
+@login_required
 def photo_detail(request, folder, photo_name):
     """Affiche les détails d'une photo (retourne JSON pour API)"""
     try:
@@ -316,6 +318,7 @@ def photo_delete(request, folder, photo_name):
         return JsonResponse({'error': f'Erreur lors de la suppression: {str(e)}'}, status=500)
 
 
+@login_required
 @require_http_methods(["GET"])
 def photo_get_url(request, folder, photo_name):
     """Génère une URL signée pour une photo spécifique (API)"""
@@ -625,4 +628,91 @@ def photo_bulk_delete(request):
         import traceback
         logger.error(traceback.format_exc())
         return JsonResponse({'error': f'Erreur lors de la suppression groupée: {str(e)}'}, status=500)
+
+
+PHOTOS_RESTAURANTS_PREFIX = "Photos restaurants/"
+
+
+@login_required
+def photo_export_restaurants_without_webp(request):
+    """
+    Exporte la liste des restaurants sans aucune photo .webp sur le bucket PROD.
+    IDs depuis Firestore (env session), photos lues depuis le bucket PROD.
+    Retourne un fichier Excel en téléchargement.
+    """
+    from openpyxl import Workbook
+    from google.oauth2 import service_account
+
+    try:
+        # IDs restaurants depuis Firestore (env session)
+        db = get_firestore_client(request)
+        restaurant_ids = set()
+        for doc in db.collection("restaurants").stream():
+            restaurant_ids.add(doc.id)
+
+        if not restaurant_ids:
+            from django.contrib import messages
+            messages.warning(request, "Aucun restaurant dans Firestore.")
+            return redirect("scripts_manager:photos_list")
+
+        # IDs avec au moins une photo .webp dans le bucket PROD
+        if not os.path.exists(SERVICE_ACCOUNT_PATH_PROD):
+            from django.contrib import messages
+            messages.error(request, "Credentials PROD introuvables.")
+            return redirect("scripts_manager:photos_list")
+
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_PATH_PROD,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        client = storage.Client(credentials=creds, project=creds.project_id)
+        bucket = client.bucket(FIREBASE_BUCKET_PROD)
+        blobs = list(bucket.list_blobs(prefix=PHOTOS_RESTAURANTS_PREFIX))
+        ids_with_webp = set()
+        for blob in blobs:
+            name = blob.name
+            if not name.lower().endswith(".webp"):
+                continue
+            rel = name[len(PHOTOS_RESTAURANTS_PREFIX) :].lstrip("/")
+            base = rel.replace(".webp", "").replace(".WEBP", "")
+            for i in range(len(base), 0, -1):
+                prefix, suffix = base[:i], base[i:]
+                if suffix.isdigit():
+                    ids_with_webp.add(prefix)
+                    break
+
+        without_webp = sorted(restaurant_ids - ids_with_webp)
+
+        # Excel en mémoire
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Sans_photo_webp"
+        ws.append(["Restaurant_ID", "Remarque"])
+        remarque = "Aucune photo .webp sur le bucket Storage PROD"
+        for rid in without_webp:
+            ws.append([rid, remarque])
+        ws.column_dimensions["A"].width = 18
+        ws.column_dimensions["B"].width = 55
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        buffer_value = buffer.getvalue()
+
+        from django.utils import timezone
+        filename = f"restaurants_sans_photo_webp_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response = HttpResponse(
+            buffer_value,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Export restaurants sans photo WebP: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        from django.contrib import messages
+        messages.error(request, f"Erreur lors de l'export : {str(e)}")
+        return redirect("scripts_manager:photos_list")
 

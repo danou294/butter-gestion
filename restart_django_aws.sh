@@ -117,6 +117,27 @@ fi
 echo -e "${GREEN}✅ Environnement virtuel activé${NC}"
 echo ""
 
+echo -e "${BLUE}📦 Installation des dépendances Python...${NC}"
+pip install -r requirements.txt --quiet
+echo -e "${GREEN}✅ Dépendances Python à jour${NC}"
+echo ""
+
+echo -e "${BLUE}🎨 Build Tailwind CSS...${NC}"
+if command -v npm &> /dev/null; then
+    npm install --silent 2>/dev/null
+    npm run build:css 2>/dev/null
+    echo -e "${GREEN}✅ Tailwind CSS compilé${NC}"
+else
+    echo -e "${YELLOW}⚠️  npm non trouvé, skip du build CSS${NC}"
+fi
+echo ""
+
+echo -e "${BLUE}🗄️  Migrations Django...${NC}"
+python manage.py migrate --noinput 2>/dev/null
+python manage.py collectstatic --noinput 2>/dev/null
+echo -e "${GREEN}✅ Migrations et collectstatic terminés${NC}"
+echo ""
+
 echo -e "${BLUE}🚀 Lancement du serveur Django sur le port 8000...${NC}"
 nohup python manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 &
 sleep 2

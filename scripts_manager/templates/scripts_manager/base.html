@@ -29,51 +29,14 @@
     </style>
     {% endif %}
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+    {% load static %}
+    <!-- Tailwind CSS (compilé) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
+
     <!-- Google Fonts - Inria Sans & Inria Serif -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inria+Sans:wght@300;400;700&family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
-    
-    <script>
-        (function configureTailwind() {
-            if (window.tailwind && window.tailwind.config) {
-                window.tailwind.config = {
-                    theme: {
-                        extend: {
-                            fontFamily: {
-                                sans: ['Inria Sans', 'system-ui', 'sans-serif'],
-                                serif: ['Inria Serif', 'Georgia', 'serif'],
-                            },
-                            colors: {
-                                primary: {
-                                    dark: '#111111',
-                                    gray: '#535353',
-                                    white: '#FFFFFF',
-                                    beige: '#F1EFEB',
-                                    beigeDark: '#C9C1B1',
-                                },
-                                action: {
-                                    green: {
-                                        light: '#D4F2DA',
-                                        dark: '#60BC81',
-                                    },
-                                    red: {
-                                        light: '#F2D7D4',
-                                        dark: '#D3695E',
-                                    },
-                                },
-                            },
-                        },
-                    },
-                };
-            } else {
-                setTimeout(configureTailwind, 20);
-            }
-        })();
-    </script>
     
     <style>
         body {
@@ -258,17 +221,21 @@
                                        class="block px-4 py-2 text-sm {% if 'photo' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                                         📸 Photos
                                     </a>
-                                    <a href="{% url 'scripts_manager:users_list' %}" 
+                                    <a href="{% url 'scripts_manager:users_list' %}"
                                        class="block px-4 py-2 text-sm {% if 'user' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
                                         👥 Utilisateurs
+                                    </a>
+                                    <a href="{% url 'scripts_manager:onboarding_list' %}"
+                                       class="block px-4 py-2 text-sm {% if 'onboarding' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
+                                        🎯 Onboarding
                                     </a>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Séparateur -->
                         <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
-                        
+
                         <!-- Section : Recherche -->
                         <a href="{% url 'scripts_manager:search_restaurants' %}" 
                            class="px-4 py-2 rounded-none text-sm font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
@@ -364,10 +331,11 @@
                 <a href="{% url 'scripts_manager:announcements_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'announcement' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🎪 Annonces</a>
                 <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📸 Photos</a>
                 <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
-                
+                <a href="{% url 'scripts_manager:onboarding_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'onboarding' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🎯 Onboarding</a>
+
                 <!-- Séparateur -->
                 <div class="border-t border-[#C9C1B1] my-2"></div>
-                
+
                 <!-- Section : Recherche -->
                 <a href="{% url 'scripts_manager:search_restaurants' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🔍 Recherche</a>
                 

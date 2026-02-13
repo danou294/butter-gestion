@@ -1,0 +1,171 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Import Onboarding - Butter{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Navigation retour -->
+    <div>
+        <a href="{% url 'scripts_manager:onboarding_list' %}" class="text-[#535353] hover:text-[#111111] text-sm">
+            ← Retour à la liste
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📥 Import Onboarding</h1>
+        <p class="text-[#535353]">
+            Importer les restaurants d'onboarding depuis un fichier Excel vers la collection
+            <code class="bg-[#F1EFEB] px-2 py-0.5 rounded text-sm">onboarding_restaurants</code>
+        </p>
+    </div>
+
+    {% if step == 'upload' %}
+    <!-- Étape 1 : Upload -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="bg-[#F1EFEB] rounded-[14px] p-4 mb-6">
+            <h3 class="font-medium text-[#111111] mb-2">Format attendu :</h3>
+            <ul class="text-sm text-[#535353] space-y-1 list-disc list-inside">
+                <li><strong>Nom du restaurant</strong> — Nom affiché</li>
+                <li><strong>Tag</strong> — Code court unique (ex: BENC, ALFR)</li>
+                <li><strong>Lieu</strong> — Type : Restaurant, Coffee shop, ou Bar</li>
+                <li><strong>Spécialité</strong> — Cuisine (optionnel pour bars/coffee shops)</li>
+            </ul>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="auto-loader">
+            {% csrf_token %}
+
+            <div class="border-2 border-dashed border-[#C9C1B1] rounded-[14px] p-8 text-center hover:border-[#535353] transition-colors">
+                <div class="text-4xl mb-3">📄</div>
+                <p class="text-[#111111] font-medium mb-2">Sélectionnez votre fichier Excel</p>
+                <p class="text-[#535353] text-sm mb-4">Formats acceptés : .xlsx, .xls</p>
+                <input type="file" name="excel_file" accept=".xlsx,.xls" required
+                       class="block w-full text-sm text-[#535353] file:mr-4 file:py-2 file:px-4 file:rounded-[14px] file:border-0 file:text-sm file:font-medium file:bg-[#111111] file:text-white hover:file:bg-[#535353] cursor-pointer">
+            </div>
+
+            <div class="mt-6 text-center">
+                <button type="submit" class="btn-primary text-lg px-8">
+                    🔍 Analyser le fichier
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% elif step == 'preview' %}
+    <!-- Étape 2 : Preview et confirmation -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">📊 Résultat de l'analyse</h2>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="bg-[#D4F2DA] rounded-[14px] p-3 text-center">
+                <div class="text-xl font-bold text-[#111111]">{{ report.valid_rows }}</div>
+                <div class="text-xs text-[#535353]">Valides</div>
+            </div>
+            <div class="bg-[#F1EFEB] rounded-[14px] p-3 text-center">
+                <div class="text-xl font-bold text-[#111111]">{{ report.total_rows }}</div>
+                <div class="text-xs text-[#535353]">Total lignes</div>
+            </div>
+            <div class="{% if report.skipped_rows > 0 %}bg-[#F2D7D4]{% else %}bg-[#F1EFEB]{% endif %} rounded-[14px] p-3 text-center">
+                <div class="text-xl font-bold text-[#111111]">{{ report.skipped_rows }}</div>
+                <div class="text-xs text-[#535353]">Ignorées</div>
+            </div>
+            <div class="bg-[#F1EFEB] rounded-[14px] p-3 text-center">
+                <div class="text-xl font-bold text-[#111111]">{{ report.errors|length }}</div>
+                <div class="text-xs text-[#535353]">Erreurs</div>
+            </div>
+        </div>
+
+        <!-- Répartition par lieu -->
+        {% if report.by_lieu %}
+        <div class="mb-4">
+            <h3 class="text-sm font-medium text-[#535353] mb-2">Par lieu :</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for lieu, count in report.by_lieu.items %}
+                <span class="px-3 py-1 rounded-full text-sm bg-[#F1EFEB] text-[#111111]">{{ lieu }} : {{ count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Répartition par spécialité -->
+        {% if report.by_specialite %}
+        <div class="mb-4">
+            <h3 class="text-sm font-medium text-[#535353] mb-2">Par spécialité :</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for spec, count in report.by_specialite.items %}
+                <span class="px-3 py-1 rounded-full text-sm bg-[#F1EFEB] text-[#111111]">{{ spec }} : {{ count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Erreurs -->
+        {% if report.errors %}
+        <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4 mb-4">
+            <h3 class="font-medium text-[#D3695E] mb-2">Avertissements :</h3>
+            <ul class="text-sm text-[#D3695E] space-y-1 list-disc list-inside">
+                {% for error in report.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Preview des données -->
+    {% if records %}
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+        <div class="p-4 bg-[#F1EFEB] border-b border-[#C9C1B1]">
+            <h3 class="font-medium text-[#111111]">{{ records|length }} restaurants à importer</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-[#C9C1B1]">
+                <thead class="bg-[#F1EFEB]">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-[#535353] uppercase">#</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-[#535353] uppercase">Tag</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-[#535353] uppercase">Nom</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-[#535353] uppercase">Lieu</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-[#535353] uppercase">Spécialité</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#C9C1B1]">
+                    {% for record in records %}
+                    <tr class="hover:bg-[#F1EFEB]">
+                        <td class="px-4 py-2 text-sm text-[#535353]">{{ forloop.counter }}</td>
+                        <td class="px-4 py-2"><code class="text-xs bg-[#F1EFEB] px-2 py-0.5 rounded">{{ record.tag }}</code></td>
+                        <td class="px-4 py-2 font-medium text-[#111111]">{{ record.name }}</td>
+                        <td class="px-4 py-2 text-sm text-[#535353]">{{ record.lieu }}</td>
+                        <td class="px-4 py-2 text-sm text-[#535353]">{{ record.specialite|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Boutons de confirmation -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="bg-yellow-50 border border-yellow-200 rounded-[14px] p-4 mb-4">
+            <p class="text-yellow-800 text-sm">
+                ⚠️ L'import va <strong>remplacer</strong> tous les restaurants d'onboarding existants dans l'environnement actif.
+            </p>
+        </div>
+        <div class="flex gap-3 justify-center">
+            <form method="POST" action="{% url 'scripts_manager:onboarding_import_confirm' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-primary text-lg px-8" onclick="return confirm('Confirmer l\'import de {{ records|length }} restaurants ?');">
+                    ✅ Confirmer l'import
+                </button>
+            </form>
+            <a href="{% url 'scripts_manager:onboarding_import' %}" class="btn-secondary text-lg px-8">
+                ❌ Annuler
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

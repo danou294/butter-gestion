@@ -1,0 +1,75 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}{{ restaurant.name }} - Onboarding - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Navigation retour -->
+    <div>
+        <a href="{% url 'scripts_manager:onboarding_list' %}" class="text-[#535353] hover:text-[#111111] text-sm">
+            ← Retour à la liste
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <h1 class="text-3xl font-serif font-bold text-[#111111]">{{ restaurant.name }}</h1>
+                    {% if restaurant.lieu == 'Coffee shop' %}
+                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">☕ Coffee shop</span>
+                    {% elif restaurant.lieu == 'Bar' %}
+                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">🍸 Bar</span>
+                    {% else %}
+                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">🍽️ Restaurant</span>
+                    {% endif %}
+                </div>
+                <p class="text-[#535353]">
+                    Tag : <code class="bg-[#F1EFEB] px-2 py-0.5 rounded text-sm">{{ restaurant.tag }}</code>
+                    {% if restaurant.specialite %}
+                    — Spécialité : <strong>{{ restaurant.specialite }}</strong>
+                    {% endif %}
+                </p>
+            </div>
+            <form method="POST" action="{% url 'scripts_manager:onboarding_delete' restaurant.id %}" onsubmit="return confirm('Supprimer {{ restaurant.name }} ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-danger">🗑️ Supprimer</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Données Firestore (JSON) -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">📄 Données Firestore</h2>
+        <pre class="bg-[#F1EFEB] p-4 rounded-[14px] text-sm text-[#111111] overflow-x-auto">{{ restaurant_json }}</pre>
+    </div>
+
+    <!-- Médias -->
+    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
+        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">📸 Médias</h2>
+
+        {% if restaurant.logo_url %}
+        <div class="mb-4">
+            <h3 class="text-sm font-medium text-[#535353] mb-2">Logo</h3>
+            <img src="{{ restaurant.logo_url }}" alt="Logo {{ restaurant.name }}" class="h-16 rounded-lg border border-[#C9C1B1]">
+        </div>
+        {% else %}
+        <p class="text-[#D3695E] text-sm mb-4">🖼️ Aucun logo</p>
+        {% endif %}
+
+        {% if restaurant.image_urls %}
+        <div>
+            <h3 class="text-sm font-medium text-[#535353] mb-2">Photos ({{ restaurant.image_urls|length }})</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {% for url in restaurant.image_urls %}
+                <img src="{{ url }}" alt="Photo {{ forloop.counter }}" class="w-full h-32 object-cover rounded-lg border border-[#C9C1B1]">
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-[#D3695E] text-sm">📸 Aucune photo</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

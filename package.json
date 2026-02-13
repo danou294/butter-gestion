@@ -4,7 +4,8 @@
   "description": "Interface web moderne et complète pour gérer votre application Firebase, incluant la gestion des utilisateurs, restaurants, photos, notifications push et exports de données.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:css": "npx tailwindcss -i ./scripts_manager/static/css/input.css -o ./scripts_manager/static/css/tailwind.min.css --minify",
+    "watch:css": "npx tailwindcss -i ./scripts_manager/static/css/input.css -o ./scripts_manager/static/css/tailwind.min.css --watch"
   },
   "repository": {
     "type": "git",

@@ -245,11 +245,9 @@ def run_search_restaurants(request):
         })
         
     except Exception as e:
-        logger.error(f"Erreur run_search_restaurants: {e}")
-        import traceback
+        logger.error(f"Erreur run_search_restaurants: {e}", exc_info=True)
         return JsonResponse({
-            'error': f'Erreur: {str(e)}',
-            'traceback': traceback.format_exc()
+            'error': 'Une erreur interne est survenue lors de la recherche.',
         }, status=500)
 
 

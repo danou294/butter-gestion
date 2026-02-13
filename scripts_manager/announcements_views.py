@@ -13,8 +13,12 @@ from datetime import datetime
 import json
 import csv
 import os
+import logging
+import time
 
 from google.cloud import firestore
+
+logger = logging.getLogger(__name__)
 from .restaurants_views import get_firestore_client
 from .config import FIREBASE_BUCKET_PROD
 
@@ -79,11 +83,26 @@ def announcements_list(request):
     """
     Affiche la liste de toutes les annonces (événements + sondages)
     """
+    t0 = time.time()
+    print("[DEBUG announcements] 1. Entrée dans la vue", flush=True)
+    logger.info("[announcements_list] Début requête")
     try:
+        t1 = time.time()
+        from .firebase_utils import get_firebase_env_from_session
+        env = get_firebase_env_from_session(request)
+        print(f"[DEBUG announcements] 2. Avant get_firestore_client (env={env})...", flush=True)
         db = get_firestore_client(request)
+        print(f"[DEBUG announcements] 2. get_firestore_client ok → projet={db.project} ({(time.time() - t1):.2f}s)", flush=True)
+        logger.info("[announcements_list] get_firestore_client ok (%.2fs)", time.time() - t1)
+
         announcements_ref = db.collection('announcements')
 
-        announcements_docs = announcements_ref.order_by('createdAt', direction='DESCENDING').stream()
+        t2 = time.time()
+        print("[DEBUG announcements] 3. Avant collection.get()...", flush=True)
+        # Utiliser .get() au lieu de .order_by().stream() pour éviter les problèmes d'index Firestore
+        announcements_docs = announcements_ref.get()
+        print(f"[DEBUG announcements] 3. collection.get() terminé ({(time.time() - t2):.2f}s)", flush=True)
+        logger.info("[announcements_list] collection.get() terminé (%.2fs)", time.time() - t2)
 
         announcements = []
         events_count = 0
@@ -91,6 +110,8 @@ def announcements_list(request):
         premium_count = 0
         active_count = 0
 
+        t3 = time.time()
+        print("[DEBUG announcements] 4. Début itération sur les docs...", flush=True)
         for doc in announcements_docs:
             data = doc.to_dict()
             data['id'] = doc.id
@@ -107,6 +128,15 @@ def announcements_list(request):
             if data.get('isActive', False):
                 active_count += 1
 
+        # Tri par createdAt décroissant en Python (évite l'index Firestore)
+        announcements.sort(
+            key=lambda x: x.get('createdAt') or datetime.min,
+            reverse=True,
+        )
+
+        print(f"[DEBUG announcements] 4. Itération terminée: {len(announcements)} docs ({(time.time() - t3):.2f}s)", flush=True)
+        logger.info("[announcements_list] Itération terminée: %d docs en %.2fs", len(announcements), time.time() - t3)
+
         context = {
             'announcements': announcements,
             'total_count': len(announcements),
@@ -116,9 +146,13 @@ def announcements_list(request):
             'active_count': active_count,
         }
 
+        print(f"[DEBUG announcements] 5. Rendu template (total {(time.time() - t0):.2f}s)", flush=True)
+        logger.info("[announcements_list] Succès total (%.2fs)", time.time() - t0)
         return render(request, 'scripts_manager/announcements/list.html', context)
 
     except Exception as e:
+        print(f"[DEBUG announcements] ERREUR après {(time.time() - t0):.2f}s: {e}", flush=True)
+        logger.exception("[announcements_list] ERREUR après %.2fs: %s", time.time() - t0, e)
         messages.error(request, f"Erreur lors du chargement des annonces : {str(e)}")
         return render(request, 'scripts_manager/announcements/list.html', {
             'announcements': [],

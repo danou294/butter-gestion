@@ -124,21 +124,25 @@ def export_index(request):
     return render(request, 'scripts_manager/export.html')
 
 
+@login_required
 def convert_local_index(request):
     """Page de conversion d'images locales"""
     return render(request, 'scripts_manager/convert_local.html')
 
 
+@login_required
 def optimize_firebase_index(request):
     """Page d'optimisation Firebase"""
     return render(request, 'scripts_manager/optimize_firebase.html')
 
 
+@login_required
 def check_missing_index(request):
     """Page de vérification"""
     return render(request, 'scripts_manager/check_missing.html')
 
 
+@login_required
 def delete_index(request):
     """Page de suppression"""
     return render(request, 'scripts_manager/delete.html')
@@ -260,6 +264,7 @@ def run_export(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@login_required
 @require_http_methods(["POST"])
 def run_convert_local(request):
     """Exécute la conversion d'images locales"""
@@ -304,6 +309,7 @@ def run_convert_local(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@login_required
 @require_http_methods(["POST"])
 def run_optimize_firebase(request):
     """Exécute l'optimisation Firebase"""
@@ -355,6 +361,7 @@ def run_optimize_firebase(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@login_required
 @require_http_methods(["POST"])
 def run_check_missing(request):
     """Exécute la vérification des fichiers manquants"""
@@ -388,6 +395,7 @@ def run_check_missing(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@login_required
 @require_http_methods(["POST"])
 def run_delete(request):
     """Exécute une opération de suppression"""
@@ -457,6 +465,7 @@ def run_script_task(task_id, cmd, exports_dir):
         running_tasks[task_id]['error'] = str(e)
 
 
+@login_required
 def get_task_status(request, task_id):
     """Récupère le statut d'une tâche"""
     if task_id not in running_tasks:
@@ -477,6 +486,7 @@ def get_task_status(request, task_id):
 #     return JsonResponse({'error': 'L\'upload de service account est désactivé. Le fichier est fixe.'}, status=403)
 
 
+@login_required
 def list_exports(request):
     """Liste tous les fichiers d'export disponibles"""
     exports = []
@@ -496,6 +506,7 @@ def list_exports(request):
     return JsonResponse({'exports': exports})
 
 
+@login_required
 def download_file(request, file_path):
     """Télécharge un fichier depuis exports"""
     # Sécuriser le chemin
@@ -604,7 +615,7 @@ def run_import_restaurants(request):
             except Exception as e:
                 import traceback
                 import_result['error'] = str(e)
-                import_result['traceback'] = traceback.format_exc()
+                logger.error(traceback.format_exc())
                 import_result['done'] = True
             finally:
                 # Supprimer le fichier temporaire après import
@@ -632,11 +643,9 @@ def run_import_restaurants(request):
         logger.error(f"❌ Erreur de validation: {e}")
         return JsonResponse({'error': f'Erreur de validation: {str(e)}'}, status=400)
     except Exception as e:
-        logger.error(f"❌ Erreur lors de l'import: {e}")
-        import traceback
+        logger.error(f"❌ Erreur lors de l'import: {e}", exc_info=True)
         return JsonResponse({
-            'error': f'Erreur lors de l\'import: {str(e)}',
-            'traceback': traceback.format_exc()
+            'error': 'Une erreur interne est survenue lors de l\'import.',
         }, status=500)
 
 
@@ -827,11 +836,9 @@ def dev_import_function(request):
             return JsonResponse({'error': 'Action non reconnue'}, status=400)
             
     except Exception as e:
-        logger.error(f"❌ Erreur fonction DEV: {e}")
-        import traceback
+        logger.error(f"❌ Erreur fonction DEV: {e}", exc_info=True)
         return JsonResponse({
-            'error': f'Erreur: {str(e)}',
-            'traceback': traceback.format_exc()
+            'error': 'Une erreur interne est survenue.',
         }, status=500)
 
 
@@ -1024,9 +1031,7 @@ def restore_backup(request):
         logger.error(f"❌ Erreur de validation: {e}")
         return JsonResponse({'error': f'Erreur de validation: {str(e)}'}, status=400)
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la restauration: {e}")
-        import traceback
+        logger.error(f"❌ Erreur lors de la restauration: {e}", exc_info=True)
         return JsonResponse({
-            'error': f'Erreur lors de la restauration: {str(e)}',
-            'traceback': traceback.format_exc()
+            'error': 'Une erreur interne est survenue lors de la restauration.',
         }, status=500)

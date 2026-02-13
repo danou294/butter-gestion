@@ -5,6 +5,7 @@ Django settings for butter_web_interface project.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import sentry_sdk
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,11 +17,24 @@ if dotenv_path.exists():
 
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-+q)wa2qlz$ultsrw87!6i=l+@00w7=i7#+zzrp%po(=qaift7y'
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Security settings (actifs uniquement en production)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+SESSION_COOKIE_HTTPONLY = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 
 # Application definition
@@ -50,7 +64,7 @@ ROOT_URLCONF = 'butter_web_interface.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -174,3 +188,12 @@ LOGGING = {
         },
     },
 }
+
+# Sentry — Monitoring des erreurs (actif uniquement si SENTRY_DSN est configuré)
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )

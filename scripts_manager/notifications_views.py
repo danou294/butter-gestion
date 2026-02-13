@@ -6,7 +6,6 @@ import logging
 import json
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from . import notifications_services
@@ -66,9 +65,8 @@ def notifications_index(request):
     return render(request, 'scripts_manager/notifications/index.html', context)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
 @login_required
+@require_http_methods(["POST"])
 def send_notification_to_all(request):
     """
     Envoie une notification à tous les utilisateurs (sans personnalisation)
@@ -104,9 +102,8 @@ def send_notification_to_all(request):
         }, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
 @login_required
+@require_http_methods(["POST"])
 def send_notification_to_all_with_prenom(request):
     """
     Envoie une notification personnalisée à tous les utilisateurs avec leurs prénoms
@@ -142,9 +139,8 @@ def send_notification_to_all_with_prenom(request):
         }, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
 @login_required
+@require_http_methods(["POST"])
 def send_notification_to_group(request):
     """
     Envoie une notification à un groupe d'utilisateurs spécifiques

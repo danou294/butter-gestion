@@ -33,10 +33,13 @@ input/serviceAccountKey.json
 firebase_credentials/
 .env
 .env.local
+*.pem
 
-# Fichiers Excel temporaires (exports)
+# Fichiers Excel temporaires (exports et données)
 media/exports/*.xlsx
 media/exports/*.xls
 scripts_manager/scripts/exports/*.xlsx
+/*.xlsx
 
-.env
+# Node
+node_modules/

@@ -10,7 +10,6 @@ from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from google.cloud import firestore
 from google.cloud import storage
@@ -39,15 +38,13 @@ def build_query_without_page(request):
 # Initialiser le client Firestore
 def get_firestore_client(request=None):
     """
-    Retourne un client Firestore configuré
-    
-    Args:
-        request: Objet request Django (optionnel) pour déterminer l'environnement
+    Retourne un client Firestore configuré selon l'environnement de la session (dev/prod).
+    Utilise des credentials explicites pour éviter le cache de GOOGLE_APPLICATION_CREDENTIALS.
     """
+    from google.oauth2 import service_account as sa
     service_account_path = get_service_account_path(request)
-    if not os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
-    return firestore.Client()
+    credentials = sa.Credentials.from_service_account_file(service_account_path)
+    return firestore.Client(credentials=credentials, project=credentials.project_id)
 
 
 # Initialiser le client Storage
@@ -746,7 +743,7 @@ def restaurant_delete(request, restaurant_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@csrf_exempt
+@login_required
 @require_http_methods(["GET"])
 def restaurant_get_json(request, restaurant_id):
     """Retourne un restaurant en JSON (pour API)"""

@@ -10,5 +10,6 @@ python-dotenv
 requests
 beautifulsoup4
 googlemaps
+sentry-sdk
 
 

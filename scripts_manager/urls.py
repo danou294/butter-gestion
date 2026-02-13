@@ -9,6 +9,7 @@ from . import firebase_env_views
 from . import search_restaurants_views
 from . import guides_views
 from . import announcements_views
+from . import onboarding_views
 
 app_name = 'scripts_manager'
 
@@ -49,6 +50,7 @@ urlpatterns = [
     path('import-restaurants/run/', views.run_import_restaurants, name='run_import_restaurants'),
     path('import-restaurants/dev/', views.dev_import_function, name='dev_import_function'),
     path('import-restaurants/logs/', views.get_import_logs, name='get_import_logs'),
+    path('import-restaurants/download-logs/', views.download_import_logs, name='download_import_logs'),
     path('import-restaurants/analyze-sheets/', views.analyze_excel_sheets, name='analyze_excel_sheets'),
     
     # Restauration de Backups
@@ -72,6 +74,7 @@ urlpatterns = [
     path('photos/<str:folder>/<str:photo_name>/rename/', photos_views.photo_rename, name='photo_rename'),
     path('photos/convert-png-to-webp/', photos_views.photo_convert_png_to_webp, name='photo_convert_png_to_webp'),
     path('photos/bulk-delete/', photos_views.photo_bulk_delete, name='photo_bulk_delete'),
+    path('photos/export-restaurants-sans-photo-webp/', photos_views.photo_export_restaurants_without_webp, name='photo_export_restaurants_without_webp'),
     
     # Notifications
     path('notifications/', notifications_views.notifications_index, name='notifications_index'),
@@ -98,6 +101,13 @@ urlpatterns = [
     path('guides/<str:guide_id>/edit/', guides_views.guide_edit, name='guide_edit'),
     path('guides/<str:guide_id>/delete/', guides_views.guide_delete, name='guide_delete'),
     path('guides/<str:guide_id>/json/', guides_views.guide_get_json, name='guide_get_json'),
+
+    # Onboarding Restaurants
+    path('onboarding-restaurants/', onboarding_views.onboarding_list, name='onboarding_list'),
+    path('onboarding-restaurants/import/', onboarding_views.onboarding_import, name='onboarding_import'),
+    path('onboarding-restaurants/import/confirm/', onboarding_views.onboarding_import_confirm, name='onboarding_import_confirm'),
+    path('onboarding-restaurants/<str:restaurant_id>/', onboarding_views.onboarding_detail, name='onboarding_detail'),
+    path('onboarding-restaurants/<str:restaurant_id>/delete/', onboarding_views.onboarding_delete, name='onboarding_delete'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
