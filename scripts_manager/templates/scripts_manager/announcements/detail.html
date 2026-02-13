@@ -4,126 +4,131 @@
 {% block title %}{{ announcement.title }} - Butter Backoffice{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <nav class="text-sm text-[#535353] mb-2">
-            <a href="{% url 'scripts_manager:announcements_list' %}" class="hover:text-[#111111]">Annonces</a>
-            <span class="mx-1">/</span>
-            <span class="text-[#111111]">{{ announcement.title }}</span>
-        </nav>
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h1 class="text-3xl font-serif font-bold text-[#111111]">
-                {{ announcement.title }}
-                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-[#F1EFEB] text-[#535353]">{{ announcement.id }}</span>
-                {% if announcement.type == 'event' %}
-                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Événement</span>
-                {% else %}
-                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F1EFEB] text-[#535353]">Sondage</span>
-                {% endif %}
-                {% if announcement.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
-                {% if announcement.isActive %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Actif</span>{% endif %}
-            </h1>
-            <div class="flex flex-wrap gap-2">
-                <a href="{% url 'scripts_manager:announcement_edit' announcement.id %}" class="btn-secondary">Éditer</a>
-                <a href="{% url 'scripts_manager:announcement_get_json' announcement.id %}" class="px-4 py-2 rounded-[14px] text-sm font-medium bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81] hover:opacity-90" target="_blank">JSON</a>
-                {% if announcement.type == 'poll' %}
-                <a href="{% url 'scripts_manager:poll_export_answers' announcement.id %}" class="btn-primary">Export CSV réponses</a>
-                {% endif %}
-                <button type="button" onclick="document.getElementById('deleteModal').classList.remove('hidden')" class="px-4 py-2 rounded-[14px] text-sm font-medium border border-[#D3695E] text-[#D3695E] hover:bg-[#F2D7D4]">Supprimer</button>
+<div class="space-y-6" x-data="{ deleteOpen: false }">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <nav class="text-sm text-secondary mb-2">
+                <a href="{% url 'scripts_manager:announcements_list' %}" class="hover:text-base-content">Annonces</a>
+                <span class="mx-1">/</span>
+                <span class="text-base-content">{{ announcement.title }}</span>
+            </nav>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h1 class="text-3xl font-serif font-bold text-base-content">
+                    {{ announcement.title }}
+                    <span class="badge badge-ghost ml-2 text-sm">{{ announcement.id }}</span>
+                    {% if announcement.type == 'event' %}
+                    <span class="badge badge-success ml-2">Événement</span>
+                    {% else %}
+                    <span class="badge badge-ghost ml-2">Sondage</span>
+                    {% endif %}
+                    {% if announcement.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+                    {% if announcement.isActive %}<span class="badge badge-success ml-2">Actif</span>{% endif %}
+                </h1>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'scripts_manager:announcement_edit' announcement.id %}" class="btn btn-ghost">Éditer</a>
+                    <a href="{% url 'scripts_manager:announcement_get_json' announcement.id %}" class="btn btn-outline btn-success btn-sm" target="_blank">JSON</a>
+                    {% if announcement.type == 'poll' %}
+                    <a href="{% url 'scripts_manager:poll_export_answers' announcement.id %}" class="btn btn-primary">Export CSV réponses</a>
+                    {% endif %}
+                    <button type="button" @click="deleteOpen = true" class="btn btn-outline btn-error btn-sm">Supprimer</button>
+                </div>
             </div>
         </div>
     </div>
 
     {% if messages %}
         {% for message in messages %}
-        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}">{{ message }}</div>
+        <div class="{% if message.tags == 'error' %}alert alert-error{% elif message.tags == 'success' %}alert alert-success{% else %}alert alert-info{% endif %}">{{ message }}</div>
         {% endfor %}
     {% endif %}
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Infos -->
         <div class="space-y-6">
-            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-                <h3 class="font-serif font-bold text-[#111111] mb-4">Informations</h3>
-                <dl class="space-y-2 text-sm">
-                    <div><dt class="text-[#535353]">ID</dt><dd><code class="bg-[#F1EFEB] px-1 rounded">{{ announcement.id }}</code></dd></div>
-                    <div><dt class="text-[#535353]">Type</dt><dd>{% if announcement.type == 'event' %}Événement{% else %}Sondage{% endif %}</dd></div>
-                    <div><dt class="text-[#535353]">Statut</dt><dd>{% if announcement.isActive %}Actif{% else %}Inactif{% endif %}</dd></div>
-                    <div><dt class="text-[#535353]">Premium</dt><dd>{% if announcement.isPremium %}Oui{% else %}Non{% endif %}</dd></div>
-                    <div><dt class="text-[#535353]">Début affichage</dt><dd>{% if announcement.startDate %}{{ announcement.startDate|date:"d/m/Y" }}{% else %}-{% endif %}</dd></div>
-                    <div><dt class="text-[#535353]">Fin affichage</dt><dd>{% if announcement.endDate %}{{ announcement.endDate|date:"d/m/Y" }}{% else %}-{% endif %}</dd></div>
-                    {% if announcement.type == 'event' and announcement.eventDate %}
-                    <div><dt class="text-[#535353]">Date événement</dt><dd>{{ announcement.eventDate|date:"d/m/Y" }}</dd></div>
-                    <div><dt class="text-[#535353]">CTA</dt><dd>{{ announcement.ctaText }} → {{ announcement.ctaLink|truncatechars:40 }}</dd></div>
-                    {% endif %}
-                    {% if announcement.type == 'poll' %}
-                    <div><dt class="text-[#535353]">Question</dt><dd>{{ announcement.pollQuestion }}</dd></div>
-                    {% endif %}
-                </dl>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h3 class="font-serif font-bold text-base-content mb-4">Informations</h3>
+                    <dl class="space-y-2 text-sm">
+                        <div><dt class="text-secondary">ID</dt><dd><code class="bg-base-200 px-1 rounded">{{ announcement.id }}</code></dd></div>
+                        <div><dt class="text-secondary">Type</dt><dd>{% if announcement.type == 'event' %}Événement{% else %}Sondage{% endif %}</dd></div>
+                        <div><dt class="text-secondary">Statut</dt><dd>{% if announcement.isActive %}Actif{% else %}Inactif{% endif %}</dd></div>
+                        <div><dt class="text-secondary">Premium</dt><dd>{% if announcement.isPremium %}Oui{% else %}Non{% endif %}</dd></div>
+                        <div><dt class="text-secondary">Début affichage</dt><dd>{% if announcement.startDate %}{{ announcement.startDate|date:"d/m/Y" }}{% else %}-{% endif %}</dd></div>
+                        <div><dt class="text-secondary">Fin affichage</dt><dd>{% if announcement.endDate %}{{ announcement.endDate|date:"d/m/Y" }}{% else %}-{% endif %}</dd></div>
+                        {% if announcement.type == 'event' and announcement.eventDate %}
+                        <div><dt class="text-secondary">Date événement</dt><dd>{{ announcement.eventDate|date:"d/m/Y" }}</dd></div>
+                        <div><dt class="text-secondary">CTA</dt><dd>{{ announcement.ctaText }} → {{ announcement.ctaLink|truncatechars:40 }}</dd></div>
+                        {% endif %}
+                        {% if announcement.type == 'poll' %}
+                        <div><dt class="text-secondary">Question</dt><dd>{{ announcement.pollQuestion }}</dd></div>
+                        {% endif %}
+                    </dl>
+                </div>
             </div>
         </div>
 
         <!-- Contenu + Stats -->
         <div class="lg:col-span-2 space-y-6">
             {% if announcement.description %}
-            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-                <h3 class="font-serif font-bold text-[#111111] mb-3">Description</h3>
-                <p class="text-[#535353]">{{ announcement.description }}</p>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h3 class="font-serif font-bold text-base-content mb-3">Description</h3>
+                    <p class="text-secondary">{{ announcement.description }}</p>
+                </div>
             </div>
             {% endif %}
 
             {% if announcement.type == 'poll' and poll_stats %}
-            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-                <h3 class="font-serif font-bold text-[#111111] mb-4">Statistiques sondage</h3>
-                <p class="text-[#535353] mb-4"><strong>{{ poll_stats.total_votes }}</strong> vote(s) · <strong>{{ poll_stats.unique_answers }}</strong> réponse(s) unique(s)</p>
-                <h4 class="text-sm font-medium text-[#535353] mb-2">Top 10 des réponses</h4>
-                <ul class="space-y-2">
-                    {% for answer, count in poll_stats.top_answers %}
-                    <li class="flex justify-between gap-4 py-2 border-b border-[#F1EFEB]">
-                        <span class="text-[#111111]">« {{ answer }} »</span>
-                        <span class="font-medium text-[#60BC81]">{{ count }}</span>
-                    </li>
-                    {% empty %}
-                    <li class="text-[#535353]">Aucune réponse pour le moment.</li>
-                    {% endfor %}
-                </ul>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h3 class="font-serif font-bold text-base-content mb-4">Statistiques sondage</h3>
+                    <p class="text-secondary mb-4"><strong>{{ poll_stats.total_votes }}</strong> vote(s) · <strong>{{ poll_stats.unique_answers }}</strong> réponse(s) unique(s)</p>
+                    <h4 class="text-sm font-medium text-secondary mb-2">Top 10 des réponses</h4>
+                    <ul class="space-y-2">
+                        {% for answer, count in poll_stats.top_answers %}
+                        <li class="flex justify-between gap-4 py-2 border-b border-base-200">
+                            <span class="text-base-content">« {{ answer }} »</span>
+                            <span class="font-medium text-success">{{ count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-secondary">Aucune réponse pour le moment.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
             {% endif %}
 
             {% if announcement.type == 'event' and event_stats %}
-            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-                <h3 class="font-serif font-bold text-[#111111] mb-4">Statistiques événement</h3>
-                <p class="text-[#535353]"><strong>{{ event_stats.total_clicks }}</strong> clic(s) · <strong>{{ event_stats.unique_users }}</strong> utilisateur(s) unique(s)</p>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h3 class="font-serif font-bold text-base-content mb-4">Statistiques événement</h3>
+                    <p class="text-secondary"><strong>{{ event_stats.total_clicks }}</strong> clic(s) · <strong>{{ event_stats.unique_users }}</strong> utilisateur(s) unique(s)</p>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
-</div>
 
-<!-- Modal suppression -->
-<div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-[#111111] bg-opacity-50 z-0" aria-hidden="true" id="deleteModalOverlay"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="relative z-10 inline-block align-bottom bg-[#FFFFFF] rounded-[14px] text-left overflow-hidden shadow-xl border border-[#C9C1B1] sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="px-6 py-4">
-                <h3 class="text-lg font-serif font-bold text-[#111111]">Confirmer la suppression</h3>
-                <p class="mt-2 text-[#535353]">Supprimer l'annonce <strong>{{ announcement.title }}</strong> ?</p>
-                <p class="mt-2 text-sm text-[#D3695E]">Cette action est irréversible.</p>
-            </div>
-            <div class="px-6 py-4 bg-[#F1EFEB] flex justify-end gap-3">
-                <button type="button" onclick="document.getElementById('deleteModal').classList.add('hidden')" class="btn-secondary">Annuler</button>
-                <form method="post" action="{% url 'scripts_manager:announcement_delete' announcement.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-primary bg-[#D3695E] hover:opacity-90">Supprimer</button>
-                </form>
+    <!-- Modal suppression (Alpine.js) -->
+    <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-neutral bg-opacity-50 z-0" aria-hidden="true" @click="deleteOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="relative z-10 inline-block align-bottom bg-base-100 text-left overflow-hidden shadow-xl border border-base-300 sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" @click.stop>
+                <div class="px-6 py-4">
+                    <h3 class="text-lg font-serif font-bold text-base-content">Confirmer la suppression</h3>
+                    <p class="mt-2 text-secondary">Supprimer l'annonce <strong>{{ announcement.title }}</strong> ?</p>
+                    <p class="mt-2 text-sm text-error">Cette action est irréversible.</p>
+                </div>
+                <div class="px-6 py-4 bg-base-200 flex justify-end gap-3">
+                    <button type="button" @click="deleteOpen = false" class="btn btn-ghost">Annuler</button>
+                    <form method="post" action="{% url 'scripts_manager:announcement_delete' announcement.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error">Supprimer</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
-<script>
-document.getElementById('deleteModalOverlay').addEventListener('click', function() {
-    document.getElementById('deleteModal').classList.add('hidden');
-});
-</script>
 {% endblock %}

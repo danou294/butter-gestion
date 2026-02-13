@@ -3,180 +3,130 @@
 {% block title %}Photos - Butter{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ uploadOpen: false }">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📸 Gestion des Photos</h1>
-                <p class="text-[#535353]">Gérez les logos et photos des restaurants</p>
+                <h1 class="text-3xl font-serif font-bold text-base-content">📸 Gestion des Photos</h1>
+                <p class="text-secondary mt-1">Gérez les logos et photos des restaurants</p>
             </div>
-            <button onclick="showUploadModal()" class="btn-primary">
-                ➕ Upload Photo
-            </button>
+            <button @click="uploadOpen = true" class="btn btn-primary">➕ Upload Photo</button>
         </div>
     </div>
-    
-    <!-- Onglets pour choisir le dossier -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="flex flex-wrap gap-3">
-            <a href="?folder=logos{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if folder == 'logos' %}bg-[#C9C1B1] text-[#111111]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111]{% endif %} trigger-loading">
-                🖼️ Logos
-            </a>
-            <a href="?folder=photos{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if folder == 'photos' %}bg-[#C9C1B1] text-[#111111]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111]{% endif %} trigger-loading">
-                📸 Photos restaurants
-            </a>
+
+    <!-- Onglets -->
+    <div class="tabs tabs-boxed bg-base-100 border border-base-300 p-1">
+        <a href="?folder=logos{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+           class="tab {% if folder == 'logos' %}tab-active{% endif %} trigger-loading">🖼️ Logos</a>
+        <a href="?folder=photos{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+           class="tab {% if folder == 'photos' %}tab-active{% endif %} trigger-loading">📸 Photos restaurants</a>
+    </div>
+
+    <!-- Recherche -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body py-4">
+            <form method="GET" action="{% url 'scripts_manager:photos_list' %}" class="auto-loader">
+                <input type="hidden" name="folder" value="{{ folder }}">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" name="search" placeholder="Rechercher par nom de photo..."
+                           value="{{ search_query }}" class="input input-bordered flex-1 bg-base-200">
+                    <button type="submit" class="btn btn-primary">🔍 Rechercher</button>
+                    {% if search_query %}
+                    <a href="?folder={{ folder }}" class="btn btn-ghost">❌ Effacer</a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
     </div>
-    
-    <!-- Formulaire de recherche -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <form method="GET" action="{% url 'scripts_manager:photos_list' %}" class="auto-loader">
-            <input type="hidden" name="folder" value="{{ folder }}">
-            <div class="flex flex-col md:flex-row gap-3">
-                <input 
-                    type="text" 
-                    name="search" 
-                    placeholder="Rechercher par nom de photo..." 
-                    value="{{ search_query }}"
-                    class="flex-1 px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
-                >
-                <button type="submit" class="btn-primary">🔍 Rechercher</button>
-                {% if search_query %}
-                <a href="?folder={{ folder }}" class="btn-secondary">❌ Effacer</a>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-    
-    <!-- Actions Photos restaurants : conversion + export sans photo WebP -->
+
+    <!-- Actions Photos restaurants -->
     {% if folder == 'photos' %}
-    <div class="bg-[#60BC81] rounded-[14px] shadow-sm p-6 border border-[#60BC81]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="text-white">
-                <h3 class="text-lg font-serif font-bold mb-2">⚡ Optimisation des Photos</h3>
+    <div class="card bg-primary text-primary-content">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-serif font-bold">⚡ Optimisation des Photos</h3>
                 <p class="text-sm opacity-90">Convertit et optimise toutes les images PNG en WebP (compression automatique, redimensionnement max 1920x1920px)</p>
             </div>
-            <button 
-                id="convertBtn" 
-                onclick="convertPngToWebp()" 
-                class="bg-[#FFFFFF] text-[#60BC81] font-semibold px-6 py-3 rounded-[14px] hover:bg-[#F1EFEB] transition-colors whitespace-nowrap"
-            >
+            <button id="convertBtn" onclick="convertPngToWebp()" class="btn bg-base-100 text-primary hover:bg-base-200">
                 🔄 Convertir PNG → WebP
             </button>
         </div>
-        <div id="convertStatus" class="mt-4 hidden"></div>
+        <div id="convertStatus" class="hidden px-6 pb-4"></div>
     </div>
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="text-[#111111]">
-                <h3 class="text-lg font-serif font-bold mb-2">📋 Restaurants sans photo WebP</h3>
-                <p class="text-sm text-[#535353]">Compare Firestore (env. actif) et le bucket PROD : télécharge un Excel des restaurants sans aucune photo .webp</p>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-serif font-bold text-base-content">📋 Restaurants sans photo WebP</h3>
+                <p class="text-sm text-secondary">Compare Firestore (env. actif) et le bucket PROD : télécharge un Excel des restaurants sans aucune photo .webp</p>
             </div>
-            <a 
-                href="{% url 'scripts_manager:photo_export_restaurants_without_webp' %}" 
-                class="btn-primary inline-flex items-center justify-center whitespace-nowrap"
-            >
+            <a href="{% url 'scripts_manager:photo_export_restaurants_without_webp' %}" class="btn btn-primary">
                 ⬇️ Export Excel (sans photo WebP)
             </a>
         </div>
     </div>
     {% endif %}
-    
-    <!-- Messages d'info -->
+
     {% if search_query %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-4 text-[#535353]">
-        🔍 Recherche : "{{ search_query }}" - {{ results_count }} résultat{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}
+    <div class="alert alert-info">
+        <span>🔍 Recherche : "{{ search_query }}" - {{ results_count }} résultat{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}</span>
     </div>
     {% endif %}
-    
-    <div class="text-sm text-[#535353]">
-        Résultats : {{ results_count }} photo{{ results_count|pluralize }}
-    </div>
-    
+
+    <div class="text-sm text-secondary">Résultats : {{ results_count }} photo{{ results_count|pluralize }}</div>
+
     {% if error %}
-    <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4 text-[#D3695E]">
-        ❌ Erreur : {{ error }}
-    </div>
+    <div class="alert alert-error"><span>❌ Erreur : {{ error }}</span></div>
     {% endif %}
-    
+
     <!-- Barre d'actions groupées -->
-    <div id="bulkActionsBar" class="hidden bg-[#60BC81] text-white rounded-[14px] p-4 mb-6 sticky top-0 z-50 shadow-lg">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="font-semibold">
-                <strong id="selectedCount">0</strong> photo(s) sélectionnée(s)
-            </div>
-            <div class="flex gap-3 flex-wrap">
-                <button onclick="bulkDeletePhotos()" class="btn-danger">
-                    🗑️ Supprimer sélection
-                </button>
-                <button onclick="clearSelection()" class="bg-[#FFFFFF] text-[#60BC81] px-4 py-2 rounded-[14px] font-medium hover:bg-[#F1EFEB] transition-colors">
-                    ❌ Annuler
-                </button>
+    <div id="bulkActionsBar" class="hidden alert alert-success shadow-lg sticky top-16 z-40">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+            <span class="font-semibold"><strong id="selectedCount">0</strong> photo(s) sélectionnée(s)</span>
+            <div class="flex gap-2">
+                <button onclick="bulkDeletePhotos()" class="btn btn-error btn-sm">🗑️ Supprimer sélection</button>
+                <button onclick="clearSelection()" class="btn btn-ghost btn-sm">❌ Annuler</button>
             </div>
         </div>
     </div>
-    
+
     {% if photos %}
-    <!-- Liste des photos -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
-        <div class="p-4 border-b border-[#C9C1B1]">
-            <label class="flex items-center gap-2 cursor-pointer select-none">
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="w-5 h-5 cursor-pointer">
-                <strong class="text-[#111111]">Sélectionner tout</strong>
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div class="p-4 border-b border-base-300">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="checkbox checkbox-primary">
+                <strong class="text-base-content">Sélectionner tout</strong>
             </label>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-[#C9C1B1]">
-                <thead class="bg-[#F1EFEB]">
+            <table class="table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider w-12">
-                            <input type="checkbox" id="selectAllHeader" onchange="toggleSelectAll(this.checked)" class="w-5 h-5 cursor-pointer">
+                        <th class="w-12">
+                            <input type="checkbox" id="selectAllHeader" onchange="toggleSelectAll(this.checked)" class="checkbox checkbox-primary">
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Nom</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Taille</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Actions</th>
+                        <th>Nom</th>
+                        <th>Taille</th>
+                        <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-[#FFFFFF] divide-y divide-[#C9C1B1]">
+                <tbody>
                     {% for photo in photos %}
-                    <tr data-photo-name="{{ photo.name }}" class="hover:bg-[#F1EFEB] transition-colors">
-                        <td class="px-6 py-4 text-center">
-                            <input 
-                                type="checkbox" 
-                                class="photo-checkbox w-5 h-5 cursor-pointer" 
-                                value="{{ photo.name }}" 
-                                onchange="updateBulkActionsBar()"
-                            >
+                    <tr data-photo-name="{{ photo.name }}" class="hover">
+                        <td>
+                            <input type="checkbox" class="photo-checkbox checkbox checkbox-primary"
+                                   value="{{ photo.name }}" onchange="updateBulkActionsBar()">
                         </td>
-                        <td class="px-6 py-4">
-                            <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-sm text-[#535353] break-all">
-                                {{ photo.name }}
-                            </code>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-[#535353]">
-                            📦 {{ photo.size|filesizeformat }}
-                        </td>
-                        <td class="px-6 py-4 text-sm text-[#535353]">
-                            📅 {{ photo.time_created|date:"d/m/Y H:i"|default:"—" }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex gap-2 flex-wrap">
-                                <button onclick="downloadPhoto('{{ folder }}', '{{ photo.name }}')" class="btn-primary text-sm">
-                                    ⬇️ Télécharger
-                                </button>
-                                <button onclick="viewPhoto('{{ folder }}', '{{ photo.name }}')" class="btn-secondary text-sm">
-                                    👁️ Voir
-                                </button>
-                                <button onclick="renamePhoto('{{ folder }}', '{{ photo.name }}')" class="btn-secondary text-sm">
-                                    ✏️ Renommer
-                                </button>
-                                <button onclick="deletePhoto('{{ folder }}', '{{ photo.name }}')" class="btn-danger text-sm">
-                                    🗑️ Supprimer
-                                </button>
+                        <td><code class="badge badge-ghost text-xs break-all">{{ photo.name }}</code></td>
+                        <td class="text-sm text-secondary">📦 {{ photo.size|filesizeformat }}</td>
+                        <td class="text-sm text-secondary">📅 {{ photo.time_created|date:"d/m/Y H:i"|default:"—" }}</td>
+                        <td>
+                            <div class="flex gap-1 flex-wrap">
+                                <button onclick="downloadPhoto('{{ folder }}', '{{ photo.name }}')" class="btn btn-primary btn-xs">⬇️ Télécharger</button>
+                                <button onclick="viewPhoto('{{ folder }}', '{{ photo.name }}')" class="btn btn-ghost btn-xs">👁️ Voir</button>
+                                <button onclick="renamePhoto('{{ folder }}', '{{ photo.name }}')" class="btn btn-ghost btn-xs">✏️ Renommer</button>
+                                <button onclick="deletePhoto('{{ folder }}', '{{ photo.name }}')" class="btn btn-error btn-xs">🗑️ Supprimer</button>
                             </div>
                         </td>
                     </tr>
@@ -185,108 +135,85 @@
             </table>
         </div>
     </div>
-    
-    <!-- Pagination -->
+
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="flex items-center justify-between bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="text-sm text-[#535353]">
-            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
-        </div>
-        <div class="flex gap-2">
+    <div class="flex items-center justify-between">
+        <span class="text-sm text-secondary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn-secondary trigger-loading">
-                ← Précédent
-            </a>
+            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="join-item btn btn-ghost trigger-loading">← Précédent</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn-secondary trigger-loading">
-                Suivant →
-            </a>
+            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="join-item btn btn-ghost trigger-loading">Suivant →</a>
             {% endif %}
         </div>
     </div>
     {% endif %}
     {% else %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-6 text-center text-[#535353]">
-        📭 Aucune photo dans ce dossier.
-    </div>
+    <div class="alert alert-info"><span>📭 Aucune photo dans ce dossier.</span></div>
     {% endif %}
-</div>
 
-<!-- Modal Upload -->
-<div id="uploadModal" class="hidden fixed inset-0 bg-[#111111]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <h3 class="text-2xl font-serif font-bold text-[#111111] mb-4">📤 Upload Photo</h3>
-        <form id="uploadForm" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            <div class="mb-4">
-                <label for="uploadFolder" class="block text-sm font-medium text-[#111111] mb-2">
-                    📁 Dossier de destination :
-                </label>
-                <select id="uploadFolder" name="folder" required 
-                        class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-                    <option value="logos" {% if folder == 'logos' %}selected{% endif %}>🖼️ Logos</option>
-                    <option value="photos" {% if folder == 'photos' %}selected{% endif %}>📸 Photos restaurants</option>
-                </select>
+    <!-- Modal Upload (Alpine.js) -->
+    <div x-show="uploadOpen" x-transition class="fixed inset-0 bg-neutral/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="uploadOpen = false">
+        <div class="card bg-base-100 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" @click.stop>
+            <div class="card-body">
+                <h3 class="card-title text-2xl font-serif">📤 Upload Photo</h3>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="form-control mb-4">
+                        <label class="label"><span class="label-text">📁 Dossier de destination</span></label>
+                        <select id="uploadFolder" name="folder" required class="select select-bordered bg-base-200">
+                            <option value="logos" {% if folder == 'logos' %}selected{% endif %}>🖼️ Logos</option>
+                            <option value="photos" {% if folder == 'photos' %}selected{% endif %}>📸 Photos restaurants</option>
+                        </select>
+                    </div>
+
+                    <div id="uploadArea" onclick="document.getElementById('photo_file').click()"
+                         class="border-2 border-dashed border-base-300 rounded-box p-8 text-center cursor-pointer transition-colors hover:border-primary hover:bg-base-200">
+                        <div class="text-5xl mb-4">📄</div>
+                        <h4 class="text-lg font-medium text-base-content mb-2">Glissez-déposez vos photos ici</h4>
+                        <p class="text-secondary mb-4">ou</p>
+                        <button type="button" class="btn btn-ghost btn-sm">Parcourir les fichiers</button>
+                        <p class="text-sm text-secondary mt-2">Vous pouvez sélectionner plusieurs photos à la fois</p>
+                        <input type="file" id="photo_file" name="photo_file" accept="image/*" multiple required class="hidden">
+                    </div>
+
+                    <div id="filesList" class="mt-4 hidden">
+                        <div class="bg-base-200 rounded-box p-4">
+                            <strong class="text-base-content block mb-2">Fichiers sélectionnés (<span id="filesCount">0</span>) :</strong>
+                            <div id="filesInfo" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-3">
+                        <button type="submit" class="btn btn-primary flex-1">📤 Upload</button>
+                        <button type="button" @click="uploadOpen = false" class="btn btn-ghost flex-1">Annuler</button>
+                    </div>
+                </form>
             </div>
-            
-            <div id="uploadArea" onclick="document.getElementById('photo_file').click()" 
-                 class="border-2 border-dashed border-[#C9C1B1] rounded-[14px] p-8 text-center cursor-pointer transition-colors hover:border-[#60BC81] hover:bg-[#F1EFEB]">
-                <div class="text-5xl mb-4">📄</div>
-                <h4 class="text-lg font-medium text-[#111111] mb-2">Glissez-déposez vos photos ici</h4>
-                <p class="text-[#535353] mb-4">ou</p>
-                <button type="button" class="btn-secondary">Parcourir les fichiers</button>
-                <p class="text-sm text-[#535353] mt-2">Vous pouvez sélectionner plusieurs photos à la fois</p>
-                <input type="file" id="photo_file" name="photo_file" accept="image/*" multiple required class="hidden">
-            </div>
-            
-            <div id="filesList" class="mt-4 hidden">
-                <div class="bg-[#F1EFEB] rounded-[14px] p-4">
-                    <strong class="text-[#111111] block mb-2">Fichiers sélectionnés (<span id="filesCount">0</span>) :</strong>
-                    <div id="filesInfo" class="space-y-2 max-h-48 overflow-y-auto"></div>
-                </div>
-            </div>
-            
-            
-            <div class="mt-6 flex gap-3">
-                <button type="submit" class="btn-primary flex-1">📤 Upload</button>
-                <button type="button" onclick="hideUploadModal()" class="btn-secondary flex-1">Annuler</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
 <script>
-function showUploadModal() {
-    document.getElementById('uploadModal').classList.remove('hidden');
-}
-
-function hideUploadModal() {
-    document.getElementById('uploadModal').classList.add('hidden');
-    document.getElementById('uploadForm').reset();
-    document.getElementById('filesList').classList.add('hidden');
-    document.getElementById('filesInfo').innerHTML = '';
-}
-
 // Drag & drop
 const uploadArea = document.getElementById('uploadArea');
 const photoFile = document.getElementById('photo_file');
 
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('border-[#60BC81]', 'bg-[#D4F2DA]');
+    uploadArea.classList.add('border-primary', 'bg-success/10');
 });
 
 uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('border-[#60BC81]', 'bg-[#D4F2DA]');
+    uploadArea.classList.remove('border-primary', 'bg-success/10');
 });
 
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('border-[#60BC81]', 'bg-[#D4F2DA]');
+    uploadArea.classList.remove('border-primary', 'bg-success/10');
     if (e.dataTransfer.files.length > 0) {
-        // Créer un DataTransfer pour assigner plusieurs fichiers
         const dt = new DataTransfer();
         for (let file of e.dataTransfer.files) {
             dt.items.add(file);
@@ -306,28 +233,27 @@ function handleFilesSelect(files) {
     const filesList = document.getElementById('filesList');
     const filesInfo = document.getElementById('filesInfo');
     const filesCount = document.getElementById('filesCount');
-    
+
     filesList.classList.remove('hidden');
     filesInfo.innerHTML = '';
     filesCount.textContent = files.length;
-    
+
     let totalSize = 0;
     files.forEach((file, index) => {
         totalSize += file.size;
         const fileDiv = document.createElement('div');
-        fileDiv.className = 'flex items-center justify-between p-2 bg-white rounded-[8px] text-sm';
+        fileDiv.className = 'flex items-center justify-between p-2 bg-base-100 rounded-lg text-sm';
         fileDiv.innerHTML = `
             <div class="flex-1">
-                <span class="text-[#111111] font-medium">${file.name}</span>
-                <span class="text-[#535353] ml-2">(${formatFileSize(file.size)})</span>
+                <span class="text-base-content font-medium">${file.name}</span>
+                <span class="text-secondary ml-2">(${formatFileSize(file.size)})</span>
             </div>
         `;
         filesInfo.appendChild(fileDiv);
     });
-    
-    // Afficher la taille totale
+
     const totalDiv = document.createElement('div');
-    totalDiv.className = 'mt-2 pt-2 border-t border-[#C9C1B1] text-sm font-semibold text-[#111111]';
+    totalDiv.className = 'mt-2 pt-2 border-t border-base-300 text-sm font-semibold text-base-content';
     totalDiv.textContent = `Taille totale: ${formatFileSize(totalSize)}`;
     filesInfo.appendChild(totalDiv);
 }
@@ -345,32 +271,29 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const photoFileInput = document.getElementById('photo_file');
     const files = photoFileInput.files;
-    
+
     if (files.length === 0) {
         alert('⚠️ Veuillez sélectionner au moins un fichier');
         return;
     }
-    
+
     const folder = document.getElementById('uploadFolder').value;
     const submitButton = this.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.textContent;
-    
-    // Désactiver le bouton et afficher la progression
+
     submitButton.disabled = true;
     submitButton.textContent = '⏳ Upload en cours...';
-    
+
     let uploaded = 0;
     let errors = 0;
     const total = files.length;
     const errorMessages = [];
-    
-    // Uploader chaque fichier séquentiellement
+
     const uploadPromises = Array.from(files).map((file, index) => {
         const formData = new FormData();
         formData.append('photo_file', file);
         formData.append('folder', folder);
-        // Utiliser le nom original du fichier
-        
+
         return fetch('{% url "scripts_manager:photo_upload" %}', {
             method: 'POST',
             body: formData,
@@ -393,12 +316,11 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
             errorMessages.push(`${file.name}: ${error.message}`);
         });
     });
-    
-    // Attendre que tous les uploads soient terminés
+
     Promise.all(uploadPromises).then(() => {
         submitButton.disabled = false;
         submitButton.textContent = originalButtonText;
-        
+
         if (uploaded === total) {
             alert(`✅ ${uploaded} photo(s) uploadée(s) avec succès !`);
             location.reload();
@@ -418,68 +340,51 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     });
 });
 
-// Fonction pour obtenir l'URL signée d'une photo
 function getPhotoUrl(folder, photoName) {
     return new Promise((resolve, reject) => {
         const url = `{% url "scripts_manager:photo_get_url" folder="__FOLDER__" photo_name="__NAME__" %}`.replace('__FOLDER__', folder).replace('__NAME__', encodeURIComponent(photoName));
-        
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                if (data.url) {
-                    resolve(data.url);
-                } else {
-                    reject(new Error(data.error || 'Erreur lors de la génération de l\'URL'));
-                }
+                if (data.url) resolve(data.url);
+                else reject(new Error(data.error || 'Erreur'));
             })
-            .catch(error => {
-                reject(error);
-            });
+            .catch(error => reject(error));
     });
 }
 
 function downloadPhoto(folder, photoName) {
     const button = event.target;
     const originalText = button.textContent;
-    button.textContent = '⏳ Chargement...';
+    button.textContent = '⏳';
     button.disabled = true;
-    
+
     getPhotoUrl(folder, photoName)
         .then(url => {
             const a = document.createElement('a');
-            a.href = url;
-            a.download = photoName;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            button.textContent = originalText;
-            button.disabled = false;
+            a.href = url; a.download = photoName; a.target = '_blank';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            button.textContent = originalText; button.disabled = false;
         })
         .catch(error => {
-            alert('❌ Erreur lors du téléchargement: ' + error.message);
-            button.textContent = originalText;
-            button.disabled = false;
+            alert('❌ Erreur: ' + error.message);
+            button.textContent = originalText; button.disabled = false;
         });
 }
 
 function viewPhoto(folder, photoName) {
     const button = event.target;
     const originalText = button.textContent;
-    button.textContent = '⏳ Chargement...';
-    button.disabled = true;
-    
+    button.textContent = '⏳'; button.disabled = true;
+
     getPhotoUrl(folder, photoName)
         .then(url => {
             window.open(url, '_blank');
-            button.textContent = originalText;
-            button.disabled = false;
+            button.textContent = originalText; button.disabled = false;
         })
         .catch(error => {
-            alert('❌ Erreur lors de l\'ouverture: ' + error.message);
-            button.textContent = originalText;
-            button.disabled = false;
+            alert('❌ Erreur: ' + error.message);
+            button.textContent = originalText; button.disabled = false;
         });
 }
 
@@ -488,126 +393,87 @@ function renamePhoto(folder, photoName) {
     if (newName && newName !== photoName) {
         const formData = new FormData();
         formData.append('new_name', newName);
-        
+
         const renameUrl = `{% url "scripts_manager:photo_rename" folder="__FOLDER__" photo_name="__NAME__" %}`.replace('__FOLDER__', folder).replace('__NAME__', encodeURIComponent(photoName));
         fetch(renameUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
+            method: 'POST', body: formData,
+            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                alert('✅ ' + data.message);
-                location.reload();
-            } else {
-                alert('❌ ' + data.error);
-            }
+            if (data.success) { alert('✅ ' + data.message); location.reload(); }
+            else alert('❌ ' + data.error);
         })
-        .catch(error => {
-            alert('❌ Erreur: ' + error.message);
-        });
+        .catch(error => alert('❌ Erreur: ' + error.message));
     }
 }
 
 function deletePhoto(folder, photoName) {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer la photo "${photoName}" ?\n\nCette action est irréversible !`)) {
-        return;
-    }
-    
+    if (!confirm(`Supprimer "${photoName}" ?\n\nCette action est irréversible !`)) return;
+
     const deleteUrl = `{% url "scripts_manager:photo_delete" folder="__FOLDER__" photo_name="__NAME__" %}`.replace('__FOLDER__', folder).replace('__NAME__', encodeURIComponent(photoName));
     fetch(deleteUrl, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            alert('✅ ' + data.message);
-            location.reload();
-        } else {
-            alert('❌ ' + data.error);
-        }
+        if (data.success) { alert('✅ ' + data.message); location.reload(); }
+        else alert('❌ ' + data.error);
     })
-    .catch(error => {
-        alert('❌ Erreur: ' + error.message);
-    });
+    .catch(error => alert('❌ Erreur: ' + error.message));
 }
 
 function convertPngToWebp() {
-    if (!confirm('⚠️ Cette action va convertir TOUTES les images PNG en WebP dans "Photos restaurants/".\n\nLes PNG originaux seront supprimés après conversion.\n\nVoulez-vous continuer ?')) {
-        return;
-    }
-    
+    if (!confirm('⚠️ Cette action va convertir TOUTES les images PNG en WebP dans "Photos restaurants/".\n\nLes PNG originaux seront supprimés après conversion.\n\nVoulez-vous continuer ?')) return;
+
     const convertBtn = document.getElementById('convertBtn');
     const convertStatus = document.getElementById('convertStatus');
-    
+
     convertBtn.disabled = true;
     convertBtn.innerHTML = '⏳ Conversion en cours...';
     convertStatus.classList.remove('hidden');
-    convertStatus.innerHTML = '<div class="bg-white/20 p-4 rounded-[14px]"><p class="m-0 text-white">🔄 Conversion en cours, veuillez patienter...</p></div>';
-    
+    convertStatus.innerHTML = '<div class="alert alert-info"><span>🔄 Conversion en cours, veuillez patienter...</span></div>';
+
     fetch('{% url "scripts_manager:photo_convert_png_to_webp" %}', {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
         return response.json();
     })
     .then(data => {
         if (data.success) {
             const stats = data.stats || {};
-            let statusHtml = '<div class="bg-white/20 p-4 rounded-[14px] text-white">';
-            statusHtml += `<p class="m-0 mb-2 font-semibold">✅ ${data.message || 'Conversion terminée'}</p>`;
-            
+            let html = '<div class="alert alert-success"><div>';
+            html += `<p class="font-semibold">✅ ${data.message || 'Conversion terminée'}</p>`;
             if (stats.total !== undefined) {
-                statusHtml += `<p class="m-1 text-sm">📊 ${stats.converted || 0}/${stats.total || 0} image(s) convertie(s)</p>`;
-                if (stats.errors > 0) {
-                    statusHtml += `<p class="m-1 text-sm text-yellow-200">⚠️ ${stats.errors} erreur(s)</p>`;
-                }
-                if (stats.space_saved_mb !== undefined) {
-                    statusHtml += `<p class="m-1 text-sm">💾 Espace économisé: ${stats.space_saved_mb} MB (-${stats.overall_reduction_percent || 0}%)</p>`;
-                }
-                if (stats.total_original_size_mb !== undefined) {
-                    statusHtml += `<p class="m-2 mt-3 text-xs opacity-80">📦 Taille originale: ${stats.total_original_size_mb} MB → Taille WebP: ${stats.total_webp_size_mb || 0} MB</p>`;
-                }
+                html += `<p class="text-sm">📊 ${stats.converted || 0}/${stats.total || 0} image(s) convertie(s)</p>`;
+                if (stats.errors > 0) html += `<p class="text-sm">⚠️ ${stats.errors} erreur(s)</p>`;
+                if (stats.space_saved_mb !== undefined) html += `<p class="text-sm">💾 Espace économisé: ${stats.space_saved_mb} MB (-${stats.overall_reduction_percent || 0}%)</p>`;
+                if (stats.total_original_size_mb !== undefined) html += `<p class="text-xs opacity-80">📦 Taille originale: ${stats.total_original_size_mb} MB → Taille WebP: ${stats.total_webp_size_mb || 0} MB</p>`;
             } else if (data.converted !== undefined) {
-                statusHtml += `<p class="m-1 text-sm">📊 ${data.converted} image(s) convertie(s)</p>`;
+                html += `<p class="text-sm">📊 ${data.converted} image(s) convertie(s)</p>`;
             }
-            
-            statusHtml += '</div>';
-            convertStatus.innerHTML = statusHtml;
-            
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
+            html += '</div></div>';
+            convertStatus.innerHTML = html;
+            setTimeout(() => location.reload(), 3000);
         } else {
-            convertStatus.innerHTML = `<div class="bg-red-500/20 p-4 rounded-[14px] text-white"><p class="m-0">❌ ${data.error || 'Erreur inconnue'}</p></div>`;
+            convertStatus.innerHTML = `<div class="alert alert-error"><span>❌ ${data.error || 'Erreur inconnue'}</span></div>`;
             convertBtn.disabled = false;
             convertBtn.innerHTML = '🔄 Convertir PNG → WebP';
         }
     })
     .catch(error => {
-        console.error('Erreur lors de la conversion:', error);
-        convertStatus.innerHTML = `<div class="bg-red-500/20 p-4 rounded-[14px] text-white"><p class="m-0">❌ Erreur: ${error.message || 'Erreur inconnue'}</p></div>`;
+        convertStatus.innerHTML = `<div class="alert alert-error"><span>❌ ${error.message}</span></div>`;
         convertBtn.disabled = false;
         convertBtn.innerHTML = '🔄 Convertir PNG → WebP';
     });
 }
 
-// Actions groupées
 function toggleSelectAll(checked) {
-    const checkboxes = document.querySelectorAll('.photo-checkbox');
-    checkboxes.forEach(cb => cb.checked = checked);
+    document.querySelectorAll('.photo-checkbox').forEach(cb => cb.checked = checked);
     document.getElementById('selectAll').checked = checked;
     document.getElementById('selectAllHeader').checked = checked;
     updateBulkActionsBar();
@@ -618,69 +484,54 @@ function updateBulkActionsBar() {
     const count = checkboxes.length;
     const bulkBar = document.getElementById('bulkActionsBar');
     const selectedCount = document.getElementById('selectedCount');
-    
+
     document.querySelectorAll('.photo-checkbox').forEach(cb => {
         const row = cb.closest('tr');
-        if (cb.checked) {
-            row.classList.add('bg-[#D4F2DA]');
-        } else {
-            row.classList.remove('bg-[#D4F2DA]');
-        }
+        if (cb.checked) row.classList.add('bg-success/10');
+        else row.classList.remove('bg-success/10');
     });
-    
+
     if (count > 0) {
         bulkBar.classList.remove('hidden');
         selectedCount.textContent = count;
     } else {
         bulkBar.classList.add('hidden');
     }
-    
+
     const allCheckboxes = document.querySelectorAll('.photo-checkbox');
     const allChecked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
     document.getElementById('selectAll').checked = allChecked;
     document.getElementById('selectAllHeader').checked = allChecked;
 }
 
-function clearSelection() {
-    toggleSelectAll(false);
-}
+function clearSelection() { toggleSelectAll(false); }
 
 function getSelectedPhotos() {
-    const checkboxes = document.querySelectorAll('.photo-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+    return Array.from(document.querySelectorAll('.photo-checkbox:checked')).map(cb => cb.value);
 }
 
 function bulkDeletePhotos() {
     const selected = getSelectedPhotos();
-    if (selected.length === 0) {
-        alert('⚠️ Aucune photo sélectionnée');
-        return;
-    }
-    
-    const folder = '{{ folder }}';
-    if (!confirm(`⚠️ Êtes-vous sûr de vouloir supprimer ${selected.length} photo(s) ?\n\nCette action est irréversible !`)) {
-        return;
-    }
-    
+    if (selected.length === 0) { alert('⚠️ Aucune photo sélectionnée'); return; }
+
+    if (!confirm(`⚠️ Supprimer ${selected.length} photo(s) ?\n\nCette action est irréversible !`)) return;
+
     const bulkBar = document.getElementById('bulkActionsBar');
     const originalContent = bulkBar.innerHTML;
     bulkBar.innerHTML = '<div class="text-center p-3">⏳ Suppression en cours... (' + selected.length + ' photo(s))</div>';
-    
+
     fetch('{% url "scripts_manager:photo_bulk_delete" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: JSON.stringify({
-            folder: folder,
-            photo_names: selected
-        })
+        body: JSON.stringify({ folder: '{{ folder }}', photo_names: selected })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(`✅ ${data.deleted} photo(s) supprimée(s) avec succès${data.errors > 0 ? '\n⚠️ ' + data.errors + ' erreur(s)' : ''}`);
+            alert(`✅ ${data.deleted} photo(s) supprimée(s)${data.errors > 0 ? '\n⚠️ ' + data.errors + ' erreur(s)' : ''}`);
             location.reload();
         } else {
             alert('❌ ' + data.error);

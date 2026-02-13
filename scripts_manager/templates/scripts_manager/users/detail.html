@@ -6,13 +6,6 @@
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-    .status-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-    }
     .chart-container {
         position: relative;
         height: 300px;
@@ -26,131 +19,141 @@
     <!-- Header avec bouton retour -->
     <div class="flex items-center justify-between">
         <div>
-            <a href="{% url 'scripts_manager:users_list' %}" class="text-[#535353] hover:text-[#111111] mb-4 inline-block">
+            <a href="{% url 'scripts_manager:users_list' %}" class="text-secondary hover:text-base-content mb-4 inline-block">
                 ← Retour à la liste
             </a>
-            <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">{{ user.display_name|default:"N/A" }}</h1>
-            <p class="text-[#535353]">{{ user.uid }}</p>
+            <h1 class="text-3xl font-serif font-bold text-base-content mb-2">{{ user.display_name|default:"N/A" }}</h1>
+            <p class="text-secondary">{{ user.uid }}</p>
         </div>
         <div>
-            <a href="{% url 'scripts_manager:user_refresh_revenuecat' user.uid %}" 
-               class="btn-primary">
+            <a href="{% url 'scripts_manager:user_refresh_revenuecat' user.uid %}"
+               class="btn btn-primary">
                 🔄 Actualiser les données RevenueCat
             </a>
         </div>
     </div>
-    
+
     <!-- Informations utilisateur -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">👤 Informations</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <span class="text-sm text-[#535353]">Email:</span>
-                <div class="font-medium text-[#111111]">{{ user.email|default:"N/A" }}</div>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-xl font-serif font-bold text-base-content">👤 Informations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <span class="text-sm text-secondary">Email:</span>
+                    <div class="font-medium text-base-content">{{ user.email|default:"N/A" }}</div>
+                </div>
+                <div>
+                    <span class="text-sm text-secondary">Téléphone:</span>
+                    <div class="font-medium text-base-content">{{ user.phone|default:"N/A" }}</div>
+                </div>
+                <div>
+                    <span class="text-sm text-secondary">Date de création:</span>
+                    <div class="font-medium text-base-content">{{ user.created_at_display|default:"N/A" }}</div>
+                </div>
+                <div>
+                    <span class="text-sm text-secondary">Dernière connexion:</span>
+                    <div class="font-medium text-base-content">{{ user.last_sign_in_display|default:"Jamais" }}</div>
+                </div>
+                {% if user.birthdate %}
+                <div>
+                    <span class="text-sm text-secondary">Date de naissance:</span>
+                    <div class="font-medium text-base-content">{{ user.birthdate }}</div>
+                </div>
+                {% endif %}
             </div>
-            <div>
-                <span class="text-sm text-[#535353]">Téléphone:</span>
-                <div class="font-medium text-[#111111]">{{ user.phone|default:"N/A" }}</div>
-            </div>
-            <div>
-                <span class="text-sm text-[#535353]">Date de création:</span>
-                <div class="font-medium text-[#111111]">{{ user.created_at_display|default:"N/A" }}</div>
-            </div>
-            <div>
-                <span class="text-sm text-[#535353]">Dernière connexion:</span>
-                <div class="font-medium text-[#111111]">{{ user.last_sign_in_display|default:"Jamais" }}</div>
-            </div>
-            {% if user.birthdate %}
-            <div>
-                <span class="text-sm text-[#535353]">Date de naissance:</span>
-                <div class="font-medium text-[#111111]">{{ user.birthdate }}</div>
-            </div>
-            {% endif %}
         </div>
     </div>
-    
+
     <!-- Statut RevenueCat actuel -->
     {% if current_status %}
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">💳 Statut RevenueCat</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <span class="text-sm text-[#535353]">Statut:</span>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-xl font-serif font-bold text-base-content">💳 Statut RevenueCat</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                    <span class="status-badge {{ user.rc_status.status_class }}">
-                        {{ current_status.status_label }}
-                    </span>
-                    {% if current_status.is_sandbox %}
-                    <span class="status-badge bg-yellow-100 text-yellow-800 border border-yellow-300 ml-2">
-                        🧪 Sandbox
-                    </span>
-                    {% endif %}
+                    <span class="text-sm text-secondary">Statut:</span>
+                    <div class="mt-1">
+                        <span class="badge {{ user.rc_status.status_class }} badge-lg">
+                            {{ current_status.status_label }}
+                        </span>
+                        {% if current_status.is_sandbox %}
+                        <span class="badge badge-warning badge-lg ml-2">
+                            🧪 Sandbox
+                        </span>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-            {% if current_status.product_identifier %}
-            <div>
-                <span class="text-sm text-[#535353]">Produit:</span>
-                <div class="font-medium text-[#111111]">{{ current_status.product_identifier }}</div>
-            </div>
-            {% endif %}
-            {% if current_status.period_type %}
-            <div>
-                <span class="text-sm text-[#535353]">Type de période:</span>
-                <div class="font-medium text-[#111111]">{{ current_status.period_type|upper }}</div>
-            </div>
-            {% endif %}
-            <div>
-                <span class="text-sm text-[#535353]">Actif:</span>
-                <div class="font-medium text-[#111111]">
-                    {% if current_status.is_active %}✅ Oui{% else %}❌ Non{% endif %}
+                {% if current_status.product_identifier %}
+                <div>
+                    <span class="text-sm text-secondary">Produit:</span>
+                    <div class="font-medium text-base-content">{{ current_status.product_identifier }}</div>
                 </div>
+                {% endif %}
+                {% if current_status.period_type %}
+                <div>
+                    <span class="text-sm text-secondary">Type de période:</span>
+                    <div class="font-medium text-base-content">{{ current_status.period_type|upper }}</div>
+                </div>
+                {% endif %}
+                <div>
+                    <span class="text-sm text-secondary">Actif:</span>
+                    <div class="font-medium text-base-content">
+                        {% if current_status.is_active %}✅ Oui{% else %}❌ Non{% endif %}
+                    </div>
+                </div>
+                {% if current_status.expires_at %}
+                <div>
+                    <span class="text-sm text-secondary">Expire le:</span>
+                    <div class="font-medium text-base-content">{{ current_status.expires_at|date:"d/m/Y à H:i" }}</div>
+                </div>
+                {% endif %}
+                {% if current_status.purchase_date %}
+                <div>
+                    <span class="text-sm text-secondary">Acheté le:</span>
+                    <div class="font-medium text-base-content">{{ current_status.purchase_date|date:"d/m/Y à H:i" }}</div>
+                </div>
+                {% endif %}
+                {% if current_status.will_renew %}
+                <div>
+                    <span class="text-sm text-secondary">Renouvellement:</span>
+                    <div class="font-medium text-success">✅ Automatique</div>
+                </div>
+                {% endif %}
+                {% if current_status.grace_period_expires_at %}
+                <div>
+                    <span class="text-sm text-secondary">Période de grâce expire le:</span>
+                    <div class="font-medium text-base-content">{{ current_status.grace_period_expires_at|date:"d/m/Y à H:i" }}</div>
+                </div>
+                {% endif %}
             </div>
-            {% if current_status.expires_at %}
-            <div>
-                <span class="text-sm text-[#535353]">Expire le:</span>
-                <div class="font-medium text-[#111111]">{{ current_status.expires_at|date:"d/m/Y à H:i" }}</div>
+            <div class="mt-4 text-xs text-secondary">
+                <span>Dernière mise à jour: {{ current_status.updated_at|date:"d/m/Y à H:i" }}</span>
             </div>
-            {% endif %}
-            {% if current_status.purchase_date %}
-            <div>
-                <span class="text-sm text-[#535353]">Acheté le:</span>
-                <div class="font-medium text-[#111111]">{{ current_status.purchase_date|date:"d/m/Y à H:i" }}</div>
-            </div>
-            {% endif %}
-            {% if current_status.will_renew %}
-            <div>
-                <span class="text-sm text-[#535353]">Renouvellement:</span>
-                <div class="font-medium text-[#60BC81]">✅ Automatique</div>
-            </div>
-            {% endif %}
-            {% if current_status.grace_period_expires_at %}
-            <div>
-                <span class="text-sm text-[#535353]">Période de grâce expire le:</span>
-                <div class="font-medium text-[#111111]">{{ current_status.grace_period_expires_at|date:"d/m/Y à H:i" }}</div>
-            </div>
-            {% endif %}
-        </div>
-        <div class="mt-4 text-xs text-[#535353]">
-            <span>Dernière mise à jour: {{ current_status.updated_at|date:"d/m/Y à H:i" }}</span>
         </div>
     </div>
     {% else %}
-    <div class="bg-[#F1EFEB] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <p class="text-[#535353]">Aucune donnée RevenueCat disponible pour cet utilisateur.</p>
+    <div class="card bg-base-200 shadow-sm border border-base-300">
+        <div class="card-body">
+            <p class="text-secondary">Aucune donnée RevenueCat disponible pour cet utilisateur.</p>
+        </div>
     </div>
     {% endif %}
-    
+
     <!-- Graphique historique -->
     {% if history_count > 0 %}
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-xl font-serif font-bold text-[#111111] mb-4">📊 Historique des 30 derniers jours</h2>
-        <div class="chart-container">
-            <canvas id="revenuecatChart"></canvas>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-xl font-serif font-bold text-base-content">📊 Historique des 30 derniers jours</h2>
+            <div class="chart-container">
+                <canvas id="revenuecatChart"></canvas>
+            </div>
         </div>
     </div>
     {% else %}
-    <div class="bg-[#F1EFEB] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <p class="text-[#535353]">Aucun historique disponible. Les données seront enregistrées lors de la prochaine actualisation.</p>
+    <div class="card bg-base-200 shadow-sm border border-base-300">
+        <div class="card-body">
+            <p class="text-secondary">Aucun historique disponible. Les données seront enregistrées lors de la prochaine actualisation.</p>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -176,10 +179,10 @@ const statusColors = {
 // Créer le graphique
 if (chartData.dates.length > 0 && typeof Chart !== 'undefined') {
     const ctx = document.getElementById('revenuecatChart').getContext('2d');
-    
+
     // Préparer les données pour le graphique
     const backgroundColors = chartData.statuses.map(s => statusColors[s] || '#535353');
-    
+
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -261,4 +264,3 @@ if (chartData.dates.length > 0 && typeof Chart !== 'undefined') {
 }
 </script>
 {% endblock %}
-

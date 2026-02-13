@@ -4,25 +4,27 @@
 {% block title %}Guides - Butter Backoffice{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ deleteOpen: false, deleteId: '', deleteName: '' }">
     <!-- Header avec actions -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📖 Guides</h1>
-                <p class="text-[#535353]">
-                    {{ total_count }} guide(s)
-                    {% if premium_count %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{{ premium_count }} Premium</span>{% endif %}
-                    {% if free_count %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">{{ free_count }} Gratuit</span>{% endif %}
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="{% url 'scripts_manager:guides_import_csv' %}" class="btn-secondary">
-                    📤 Importer CSV
-                </a>
-                <a href="{% url 'scripts_manager:guide_create' %}" class="btn-primary">
-                    ➕ Nouveau guide
-                </a>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content mb-2">📖 Guides</h1>
+                    <p class="text-secondary">
+                        {{ total_count }} guide(s)
+                        {% if premium_count %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{{ premium_count }} Premium</span>{% endif %}
+                        {% if free_count %}<span class="ml-2 badge badge-success">{{ free_count }} Gratuit</span>{% endif %}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{% url 'scripts_manager:guides_import_csv' %}" class="btn btn-ghost">
+                        📤 Importer CSV
+                    </a>
+                    <a href="{% url 'scripts_manager:guide_create' %}" class="btn btn-primary">
+                        ➕ Nouveau guide
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -30,7 +32,7 @@
     <!-- Messages -->
     {% if messages %}
         {% for message in messages %}
-        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E] text-[#111111]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81] text-[#111111]{% else %}bg-[#F1EFEB] border-[#C9C1B1] text-[#535353]{% endif %}">
+        <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -38,62 +40,62 @@
 
     <!-- Liste des guides -->
     {% if guides %}
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-[#F1EFEB] border-b border-[#C9C1B1]">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200 border-b border-base-300">
                     <tr>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-16">Ordre</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium">Nom</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-24">Type</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium">ID</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium">Restaurants</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-36">Image</th>
-                        <th class="text-left py-3 px-4 text-[#535353] font-medium w-48">Actions</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-16">Ordre</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">Nom</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">Type</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">ID</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">Restaurants</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-36">Image</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-48">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for guide in guides %}
-                    <tr class="border-b border-[#C9C1B1] hover:bg-[#F1EFEB]">
+                    <tr class="border-b border-base-300 hover:bg-base-200">
                         <td class="py-3 px-4">
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#F1EFEB] text-[#535353] text-sm font-medium">{{ guide.order }}</span>
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-base-200 text-secondary text-sm font-medium">{{ guide.order }}</span>
                         </td>
                         <td class="py-3 px-4">
-                            <strong class="text-[#111111]">{{ guide.name }}</strong>
+                            <strong class="text-base-content">{{ guide.name }}</strong>
                             {% if guide.isPremium %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
                             {% if guide.description %}
                             <br>
-                            <span class="text-sm text-[#535353]">{{ guide.description|truncatewords:15 }}</span>
+                            <span class="text-sm text-secondary">{{ guide.description|truncatewords:15 }}</span>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4">
                             {% if guide.isPremium %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Premium</span>
                             {% else %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">Gratuit</span>
+                            <span class="badge badge-success">Gratuit</span>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4">
-                            <code class="text-sm bg-[#F1EFEB] px-2 py-1 rounded">{{ guide.id }}</code>
+                            <code class="text-sm bg-base-200 px-2 py-1 rounded">{{ guide.id }}</code>
                         </td>
                         <td class="py-3 px-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D4F2DA] text-[#60BC81]">
+                            <span class="badge badge-success">
                                 {{ guide.restaurantIds|length }} resto(s)
                             </span>
                         </td>
                         <td class="py-3 px-4">
                             {% if guide.coverImageRef %}
-                            <code class="text-xs text-[#535353]">{{ guide.coverImageRef }}</code>
+                            <code class="text-xs text-secondary">{{ guide.coverImageRef }}</code>
                             {% else %}
-                            <span class="text-[#535353]">-</span>
+                            <span class="text-secondary">-</span>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4">
                             <div class="flex flex-wrap gap-2">
-                                <a href="{% url 'scripts_manager:guide_detail' guide.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#535353] text-[#535353] hover:bg-[#535353] hover:text-white" title="Voir">👁 Voir</a>
-                                <a href="{% url 'scripts_manager:guide_edit' guide.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#C9C1B1] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111]" title="Éditer">✏️ Éditer</a>
-                                <a href="{% url 'scripts_manager:guide_get_json' guide.id %}" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#60BC81] text-[#60BC81] hover:bg-[#D4F2DA]" title="JSON" target="_blank">JSON</a>
-                                <button type="button" class="px-3 py-1.5 rounded-[14px] text-sm border border-[#D3695E] text-[#D3695E] hover:bg-[#F2D7D4]" title="Supprimer" onclick="confirmDelete('{{ guide.id }}', '{{ guide.name|escapejs }}')">🗑 Supprimer</button>
+                                <a href="{% url 'scripts_manager:guide_detail' guide.id %}" class="btn btn-outline btn-secondary btn-sm" title="Voir">👁 Voir</a>
+                                <a href="{% url 'scripts_manager:guide_edit' guide.id %}" class="btn btn-outline btn-sm" title="Éditer">✏️ Éditer</a>
+                                <a href="{% url 'scripts_manager:guide_get_json' guide.id %}" class="btn btn-outline btn-success btn-sm" title="JSON" target="_blank">JSON</a>
+                                <button type="button" class="btn btn-outline btn-error btn-sm" title="Supprimer" @click="deleteOpen = true; deleteId = '{{ guide.id }}'; deleteName = '{{ guide.name|escapejs }}'">🗑 Supprimer</button>
                             </div>
                         </td>
                     </tr>
@@ -103,44 +105,32 @@
         </div>
     </div>
     {% else %}
-    <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-6 text-[#111111]">
+    <div class="alert alert-success">
         Aucun guide pour le moment.
-        <a href="{% url 'scripts_manager:guide_create' %}" class="font-medium text-[#60BC81] hover:underline ml-1">Créer le premier guide</a>
+        <a href="{% url 'scripts_manager:guide_create' %}" class="font-medium text-success hover:underline ml-1">Créer le premier guide</a>
     </div>
     {% endif %}
-</div>
 
-<!-- Modal de confirmation de suppression -->
-<div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-[#111111] bg-opacity-50 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-[#FFFFFF] rounded-[14px] text-left overflow-hidden shadow-xl border border-[#C9C1B1] sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="px-6 py-4">
-                <h3 class="text-lg font-serif font-bold text-[#111111]" id="modal-title">Confirmer la suppression</h3>
-                <p class="mt-2 text-[#535353]">Êtes-vous sûr de vouloir supprimer le guide <strong id="deleteName"></strong> ?</p>
-                <p class="mt-2 text-sm text-[#D3695E]">Cette action est irréversible.</p>
-            </div>
-            <div class="px-6 py-4 bg-[#F1EFEB] flex justify-end gap-3">
-                <button type="button" onclick="closeDeleteModal()" class="btn-secondary">Annuler</button>
-                <form id="deleteForm" method="post" action="" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-primary bg-[#D3695E] hover:opacity-90">Supprimer</button>
-                </form>
+    <!-- Modal de confirmation de suppression -->
+    <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-neutral bg-opacity-50 transition-opacity" aria-hidden="true" @click.self="deleteOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-base-100 text-left overflow-hidden shadow-xl border border-base-300 sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" @click.stop>
+                <div class="px-6 py-4">
+                    <h3 class="text-lg font-serif font-bold text-base-content" id="modal-title">Confirmer la suppression</h3>
+                    <p class="mt-2 text-secondary">Êtes-vous sûr de vouloir supprimer le guide <strong x-text="deleteName"></strong> ?</p>
+                    <p class="mt-2 text-sm text-error">Cette action est irréversible.</p>
+                </div>
+                <div class="px-6 py-4 bg-base-200 flex justify-end gap-3">
+                    <button type="button" @click="deleteOpen = false" class="btn btn-ghost">Annuler</button>
+                    <form method="post" :action="'/guides/' + deleteId + '/delete/'" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error">Supprimer</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function confirmDelete(guideId, guideName) {
-    document.getElementById('deleteName').textContent = guideName;
-    document.getElementById('deleteForm').action = '/guides/' + guideId + '/delete/';
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
-}
-document.getElementById('deleteModal').querySelector('.fixed.inset-0.bg-opacity-50').addEventListener('click', closeDeleteModal);
-</script>
 {% endblock %}

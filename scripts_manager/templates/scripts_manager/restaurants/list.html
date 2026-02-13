@@ -5,141 +5,131 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">🍽️ Restaurants</h1>
-                <p class="text-[#535353]">Gestion complète de la collection restaurants</p>
+                <h1 class="text-3xl font-serif font-bold text-base-content">🍽️ Restaurants</h1>
+                <p class="text-secondary mt-1">Gestion complète de la collection restaurants</p>
             </div>
-            <a href="{% url 'scripts_manager:restaurant_create' %}" class="btn-primary">
+            <a href="{% url 'scripts_manager:restaurant_create' %}" class="btn btn-primary">
                 ➕ Nouveau Restaurant
             </a>
         </div>
     </div>
-    
+
     <!-- Filtres rapides -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="flex flex-wrap gap-3">
-            <a href="{% url 'scripts_manager:restaurants_list' %}?filter=missing_photos" 
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if filter_type == 'missing_photos' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %} trigger-loading">
-                📸 Photos manquantes
-            </a>
-            <a href="{% url 'scripts_manager:restaurants_list' %}?filter=missing_logos" 
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if filter_type == 'missing_logos' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %} trigger-loading">
-                🖼️ Logos manquants
-            </a>
-            {% if filter_type %}
-            <a href="{% url 'scripts_manager:restaurants_list' %}" 
-               class="px-4 py-2 rounded-[14px] text-sm font-medium bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1] trigger-loading">
-                ❌ Retirer le filtre
-            </a>
-            {% endif %}
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'scripts_manager:restaurants_list' %}?filter=missing_photos"
+           class="btn btn-sm {% if filter_type == 'missing_photos' %}btn-success{% else %}btn-ghost border border-base-300{% endif %} trigger-loading">
+            📸 Photos manquantes
+        </a>
+        <a href="{% url 'scripts_manager:restaurants_list' %}?filter=missing_logos"
+           class="btn btn-sm {% if filter_type == 'missing_logos' %}btn-success{% else %}btn-ghost border border-base-300{% endif %} trigger-loading">
+            🖼️ Logos manquants
+        </a>
+        {% if filter_type %}
+        <a href="{% url 'scripts_manager:restaurants_list' %}"
+           class="btn btn-sm btn-ghost border border-base-300 trigger-loading">
+            ❌ Retirer le filtre
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Formulaire de recherche -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body py-4">
+            <form method="GET" action="{% url 'scripts_manager:restaurants_list' %}" class="auto-loader">
+                {% if filter_type %}
+                <input type="hidden" name="filter" value="{{ filter_type }}">
+                {% endif %}
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" name="search" placeholder="Rechercher par raw_name..."
+                           value="{{ search_query }}"
+                           class="input input-bordered flex-1 bg-base-200">
+                    <button type="submit" class="btn btn-primary">🔍 Rechercher</button>
+                    {% if search_query %}
+                    <a href="{% url 'scripts_manager:restaurants_list' %}{% if filter_type %}?filter={{ filter_type }}{% endif %}" class="btn btn-ghost">❌ Effacer</a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
     </div>
-    
-    <!-- Formulaire de recherche -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <form method="GET" action="{% url 'scripts_manager:restaurants_list' %}" class="auto-loader">
-            {% if filter_type %}
-            <input type="hidden" name="filter" value="{{ filter_type }}">
-            {% endif %}
-            <div class="flex flex-col md:flex-row gap-3">
-                <input 
-                    type="text" 
-                    name="search" 
-                    placeholder="Rechercher par raw_name..." 
-                    value="{{ search_query }}"
-                    class="flex-1 px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"
-                >
-                <button type="submit" class="btn-primary">🔍 Rechercher</button>
-                {% if search_query %}
-                <a href="{% url 'scripts_manager:restaurants_list' %}{% if filter_type %}?filter={{ filter_type }}{% endif %}" class="btn-secondary">❌ Effacer</a>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-    
+
     <!-- Messages d'info -->
     {% if error %}
-    <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4 text-[#D3695E]">
-        ❌ Erreur : {{ error }}
+    <div class="alert alert-error">
+        <span>❌ Erreur : {{ error }}</span>
     </div>
     {% endif %}
-    
+
     {% if filter_type %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-4 text-[#535353]">
-        {% if filter_type == 'missing_photos' %}
-        📸 Filtre actif : Restaurants avec photos manquantes
-        {% elif filter_type == 'missing_logos' %}
-        🖼️ Filtre actif : Restaurants sans logo
-        {% endif %}
-        - {{ results_count }} restaurant{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}
+    <div class="alert alert-info">
+        <span>
+            {% if filter_type == 'missing_photos' %}📸 Filtre actif : Restaurants avec photos manquantes
+            {% elif filter_type == 'missing_logos' %}🖼️ Filtre actif : Restaurants sans logo{% endif %}
+            - {{ results_count }} restaurant{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}
+        </span>
     </div>
     {% endif %}
-    
+
     {% if search_query %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-4 text-[#535353]">
-        🔍 Recherche : "{{ search_query }}" - {{ results_count }} résultat{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}
+    <div class="alert alert-info">
+        <span>🔍 Recherche : "{{ search_query }}" - {{ results_count }} résultat{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}</span>
     </div>
     {% endif %}
-    
-    <div class="text-sm text-[#535353]">
+
+    <div class="text-sm text-secondary">
         Résultats : {{ results_count }} restaurant{{ results_count|pluralize }}
     </div>
-    
+
     {% if restaurants %}
     <!-- Version tableau (desktop) -->
-    <div class="hidden md:block bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+    <div class="hidden md:block card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-[#C9C1B1]">
-                <thead class="bg-[#F1EFEB]">
+            <table class="table table-zebra">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">raw_name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Adresse</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Photos/Logos</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Actions</th>
+                        <th>ID</th>
+                        <th>raw_name</th>
+                        <th>Adresse</th>
+                        <th>Photos/Logos</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-[#FFFFFF] divide-y divide-[#C9C1B1]">
+                <tbody>
                     {% for restaurant in restaurants %}
-                    <tr class="hover:bg-[#F1EFEB] transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-xs text-[#535353]">
-                                {{ restaurant.id|truncatechars:20 }}
-                            </code>
+                    <tr>
+                        <td>
+                            <code class="badge badge-ghost text-xs">{{ restaurant.id|truncatechars:20 }}</code>
                         </td>
-                        <td class="px-6 py-4 font-medium text-[#111111]">
+                        <td class="font-medium text-base-content">
                             {{ restaurant.raw_name|default:"—" }}
                         </td>
-                        <td class="px-6 py-4 text-[#535353]">
+                        <td class="text-secondary">
                             {{ restaurant.address|default:"—" }}
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col gap-2 text-sm">
+                        <td>
+                            <div class="flex flex-col gap-1 text-sm">
                                 {% if restaurant.has_logo %}
-                                <span class="text-[#60BC81]">🖼️ Logo: ✓ ({{ restaurant.logo_count }})</span>
+                                <span class="text-success">🖼️ Logo: ✓ ({{ restaurant.logo_count }})</span>
                                 {% else %}
-                                <span class="text-[#D3695E]">🖼️ Logo: ✗</span>
+                                <span class="text-error">🖼️ Logo: ✗</span>
                                 {% endif %}
                                 {% if restaurant.photo_count > 0 %}
-                                <span class="text-[#60BC81]">📸 Photos: {{ restaurant.photo_count }} ({{ restaurant.photos|join:", " }})</span>
+                                <span class="text-success">📸 Photos: {{ restaurant.photo_count }}</span>
                                 {% else %}
-                                <span class="text-[#D3695E]">📸 Photos: 0</span>
+                                <span class="text-error">📸 Photos: 0</span>
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td>
                             <div class="flex gap-2 flex-wrap">
-                                <a href="{% url 'scripts_manager:restaurant_detail' restaurant.id %}" class="btn-secondary text-sm">
-                                    👁️ Voir
-                                </a>
-                                <a href="{% url 'scripts_manager:restaurant_edit' restaurant.id %}" class="btn-primary text-sm">
-                                    ✏️ Modifier
-                                </a>
-                                <form method="POST" action="{% url 'scripts_manager:restaurant_delete' restaurant.id %}" style="display: inline;" onsubmit="return confirmDelete('{{ restaurant.raw_name|default:restaurant.id }}');">
+                                <a href="{% url 'scripts_manager:restaurant_detail' restaurant.id %}" class="btn btn-ghost btn-sm">👁️ Voir</a>
+                                <a href="{% url 'scripts_manager:restaurant_edit' restaurant.id %}" class="btn btn-primary btn-sm">✏️</a>
+                                <form method="POST" action="{% url 'scripts_manager:restaurant_delete' restaurant.id %}"
+                                      x-data x-on:submit.prevent="if(confirm('Supprimer « {{ restaurant.raw_name|default:restaurant.id }} » ?')) $el.submit()">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-danger text-sm">🗑️ Supprimer</button>
+                                    <button type="submit" class="btn btn-error btn-sm">🗑️</button>
                                 </form>
                             </div>
                         </td>
@@ -149,79 +139,51 @@
             </table>
         </div>
     </div>
-    
+
     <!-- Version cartes (mobile) -->
     <div class="md:hidden space-y-4">
         {% for restaurant in restaurants %}
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-            <div class="flex justify-between items-start mb-3">
-                <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-xs text-[#535353]">{{ restaurant.id }}</code>
-            </div>
-            <h3 class="font-serif font-bold text-[#111111] text-lg mb-2">
-                {{ restaurant.raw_name|default:"—" }}
-            </h3>
-            {% if restaurant.address %}
-            <p class="text-[#535353] text-sm mb-3">📍 {{ restaurant.address }}</p>
-            {% endif %}
-            <div class="border-t border-[#C9C1B1] pt-3 mb-3">
-                {% if restaurant.has_logo %}
-                <div class="text-[#60BC81] text-sm mb-1">🖼️ Logo: ✓ ({{ restaurant.logo_count }})</div>
-                {% else %}
-                <div class="text-[#D3695E] text-sm mb-1">🖼️ Logo: ✗</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4">
+                <code class="badge badge-ghost text-xs">{{ restaurant.id }}</code>
+                <h3 class="card-title font-serif text-base-content">{{ restaurant.raw_name|default:"—" }}</h3>
+                {% if restaurant.address %}
+                <p class="text-secondary text-sm">📍 {{ restaurant.address }}</p>
                 {% endif %}
-                {% if restaurant.photo_count > 0 %}
-                <div class="text-[#60BC81] text-sm">📸 Photos: {{ restaurant.photo_count }} ({{ restaurant.photos|join:", " }})</div>
-                {% else %}
-                <div class="text-[#D3695E] text-sm">📸 Photos: 0</div>
-                {% endif %}
-            </div>
-            <div class="flex flex-col gap-2">
-                <a href="{% url 'scripts_manager:restaurant_detail' restaurant.id %}" class="btn-secondary text-center">
-                    👁️ Voir
-                </a>
-                <a href="{% url 'scripts_manager:restaurant_edit' restaurant.id %}" class="btn-primary text-center">
-                    ✏️ Modifier
-                </a>
-                <form method="POST" action="{% url 'scripts_manager:restaurant_delete' restaurant.id %}" onsubmit="return confirmDelete('{{ restaurant.raw_name|default:restaurant.id }}');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-danger w-full">🗑️ Supprimer</button>
-                </form>
+                <div class="divider my-1"></div>
+                <div class="text-sm">
+                    {% if restaurant.has_logo %}<div class="text-success">🖼️ Logo: ✓ ({{ restaurant.logo_count }})</div>
+                    {% else %}<div class="text-error">🖼️ Logo: ✗</div>{% endif %}
+                    {% if restaurant.photo_count > 0 %}<div class="text-success">📸 Photos: {{ restaurant.photo_count }}</div>
+                    {% else %}<div class="text-error">📸 Photos: 0</div>{% endif %}
+                </div>
+                <div class="card-actions mt-2">
+                    <a href="{% url 'scripts_manager:restaurant_detail' restaurant.id %}" class="btn btn-ghost btn-sm flex-1">👁️ Voir</a>
+                    <a href="{% url 'scripts_manager:restaurant_edit' restaurant.id %}" class="btn btn-primary btn-sm flex-1">✏️ Modifier</a>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
-    
+
     <!-- Pagination -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="flex items-center justify-between bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="text-sm text-[#535353]">
-            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
-        </div>
-        <div class="flex gap-2">
+    <div class="flex items-center justify-between">
+        <span class="text-sm text-secondary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="btn-secondary trigger-loading">
-                ← Précédent
-            </a>
+            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" class="join-item btn btn-ghost trigger-loading">← Précédent</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="btn-secondary trigger-loading">
-                Suivant →
-            </a>
+            <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}" class="join-item btn btn-ghost trigger-loading">Suivant →</a>
             {% endif %}
         </div>
     </div>
     {% endif %}
     {% else %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-6 text-center text-[#535353]">
-        📭 Aucun restaurant trouvé. <a href="{% url 'scripts_manager:restaurant_create' %}" class="text-[#111111] font-medium hover:underline">Créer le premier restaurant</a>
+    <div class="alert alert-info">
+        <span>📭 Aucun restaurant trouvé. <a href="{% url 'scripts_manager:restaurant_create' %}" class="link link-primary">Créer le premier restaurant</a></span>
     </div>
     {% endif %}
 </div>
-
-<script>
-function confirmDelete(restaurantName) {
-    const message = `Êtes-vous sûr de vouloir supprimer le restaurant "${restaurantName}" ?\n\nCette action est irréversible !`;
-    return confirm(message);
-}
-</script>
 {% endblock %}

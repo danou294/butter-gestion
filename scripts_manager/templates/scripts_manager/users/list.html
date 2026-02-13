@@ -6,153 +6,127 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">👥 Utilisateurs</h1>
-                <p class="text-[#535353]">Gestion et suivi des utilisateurs</p>
-            </div>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h1 class="text-3xl font-serif font-bold text-base-content">👥 Utilisateurs</h1>
+            <p class="text-secondary">Gestion et suivi des utilisateurs</p>
         </div>
     </div>
-    
+
     <!-- Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-3 gap-4">
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-            <div class="text-2xl font-serif font-bold text-[#111111]">{{ metrics.total }}</div>
-            <div class="text-sm text-[#535353] mt-1">Total</div>
+    <div class="stats stats-vertical md:stats-horizontal shadow w-full border border-base-300">
+        <div class="stat">
+            <div class="stat-title">Total</div>
+            <div class="stat-value text-base-content">{{ metrics.total }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#60BC81]">
-            <div class="text-2xl font-serif font-bold text-[#60BC81]">{{ metrics.active }}</div>
-            <div class="text-sm text-[#535353] mt-1">Premium</div>
+        <div class="stat">
+            <div class="stat-title">Premium</div>
+            <div class="stat-value text-success">{{ metrics.active }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#60BC81]">
-            <div class="text-2xl font-serif font-bold text-[#60BC81]">{{ metrics.trial }}</div>
-            <div class="text-sm text-[#535353] mt-1">Essais</div>
+        <div class="stat">
+            <div class="stat-title">Essais</div>
+            <div class="stat-value text-success">{{ metrics.trial }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-            <div class="text-2xl font-serif font-bold text-[#535353]">{{ metrics.grace }}</div>
-            <div class="text-sm text-[#535353] mt-1">Grace</div>
+        <div class="stat">
+            <div class="stat-title">Grace</div>
+            <div class="stat-value text-secondary">{{ metrics.grace }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#D3695E]">
-            <div class="text-2xl font-serif font-bold text-[#D3695E]">{{ metrics.expired }}</div>
-            <div class="text-sm text-[#535353] mt-1">Expirés</div>
+        <div class="stat">
+            <div class="stat-title">Expirés</div>
+            <div class="stat-value text-error">{{ metrics.expired }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#60BC81]">
-            <div class="text-2xl font-serif font-bold text-[#60BC81]">{{ metrics.online }}</div>
-            <div class="text-sm text-[#535353] mt-1">En ligne</div>
+        <div class="stat">
+            <div class="stat-title">En ligne</div>
+            <div class="stat-value text-success">{{ metrics.online }}</div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-            <div class="text-2xl font-serif font-bold text-[#111111]">{{ metrics.tokens_total }}</div>
-            <div class="text-sm text-[#535353] mt-1">Tokens FCM</div>
+        <div class="stat">
+            <div class="stat-title">Tokens FCM</div>
+            <div class="stat-value text-base-content">{{ metrics.tokens_total }}</div>
         </div>
     </div>
-    
-    <!-- Search and Filters -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <form method="get" action="{% url 'scripts_manager:users_list' %}" class="space-y-4">
-            <div class="flex flex-col md:flex-row gap-4">
-                <div class="flex-1">
-                    <input type="text" name="q" value="{{ query }}" 
+
+    <!-- Search & Filters -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <form method="get" action="{% url 'scripts_manager:users_list' %}" class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" name="q" value="{{ query }}"
                            placeholder="Rechercher par nom, email, téléphone..."
-                           class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                           class="input input-bordered flex-1 bg-base-200">
+                    <button type="submit" class="btn btn-primary">🔍 Rechercher</button>
                 </div>
-                <button type="submit" class="btn-primary">
-                    🔍 Rechercher
-                </button>
-            </div>
-            
-            <div class="flex flex-wrap gap-2">
-                {% for value, label in status_options %}
-                <a href="?status={{ value }}{% if query %}&q={{ query }}{% endif %}" 
-                   class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if status_filter == value %}bg-[#C9C1B1] text-[#111111] border border-[#535353]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %}">
-                    {{ label }}
-                </a>
-                {% endfor %}
-            </div>
-        </form>
+                <div class="flex flex-wrap gap-2">
+                    {% for value, label in status_options %}
+                    <a href="?status={{ value }}{% if query %}&q={{ query }}{% endif %}"
+                       class="btn btn-sm {% if status_filter == value %}btn-primary{% else %}btn-ghost border border-base-300{% endif %}">
+                        {{ label }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
     </div>
-    
-    <!-- Results Count -->
-    <div class="text-sm text-[#535353]">
-        {{ results_count }} résultat{{ results_count|pluralize }} trouvé{{ results_count|pluralize }}
-    </div>
-    
+
+    <div class="text-sm text-secondary">{{ results_count }} résultat{{ results_count|pluralize }}</div>
+
     <!-- Users Table -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-[#F1EFEB]">
+            <table class="table table-zebra">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Utilisateur</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Contact</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Connexion</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Actions</th>
+                        <th>Utilisateur</th>
+                        <th>Contact</th>
+                        <th>Connexion</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-[#FFFFFF] divide-y divide-[#C9C1B1]">
+                <tbody>
                     {% for user in users %}
-                    <tr class="hover:bg-[#F1EFEB] transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="font-medium text-[#111111]">{{ user.display_name|default:"N/A" }}</div>
-                            <div class="text-sm text-[#535353]">{{ user.uid|truncatechars:20 }}</div>
+                    <tr>
+                        <td>
+                            <div class="font-medium text-base-content">{{ user.display_name|default:"N/A" }}</div>
+                            <div class="text-sm text-secondary">{{ user.uid|truncatechars:20 }}</div>
                             {% if user.birthdate %}
-                            <div class="text-xs text-[#535353] mt-1">🎂 {{ user.birthdate }}</div>
+                            <div class="text-xs text-secondary mt-1">🎂 {{ user.birthdate }}</div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-[#111111]">{{ user.email|default:"N/A" }}</div>
-                            {% if user.phone %}
-                            <div class="text-sm text-[#535353]">{{ user.phone }}</div>
-                            {% endif %}
+                        <td>
+                            <div class="text-sm text-base-content">{{ user.email|default:"N/A" }}</div>
+                            {% if user.phone %}<div class="text-sm text-secondary">{{ user.phone }}</div>{% endif %}
                             {% if user.has_fcm_token %}
-                            <div class="text-xs text-[#60BC81] mt-1">📱 {{ user.fcm_tokens_count }} token{{ user.fcm_tokens_count|pluralize }}</div>
+                            <div class="text-xs text-success mt-1">📱 {{ user.fcm_tokens_count }} token{{ user.fcm_tokens_count|pluralize }}</div>
                             {% else %}
-                            <div class="text-xs text-[#535353] mt-1">Pas de token</div>
+                            <div class="text-xs text-secondary mt-1">Pas de token</div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-3 py-1 text-xs font-medium rounded-[14px] {{ user.connection_class }}">
-                                {{ user.connection_label }}
-                            </span>
+                        <td>
+                            <span class="badge {{ user.connection_class }}">{{ user.connection_label }}</span>
                             {% if user.last_sign_in_display %}
-                            <div class="text-xs text-[#535353] mt-1">{{ user.last_sign_in_display }}</div>
+                            <div class="text-xs text-secondary mt-1">{{ user.last_sign_in_display }}</div>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="4" class="px-6 py-12 text-center text-[#535353]">
-                            Aucun utilisateur trouvé
-                        </td>
-                    </tr>
+                    <tr><td colspan="4" class="text-center text-secondary py-12">Aucun utilisateur trouvé</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-    
-    <!-- Pagination -->
+
     {% if page_obj.has_other_pages %}
-    <div class="flex items-center justify-between bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="text-sm text-[#535353]">
-            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
-        </div>
-        <div class="flex gap-2">
+    <div class="flex items-center justify-between">
+        <span class="text-sm text-secondary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" 
-               class="btn-secondary">
-                ← Précédent
-            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="join-item btn btn-ghost">← Précédent</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" 
-               class="btn-secondary">
-                Suivant →
-            </a>
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="join-item btn btn-ghost">Suivant →</a>
             {% endif %}
         </div>
     </div>
     {% endif %}
 </div>
-
 {% endblock %}

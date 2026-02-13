@@ -2,134 +2,105 @@
 
 {% block title %}Dashboard RevenueCat - Butter{% endblock %}
 
-{% block extra_css %}
-<style>
-    .dashboard-card {
-        background: #FFFFFF;
-        border-radius: 14px;
-        padding: 24px;
-        border: 1px solid #C9C1B1;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .dashboard-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .metric-value {
-        font-size: 36px;
-        font-weight: 700;
-        font-family: 'Inria Serif', serif;
-        color: #111111;
-        margin: 12px 0 8px 0;
-    }
-    
-    .metric-label {
-        font-size: 14px;
-        color: #535353;
-        font-weight: 500;
-    }
-    
-    .metric-subtitle {
-        font-size: 12px;
-        color: #6c757d;
-        margin-top: 4px;
-    }
-    
-    .currency {
-        font-size: 24px;
-        font-weight: 600;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex items-center justify-between">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📊 Dashboard RevenueCat</h1>
-                <p class="text-[#535353]">Métriques de revenus et abonnements</p>
+                <h1 class="text-3xl font-serif font-bold text-base-content">📊 Dashboard RevenueCat</h1>
+                <p class="text-secondary mt-1">Métriques de revenus et abonnements</p>
             </div>
-            <div>
-                <a href="{% url 'scripts_manager:users_list' %}" class="text-[#535353] hover:text-[#111111] mr-4">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'scripts_manager:users_list' %}" class="text-secondary hover:text-base-content">
                     ← Retour à la liste
                 </a>
-                <a href="{% url 'scripts_manager:refresh_all_revenuecat' %}" 
-                   class="btn-primary inline-block"
+                <a href="{% url 'scripts_manager:refresh_all_revenuecat' %}"
+                   class="btn btn-primary"
                    onclick="return confirm('⚠️ Actualiser toutes les données RevenueCat ?');">
                     🔄 Actualiser les données
                 </a>
             </div>
         </div>
     </div>
-    
+
     <!-- Dashboard Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Active Trials -->
-        <div class="dashboard-card">
-            <div class="metric-label">Active Trials</div>
-            <div class="metric-value">{{ dashboard.active_trials }}</div>
-            <div class="metric-subtitle">In total</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">Active Trials</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_trials }}</p>
+                <p class="text-xs text-secondary">In total</p>
+            </div>
         </div>
-        
+
         <!-- Active Subscriptions -->
-        <div class="dashboard-card">
-            <div class="metric-label">Active Subscriptions</div>
-            <div class="metric-value">{{ dashboard.active_subscriptions }}</div>
-            <div class="metric-subtitle">In total</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">Active Subscriptions</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_subscriptions }}</p>
+                <p class="text-xs text-secondary">In total</p>
+            </div>
         </div>
-        
+
         <!-- MRR -->
-        <div class="dashboard-card">
-            <div class="metric-label">MRR</div>
-            <div class="metric-value">
-                <span class="currency">{{ dashboard.mrr }}</span>
-                <span class="text-lg text-[#535353]"> $US</span>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">MRR</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">
+                    <span class="text-2xl font-semibold">{{ dashboard.mrr }}</span>
+                    <span class="text-lg text-secondary"> $US</span>
+                </p>
+                <p class="text-xs text-secondary">Monthly Recurring Revenue</p>
             </div>
-            <div class="metric-subtitle">Monthly Recurring Revenue</div>
         </div>
-        
+
         <!-- Revenue -->
-        <div class="dashboard-card">
-            <div class="metric-label">Revenue</div>
-            <div class="metric-value">
-                <span class="currency">{{ dashboard.revenue_28_days }}</span>
-                <span class="text-lg text-[#535353]"> $US</span>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">Revenue</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">
+                    <span class="text-2xl font-semibold">{{ dashboard.revenue_28_days }}</span>
+                    <span class="text-lg text-secondary"> $US</span>
+                </p>
+                <p class="text-xs text-secondary">Last 28 days</p>
             </div>
-            <div class="metric-subtitle">Last 28 days</div>
         </div>
-        
+
         <!-- New Customers -->
-        <div class="dashboard-card">
-            <div class="metric-label">New Customers</div>
-            <div class="metric-value">{{ dashboard.new_customers_28_days }}</div>
-            <div class="metric-subtitle">Last 28 days</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">New Customers</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.new_customers_28_days }}</p>
+                <p class="text-xs text-secondary">Last 28 days</p>
+            </div>
         </div>
-        
+
         <!-- Active Customers -->
-        <div class="dashboard-card">
-            <div class="metric-label">Active Customers</div>
-            <div class="metric-value">{{ dashboard.active_customers }}</div>
-            <div class="metric-subtitle">Last 28 days</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+            <div class="card-body">
+                <p class="text-sm font-medium text-secondary">Active Customers</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_customers }}</p>
+                <p class="text-xs text-secondary">Last 28 days</p>
+            </div>
         </div>
     </div>
-    
+
     <!-- Info Box -->
-    <div class="bg-[#F1EFEB] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-lg font-serif font-bold text-[#111111] mb-3">ℹ️ Informations</h2>
-        <ul class="text-sm text-[#535353] space-y-2">
-            <li>• <strong>Active Trials</strong> : Nombre d'essais actuellement actifs</li>
-            <li>• <strong>Active Subscriptions</strong> : Nombre d'abonnements actifs (hors essais)</li>
-            <li>• <strong>MRR</strong> : Revenu récurrent mensuel basé sur les abonnements actifs</li>
-            <li>• <strong>Revenue</strong> : Revenu total généré au cours des 28 derniers jours</li>
-            <li>• <strong>New Customers</strong> : Nouveaux clients ayant effectué un achat dans les 28 derniers jours</li>
-            <li>• <strong>Active Customers</strong> : Clients actifs (abonnements actifs + essais + période de grâce)</li>
-            <li class="mt-4 text-xs text-[#6c757d">⚠️ Les prix des produits sont estimés. Vous pouvez les ajuster dans le code si nécessaire.</li>
-        </ul>
+    <div class="card bg-base-200 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-lg font-serif font-bold text-base-content">ℹ️ Informations</h2>
+            <ul class="text-sm text-secondary space-y-2 mt-2">
+                <li>• <strong>Active Trials</strong> : Nombre d'essais actuellement actifs</li>
+                <li>• <strong>Active Subscriptions</strong> : Nombre d'abonnements actifs (hors essais)</li>
+                <li>• <strong>MRR</strong> : Revenu récurrent mensuel basé sur les abonnements actifs</li>
+                <li>• <strong>Revenue</strong> : Revenu total généré au cours des 28 derniers jours</li>
+                <li>• <strong>New Customers</strong> : Nouveaux clients ayant effectué un achat dans les 28 derniers jours</li>
+                <li>• <strong>Active Customers</strong> : Clients actifs (abonnements actifs + essais + période de grâce)</li>
+                <li class="mt-4 text-xs opacity-70">⚠️ Les prix des produits sont estimés. Vous pouvez les ajuster dans le code si nécessaire.</li>
+            </ul>
+        </div>
     </div>
 </div>
 {% endblock %}
-

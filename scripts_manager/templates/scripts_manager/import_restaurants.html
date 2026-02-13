@@ -3,440 +3,367 @@
 
 {% block title %}Import Batch Restaurants - Butter{% endblock %}
 
-{% block extra_css %}
-<style>
-    .import-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .upload-area {
-        border: 3px dashed #667eea;
-        border-radius: 12px;
-        padding: 40px;
-        text-align: center;
-        background: #f8f9ff;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .upload-area:hover {
-        border-color: #5568d3;
-        background: #f0f2ff;
-    }
-    
-    .upload-area.dragover {
-        border-color: #28a745;
-        background: #e8f5e9;
-    }
-    
-    .file-input {
-        display: none;
-    }
-    
-    .file-info {
-        margin-top: 20px;
-        padding: 15px;
-        background: white;
-        border-radius: 8px;
-        display: none;
-    }
-    
-    .file-info.active {
-        display: block;
-    }
-    
-    .progress-container {
-        margin-top: 20px;
-        display: none;
-    }
-    
-    .progress-container.active {
-        display: block;
-    }
-    
-    .progress-bar {
-        width: 100%;
-        height: 30px;
-        background: #e9ecef;
-        border-radius: 15px;
-        overflow: hidden;
-        margin-bottom: 10px;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        width: 0%;
-        transition: width 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-    }
-    
-    .result-container {
-        margin-top: 20px;
-        padding: 20px;
-        border-radius: 8px;
-        display: none;
-    }
-    
-    .result-container.success {
-        display: block;
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-    }
-    
-    .result-container.error {
-        display: block;
-        background: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-    }
-    
-    .info-box {
-        background: #e7f3ff;
-        border-left: 4px solid #667eea;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-radius: 4px;
-    }
-    
-    .info-box ul {
-        margin: 10px 0 0 20px;
-        padding: 0;
-    }
-    
-    .info-box li {
-        margin: 5px 0;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="card import-container">
-    <h2>📥 Import Batch de Restaurants</h2>
-    
-    <div class="info-box">
-        <strong>ℹ️ Instructions :</strong>
-        <ul>
-            <li>Le fichier Excel doit contenir les colonnes requises (Ref, Nom de base, Vrai Nom, Adresse, etc.)</li>
-            <li>La première ligne doit contenir les en-têtes de colonnes</li>
-            <li>Un backup automatique sera créé avant l'import</li>
-            <li>La collection actuelle sera <strong>remplacée</strong> par les nouvelles données</li>
-            <li>Le processus peut prendre plusieurs minutes selon le nombre de restaurants</li>
-            <li><strong>Environnement actif :</strong> {{ firebase_env_label }}</li>
-        </ul>
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-2xl font-serif text-base-content">Import Batch de Restaurants</h2>
+        </div>
     </div>
 
-    <!-- Fonctions d'analyse -->
-    <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-left: 4px solid #667eea; border-radius: 8px;">
-        <h3 style="margin-top: 0; color: #667eea;">🔧 Outils d'analyse</h3>
-        <p style="color: #535353; margin-bottom: 15px;">Analysez et validez votre fichier avant l'import :</p>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
-            <button type="button" class="btn" onclick="devFunction1()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                🔍 Analyser le fichier Excel
-            </button>
-            <button type="button" class="btn" onclick="devFunction2()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                📊 Prévisualiser les données
-            </button>
-            <button type="button" class="btn" onclick="devFunction3()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                🧪 Test d'import partiel
-            </button>
-            <button type="button" class="btn" onclick="devFunction4()" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                🔄 Valider les données
-            </button>
-        </div>
-
-        <div id="devResult" style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none;"></div>
-    </div>
-    
-    <form id="importForm" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <div class="upload-area" id="uploadArea">
-            <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
-            <h3>Glissez-déposez votre fichier Excel ici</h3>
-            <p>ou</p>
-            <button type="button" class="btn" onclick="console.log('🔘 Bouton cliqué'); document.getElementById('excel_file').click();">
-                Parcourir les fichiers
-            </button>
-            <input type="file" id="excel_file" name="excel_file" class="file-input" accept=".xlsx,.xls" required onchange="console.log('📁 Input change détecté directement:', this.files.length);">
-        </div>
-        
-        <div class="file-info" id="fileInfo">
-            <strong>Fichier sélectionné :</strong> <span id="fileName"></span>
-            <br>
-            <strong>Taille :</strong> <span id="fileSize"></span>
-        </div>
-        
-        <div style="margin-top: 20px;">
-            <label for="sheet_name" style="display: block; margin-bottom: 10px; font-weight: 500;">
-                Feuille Excel à importer :
-            </label>
-            <select 
-                id="sheet_name" 
-                name="sheet_name" 
-                style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; background: white;"
-                disabled
-            >
-                <option value="">Sélectionnez un fichier Excel d'abord</option>
-            </select>
-            <small style="color: #6c757d;">Les feuilles disponibles seront chargées automatiquement après la sélection du fichier</small>
-        </div>
-        
-        <div class="progress-container" id="progressContainer">
-            <!-- Laura.gif avec "let me cook" pendant l'import -->
-            <div id="lauraGifContainer" style="margin-bottom: 20px; text-align: center; display: none;">
-                <h3 style="margin-bottom: 10px; color: #111111; font-size: 24px; font-weight: bold;">let me cook</h3>
-                <img id="lauraGif" src="{% static 'loading_gifs/Laura.gif' %}" alt="Laura cooking" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            </div>
-            
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-            <p id="progressText" style="text-align: center; margin-top: 10px;">Préparation de l'import...</p>
-            
-            <!-- Terminal pour afficher les logs en temps réel -->
-            <div id="terminalContainer" style="margin-top: 20px; display: none;">
-                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-                    <div id="terminalContent" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">
-                        <span style="color: #4ec9b0;">🚀 Démarrage de l'import...</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- omg.gif à la fin -->
-            <div id="omgGifContainer" style="margin-top: 20px; text-align: center; display: none;">
-                <img id="omgGif" src="{% static 'loading_gifs/omg.gif' %}" alt="OMG!" style="max-width: 400px; max-height: 300px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            </div>
-        </div>
-        
-        <div class="result-container" id="resultContainer"></div>
-        
-        <div style="margin-top: 30px; text-align: center;">
-            <button type="submit" class="btn" id="submitBtn" style="padding: 15px 40px; font-size: 16px;">
-                🚀 Lancer l'import
-            </button>
-        </div>
-    </form>
-    
-    <!-- Section Restauration de Backups -->
-    <div style="margin-top: 60px; padding-top: 40px; border-top: 2px solid #e9ecef;">
-        <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 700; color: #111111;">🔄 Restaurer un Backup</h2>
-        
-        <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
-            <strong>⚠️ Attention :</strong>
-            <ul>
-                <li>La restauration va <strong>remplacer</strong> tous les restaurants actuels</li>
-                <li>Un backup de sécurité sera créé automatiquement avant la restauration</li>
-                <li>Cette opération est irréversible (sauf si vous restaurez à nouveau)</li>
+    <!-- Info box -->
+    <div class="alert alert-info">
+        <div>
+            <strong>Instructions :</strong>
+            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                <li>Le fichier Excel doit contenir les colonnes requises (Ref, Nom de base, Vrai Nom, Adresse, etc.)</li>
+                <li>La premiere ligne doit contenir les en-tetes de colonnes</li>
+                <li>Un backup automatique sera cree avant l'import</li>
+                <li>La collection actuelle sera <strong>remplacee</strong> par les nouvelles donnees</li>
+                <li>Le processus peut prendre plusieurs minutes selon le nombre de restaurants</li>
+                <li><strong>Environnement actif :</strong> {{ firebase_env_label }}</li>
             </ul>
         </div>
-        
-        <div style="margin-top: 20px; text-align: right;">
-            <button type="button" class="btn" id="refreshBackupsBtn" style="margin-bottom: 20px; padding: 10px 20px;">
-                🔄 Actualiser la liste
-            </button>
-        </div>
-        
-        <div id="backupsContainer" style="margin-top: 20px;">
-            <div id="backupsLoading" style="text-align: center; padding: 40px; color: #6c757d; display: none;">
-                <p>⏳ Chargement des backups...</p>
+    </div>
+
+    <!-- Outils d'analyse -->
+    <div class="card bg-base-100 shadow-sm border border-base-300" x-data="{ showResult: false }">
+        <div class="card-body">
+            <h3 class="card-title text-lg font-serif text-primary">Outils d'analyse</h3>
+            <p class="text-secondary text-sm mb-4">Analysez et validez votre fichier avant l'import :</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button type="button" class="btn btn-primary" onclick="devFunction1()">
+                    Analyser le fichier Excel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="devFunction2()">
+                    Previsualiser les donnees
+                </button>
+                <button type="button" class="btn btn-primary" onclick="devFunction3()">
+                    Test d'import partiel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="devFunction4()">
+                    Valider les donnees
+                </button>
             </div>
-            
-            <div id="backupsSelectContainer" style="display: none;">
-                <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #C9C1B1;">
-                    <label for="backupSelect" style="display: block; margin-bottom: 10px; font-weight: 600; color: #111111;">
-                        📦 Sélectionner un backup à restaurer :
+
+            <div id="devResult" class="mt-4 p-4 bg-base-200 rounded-lg hidden"></div>
+        </div>
+    </div>
+
+    <!-- Import form -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <form id="importForm" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Upload area -->
+                <div id="uploadArea" class="border-2 border-dashed border-base-300 rounded-lg p-10 text-center cursor-pointer transition-colors hover:border-primary hover:bg-base-200">
+                    <div class="text-5xl mb-4">📄</div>
+                    <h3 class="text-lg font-semibold text-base-content">Glissez-deposez votre fichier Excel ici</h3>
+                    <p class="text-secondary my-2">ou</p>
+                    <button type="button" class="btn btn-ghost" onclick="console.log('Bouton clique'); document.getElementById('excel_file').click();">
+                        Parcourir les fichiers
+                    </button>
+                    <input type="file" id="excel_file" name="excel_file" class="hidden" accept=".xlsx,.xls" required onchange="console.log('Input change detecte directement:', this.files.length);">
+                </div>
+
+                <!-- File info -->
+                <div class="mt-4 p-4 bg-base-200 rounded-lg hidden" id="fileInfo">
+                    <strong>Fichier selectionne :</strong> <span id="fileName"></span>
+                    <br>
+                    <strong>Taille :</strong> <span id="fileSize"></span>
+                </div>
+
+                <!-- Sheet selector -->
+                <div class="form-control mt-5">
+                    <label for="sheet_name" class="label">
+                        <span class="label-text font-medium">Feuille Excel a importer :</span>
                     </label>
-                    <select id="backupSelect" 
-                            style="width: 100%; padding: 12px; border: none; border-radius: 0; font-size: 16px; background: #F1EFEB; color: #111111;">
-                        <option value="">-- Sélectionner un backup --</option>
+                    <select
+                        id="sheet_name"
+                        name="sheet_name"
+                        class="select select-bordered w-full"
+                        disabled
+                    >
+                        <option value="">Selectionnez un fichier Excel d'abord</option>
                     </select>
-                    <div id="backupInfo" style="margin-top: 15px; padding: 15px; background: #F1EFEB; border-radius: 8px; display: none;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                            <div>
-                                <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">📅 Date/Heure</span>
-                                <span id="backupDate" style="font-weight: 600; color: #111111;"></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">🍽️ Restaurants</span>
-                                <span id="backupCount" style="font-weight: 600; color: #111111;"></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 12px; color: #535353; display: block; margin-bottom: 5px;">💾 Taille</span>
-                                <span id="backupSize" style="font-weight: 600; color: #111111;"></span>
+                    <label class="label">
+                        <span class="label-text-alt text-secondary">Les feuilles disponibles seront chargees automatiquement apres la selection du fichier</span>
+                    </label>
+                </div>
+
+                <!-- Progress container -->
+                <div class="mt-5 hidden" id="progressContainer">
+                    <!-- Laura.gif -->
+                    <div id="lauraGifContainer" class="mb-5 text-center hidden">
+                        <h3 class="mb-2 text-base-content text-2xl font-bold">let me cook</h3>
+                        <img id="lauraGif" src="{% static 'loading_gifs/Laura.gif' %}" alt="Laura cooking" class="max-w-sm max-h-72 rounded-xl shadow-md mx-auto">
+                    </div>
+
+                    <!-- Progress bar -->
+                    <progress id="progressFill" class="progress progress-primary w-full h-8" value="0" max="100"></progress>
+                    <p id="progressText" class="text-center mt-2 text-secondary">Preparation de l'import...</p>
+                    <p id="progressPercent" class="text-center font-bold text-base-content">0%</p>
+
+                    <!-- Terminal -->
+                    <div id="terminalContainer" class="mt-5 hidden">
+                        <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                            <div id="terminalContent" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6;">
+                                <span style="color: #4ec9b0;">Demarrage de l'import...</span>
                             </div>
                         </div>
                     </div>
+
+                    <!-- omg.gif -->
+                    <div id="omgGifContainer" class="mt-5 text-center hidden">
+                        <img id="omgGif" src="{% static 'loading_gifs/omg.gif' %}" alt="OMG!" class="max-w-sm max-h-72 rounded-xl shadow-md mx-auto">
+                    </div>
                 </div>
-                
-                <div style="text-align: center;">
-                    <button type="button" class="btn-primary" id="restoreBtn" style="padding: 15px 40px; font-size: 16px; display: none;">
-                        🔄 Restaurer ce backup
+
+                <!-- Result container -->
+                <div id="resultContainer" class="mt-5 hidden"></div>
+
+                <!-- Submit -->
+                <div class="mt-8 text-center">
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        Lancer l'import
                     </button>
                 </div>
-            </div>
-            
-            <div id="backupsEmpty" style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px; display: none;">
-                <p style="color: #6c757d;">📦 Aucun backup disponible</p>
-                <p style="color: #6c757d; margin-top: 10px; font-size: 14px;">Les backups sont créés automatiquement lors des imports de restaurants.</p>
-            </div>
+            </form>
         </div>
-        
-        <div id="restoreResult" class="result-container" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- Backup Restoration Section -->
+    <div class="divider"></div>
+
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-2xl font-serif text-base-content">Restaurer un Backup</h2>
+
+            <div class="alert alert-warning mt-4">
+                <div>
+                    <strong>Attention :</strong>
+                    <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                        <li>La restauration va <strong>remplacer</strong> tous les restaurants actuels</li>
+                        <li>Un backup de securite sera cree automatiquement avant la restauration</li>
+                        <li>Cette operation est irreversible (sauf si vous restaurez a nouveau)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4 text-right">
+                <button type="button" class="btn btn-ghost" id="refreshBackupsBtn">
+                    Actualiser la liste
+                </button>
+            </div>
+
+            <div id="backupsContainer" class="mt-4">
+                <div id="backupsLoading" class="text-center py-10 text-secondary hidden">
+                    <span class="loading loading-spinner loading-lg"></span>
+                    <p class="mt-2">Chargement des backups...</p>
+                </div>
+
+                <div id="backupsSelectContainer" class="hidden">
+                    <div class="bg-base-200 p-5 rounded-lg mb-4">
+                        <label for="backupSelect" class="label">
+                            <span class="label-text font-semibold text-base-content">Selectionner un backup a restaurer :</span>
+                        </label>
+                        <select id="backupSelect" class="select select-bordered w-full bg-base-200 text-base-content">
+                            <option value="">-- Selectionner un backup --</option>
+                        </select>
+                        <div id="backupInfo" class="mt-4 p-4 bg-base-200 rounded-lg hidden">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <span class="text-xs text-secondary block mb-1">Date/Heure</span>
+                                    <span id="backupDate" class="font-semibold text-base-content"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-secondary block mb-1">Restaurants</span>
+                                    <span id="backupCount" class="font-semibold text-base-content"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-secondary block mb-1">Taille</span>
+                                    <span id="backupSize" class="font-semibold text-base-content"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary btn-lg hidden" id="restoreBtn">
+                            Restaurer ce backup
+                        </button>
+                    </div>
+                </div>
+
+                <div id="backupsEmpty" class="card bg-base-200 hidden">
+                    <div class="card-body items-center text-center py-10">
+                        <p class="text-secondary">Aucun backup disponible</p>
+                        <p class="text-secondary text-sm mt-2">Les backups sont crees automatiquement lors des imports de restaurants.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="restoreResult" class="mt-5 hidden"></div>
+        </div>
     </div>
 </div>
 
 <script>
-console.log('🚀 Script d\'import restaurants chargé');
+console.log('Script d\'import restaurants charge');
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOMContentLoaded déclenché');
+    console.log('DOMContentLoaded declenche');
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('excel_file');
     const fileInfo = document.getElementById('fileInfo');
     const fileName = document.getElementById('fileName');
     const fileSize = document.getElementById('fileSize');
     const importForm = document.getElementById('importForm');
-    
-    // Test de base pour vérifier que les éléments existent
-    console.log('🔧 Initialisation - fileInput:', fileInput);
-    console.log('🔧 Initialisation - fileInfo:', fileInfo);
-    console.log('🔧 Initialisation - importForm:', importForm);
-    
+
+    // Test de base pour verifier que les elements existent
+    console.log('Initialisation - fileInput:', fileInput);
+    console.log('Initialisation - fileInfo:', fileInfo);
+    console.log('Initialisation - importForm:', importForm);
+
     if (!fileInput) {
-        console.error('❌ fileInput introuvable !');
+        console.error('fileInput introuvable !');
         return;
     }
-    
-    console.log('✅ Tous les éléments trouvés, initialisation des event listeners');
+
+    console.log('Tous les elements trouves, initialisation des event listeners');
     const progressContainer = document.getElementById('progressContainer');
     const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
     const progressText = document.getElementById('progressText');
     const resultContainer = document.getElementById('resultContainer');
     const submitBtn = document.getElementById('submitBtn');
-    
+
+    // Helper to update progress bar
+    function setProgress(value) {
+        progressFill.value = value;
+        progressPercent.textContent = Math.round(value) + '%';
+    }
+
     // Gestion du drag & drop
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
-        uploadArea.classList.add('dragover');
+        uploadArea.classList.remove('border-base-300');
+        uploadArea.classList.add('border-success', 'bg-success/10');
     });
-    
+
     uploadArea.addEventListener('dragleave', function(e) {
         e.preventDefault();
-        uploadArea.classList.remove('dragover');
+        uploadArea.classList.remove('border-success', 'bg-success/10');
+        uploadArea.classList.add('border-base-300');
     });
-    
+
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        uploadArea.classList.remove('dragover');
+        uploadArea.classList.remove('border-success', 'bg-success/10');
+        uploadArea.classList.add('border-base-300');
         const files = e.dataTransfer.files;
-        console.log('📥 Fichiers déposés:', files.length);
+        console.log('Fichiers deposes:', files.length);
         if (files.length > 0) {
-            // Créer un nouveau DataTransfer pour assigner les fichiers
+            // Creer un nouveau DataTransfer pour assigner les fichiers
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(files[0]);
             fileInput.files = dataTransfer.files;
-            console.log('✅ Fichier assigné à l\'input:', fileInput.files.length);
+            console.log('Fichier assigne a l\'input:', fileInput.files.length);
             handleFileSelect(files[0]);
         }
     });
-    
+
     fileInput.addEventListener('change', function(e) {
-        console.log('📁 Event change déclenché');
-        console.log('📁 Fichier sélectionné:', e.target.files);
-        console.log('📁 Nombre de fichiers:', e.target.files.length);
-        
+        console.log('Event change declenche');
+        console.log('Fichier selectionne:', e.target.files);
+        console.log('Nombre de fichiers:', e.target.files.length);
+
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            console.log('📄 Nom du fichier:', file.name);
-            console.log('📄 Taille du fichier:', file.size);
+            console.log('Nom du fichier:', file.name);
+            console.log('Taille du fichier:', file.size);
             handleFileSelect(file);
         } else {
-            console.warn('⚠️ Aucun fichier sélectionné ou files est null');
+            console.warn('Aucun fichier selectionne ou files est null');
         }
     });
-    
-    // Vérifier aussi si l'input est réinitialisé quelque part
+
+    // Verifier aussi si l'input est reinitialise quelque part
     const originalReset = importForm.reset;
     importForm.reset = function() {
-        console.log('🔄 Formulaire réinitialisé');
+        console.log('Formulaire reinitialise');
         originalReset.call(this);
-        // Réinitialiser le select aussi
+        // Reinitialiser le select aussi
         const sheetSelect = document.getElementById('sheet_name');
         if (sheetSelect) {
             sheetSelect.disabled = true;
-            sheetSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+            sheetSelect.innerHTML = '<option value="">Selectionnez un fichier Excel d\'abord</option>';
         }
     };
-    
+
     function handleFileSelect(file) {
-        console.log('🔍 handleFileSelect appelé avec:', file.name);
-        
+        console.log('handleFileSelect appele avec:', file.name);
+
         if (!file) {
-            console.error('❌ Fichier est null ou undefined');
+            console.error('Fichier est null ou undefined');
             return;
         }
-        
+
         const sheetSelect = document.getElementById('sheet_name');
-        
+
         if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-            console.warn('⚠️ Fichier non Excel:', file.name);
-            alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
-            // Réinitialiser le select
+            console.warn('Fichier non Excel:', file.name);
+            alert('Veuillez selectionner un fichier Excel (.xlsx ou .xls)');
+            // Reinitialiser le select
             if (sheetSelect) {
                 sheetSelect.disabled = true;
-                sheetSelect.innerHTML = '<option value="">Sélectionnez un fichier Excel d\'abord</option>';
+                sheetSelect.innerHTML = '<option value="">Selectionnez un fichier Excel d\'abord</option>';
             }
-            // Réinitialiser l'affichage du fichier
+            // Reinitialiser l'affichage du fichier
             fileName.textContent = '';
             fileSize.textContent = '';
-            fileInfo.classList.remove('active');
+            fileInfo.classList.add('hidden');
             return;
         }
-        
-        console.log('✅ Fichier Excel valide, mise à jour de l\'affichage');
+
+        console.log('Fichier Excel valide, mise a jour de l\'affichage');
         fileName.textContent = file.name;
         fileSize.textContent = formatFileSize(file.size);
-        fileInfo.classList.add('active');
-        
-        // Analyser les feuilles du fichier Excel (en arrière-plan, ne bloque pas)
+        fileInfo.classList.remove('hidden');
+
+        // Analyser les feuilles du fichier Excel (en arriere-plan, ne bloque pas)
         try {
-            console.log('📊 Démarrage de l\'analyse des feuilles...');
+            console.log('Demarrage de l\'analyse des feuilles...');
             analyzeExcelSheets(file);
         } catch (error) {
-            console.error('❌ Erreur lors de l\'analyse des feuilles:', error);
-            // En cas d'erreur, utiliser Feuil1 par défaut
+            console.error('Erreur lors de l\'analyse des feuilles:', error);
+            // En cas d'erreur, utiliser Feuil1 par defaut
             if (sheetSelect) {
-                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par defaut)</option>';
                 sheetSelect.disabled = false;
             }
         }
     }
-    
+
     function analyzeExcelSheets(file) {
-        console.log('📋 analyzeExcelSheets appelé avec:', file.name);
+        console.log('analyzeExcelSheets appele avec:', file.name);
         const sheetSelect = document.getElementById('sheet_name');
-        
+
         if (!sheetSelect) {
-            console.error('❌ Select sheet_name introuvable');
+            console.error('Select sheet_name introuvable');
             return;
         }
-        
+
         sheetSelect.disabled = true;
-        sheetSelect.innerHTML = '<option value="">⏳ Analyse des feuilles en cours...</option>';
-        
+        sheetSelect.innerHTML = '<option value="">Analyse des feuilles en cours...</option>';
+
         const formData = new FormData();
         formData.append('excel_file', file);
-        
-        console.log('📤 Envoi de la requête pour analyser les feuilles...');
-        
+
+        console.log('Envoi de la requete pour analyser les feuilles...');
+
         fetch('{% url "scripts_manager:analyze_excel_sheets" %}', {
             method: 'POST',
             body: formData,
@@ -445,13 +372,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(response => {
-            console.log('📥 Réponse reçue:', response.status);
+            console.log('Reponse recue:', response.status);
             return response.json();
         })
         .then(data => {
-            console.log('📊 Données reçues:', data);
+            console.log('Donnees recues:', data);
             if (data.success && data.sheets && data.sheets.length > 0) {
-                console.log('✅ Feuilles trouvées:', data.sheets);
+                console.log('Feuilles trouvees:', data.sheets);
                 sheetSelect.innerHTML = '';
                 data.sheets.forEach(sheet => {
                     const option = document.createElement('option');
@@ -463,22 +390,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     sheetSelect.appendChild(option);
                 });
                 sheetSelect.disabled = false;
-                console.log('✅ Select mis à jour avec', data.sheets.length, 'feuilles');
+                console.log('Select mis a jour avec', data.sheets.length, 'feuilles');
             } else {
-                console.warn('⚠️ Aucune feuille trouvée, utilisation de Feuil1 par défaut');
-                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+                console.warn('Aucune feuille trouvee, utilisation de Feuil1 par defaut');
+                sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par defaut)</option>';
                 sheetSelect.disabled = false;
             }
         })
         .catch(error => {
-            console.error('❌ Erreur lors de l\'analyse des feuilles:', error);
-            sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par défaut)</option>';
+            console.error('Erreur lors de l\'analyse des feuilles:', error);
+            sheetSelect.innerHTML = '<option value="Feuil1" selected>Feuil1 (par defaut)</option>';
             sheetSelect.disabled = false;
-            // Afficher un message d'avertissement mais permettre quand même l'import
-            console.warn('Impossible d\'analyser les feuilles, utilisation de "Feuil1" par défaut');
+            // Afficher un message d'avertissement mais permettre quand meme l'import
+            console.warn('Impossible d\'analyser les feuilles, utilisation de "Feuil1" par defaut');
         });
     }
-    
+
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -486,22 +413,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
-    
+
     importForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         if (!fileInput.files.length) {
-            alert('Veuillez sélectionner un fichier Excel');
+            alert('Veuillez selectionner un fichier Excel');
             return;
         }
-        
+
         const sheetSelect = document.getElementById('sheet_name');
-        // Vérifier seulement si le select est activé et a des options mais aucune sélectionnée
+        // Verifier seulement si le select est active et a des options mais aucune selectionnee
         if (!sheetSelect.disabled && sheetSelect.options.length > 1 && !sheetSelect.value) {
-            alert('Veuillez sélectionner une feuille Excel');
+            alert('Veuillez selectionner une feuille Excel');
             return;
         }
-        
+
         // Confirmation avec lapin.gif
         const confirmModal = document.createElement('div');
         confirmModal.id = 'confirmModal';
@@ -509,10 +436,10 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal.innerHTML = `
             <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <img src="{% static 'loading_gifs/lapin.gif' %}" alt="Lapin" style="max-width: 300px; max-height: 250px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 15px; color: #111111;">⚠️ ATTENTION</h3>
+                <h3 style="margin-bottom: 15px; color: #111111;">ATTENTION</h3>
                 <p style="margin-bottom: 20px; color: #535353; line-height: 1.6;">
-                    Cette opération va remplacer TOUS les restaurants actuels.<br><br>
-                    Un backup sera créé automatiquement.<br><br>
+                    Cette operation va remplacer TOUS les restaurants actuels.<br><br>
+                    Un backup sera cree automatiquement.<br><br>
                     Voulez-vous continuer ?
                 </p>
                 <div style="display: flex; gap: 10px; justify-content: center;">
@@ -522,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         document.body.appendChild(confirmModal);
-        
+
         // Attendre la confirmation
         const confirmed = await new Promise((resolve) => {
             document.getElementById('confirmYes').onclick = () => {
@@ -534,14 +461,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 resolve(false);
             };
         });
-        
+
         if (!confirmed) {
             return;
         }
-        
+
         const formData = new FormData(importForm);
-        // Récupérer la feuille sélectionnée, ou utiliser la première option, ou 'Feuil1' par défaut
-        // sheetSelect est déjà déclaré plus haut dans la fonction
+        // Recuperer la feuille selectionnee, ou utiliser la premiere option, ou 'Feuil1' par defaut
+        // sheetSelect est deja declare plus haut dans la fonction
         let sheetName = 'Feuil1';
         if (sheetSelect && !sheetSelect.disabled && sheetSelect.value) {
             sheetName = sheetSelect.value;
@@ -549,42 +476,42 @@ document.addEventListener('DOMContentLoaded', function() {
             sheetName = sheetSelect.options[0].value;
         }
         formData.set('sheet_name', sheetName);
-        
+
         // Afficher le loader
-        progressContainer.classList.add('active');
-        progressFill.style.width = '10%';
+        progressContainer.classList.remove('hidden');
+        setProgress(10);
         progressText.textContent = 'Upload du fichier...';
         submitBtn.disabled = true;
-        resultContainer.style.display = 'none';
-        
+        resultContainer.classList.add('hidden');
+        resultContainer.innerHTML = '';
+
         // Afficher Laura.gif avec "let me cook"
-        document.getElementById('lauraGifContainer').style.display = 'block';
-        
+        document.getElementById('lauraGifContainer').classList.remove('hidden');
+
         // Afficher le terminal
-        document.getElementById('terminalContainer').style.display = 'block';
+        document.getElementById('terminalContainer').classList.remove('hidden');
         const terminalContent = document.getElementById('terminalContent');
-        terminalContent.innerHTML = '<span style="color: #4ec9b0;">🚀 Démarrage de l\'import...</span>\n';
-        
+        terminalContent.innerHTML = '<span style="color: #4ec9b0;">Demarrage de l\'import...</span>\n';
+
         // Masquer omg.gif si visible
-        document.getElementById('omgGifContainer').style.display = 'none';
-        
-        // Variable pour stocker le chemin du log (sera récupéré après l'upload)
+        document.getElementById('omgGifContainer').classList.add('hidden');
+
+        // Variable pour stocker le chemin du log (sera recupere apres l'upload)
         let logFilePath = null;
-        
-        // Simuler la progression (sera remplacée par les vrais logs)
+
+        // Simuler la progression (sera remplacee par les vrais logs)
         let progress = 10;
         const progressInterval = setInterval(() => {
             progress += Math.random() * 3;
-            if (progress > 95) progress = 95; // Ne pas aller à 100% avant la fin
-            progressFill.style.width = progress + '%';
-            progressFill.textContent = Math.round(progress) + '%';
+            if (progress > 95) progress = 95; // Ne pas aller a 100% avant la fin
+            setProgress(progress);
         }, 1000);
-        
-        // Fonction pour récupérer et afficher les logs
+
+        // Fonction pour recuperer et afficher les logs
         let logPollingInterval = null;
         function startLogPolling(logFile) {
             if (logPollingInterval) clearInterval(logPollingInterval);
-            
+
             logPollingInterval = setInterval(() => {
                 fetch(`{% url "scripts_manager:get_import_logs" %}?log_file=${encodeURIComponent(logFile)}`)
                     .then(response => response.json())
@@ -601,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     else if (line.includes('⚠️')) color = '#dcdcaa';
                                     else if (line.includes('📊') || line.includes('📥')) color = '#569cd6';
                                     else if (line.includes('🗄️') || line.includes('🔄')) color = '#c586c0';
-                                    
+
                                     formattedLogs += `<span style="color: ${color};">${escapeHtml(line)}</span>\n`;
                                 }
                             });
@@ -612,20 +539,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .catch(error => {
-                        console.error('Erreur lors de la récupération des logs:', error);
+                        console.error('Erreur lors de la recuperation des logs:', error);
                     });
             }, 1000); // Poll toutes les secondes
         }
-        
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
-        // Démarrer le polling des logs dès que le log_file est disponible
-        // On va le démarrer après avoir reçu la réponse de l'upload
-        
+
+        // Demarrer le polling des logs des que le log_file est disponible
+        // On va le demarrer apres avoir recu la reponse de l'upload
+
         fetch('{% url "scripts_manager:run_import_restaurants" %}', {
             method: 'POST',
             body: formData,
@@ -635,11 +562,11 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            // Si l'import est en cours (status: running), démarrer le polling
+            // Si l'import est en cours (status: running), demarrer le polling
             if (data.status === 'running' && data.log_file) {
                 startLogPolling(data.log_file);
-                
-                // Vérifier périodiquement si l'import est terminé
+
+                // Verifier periodiquement si l'import est termine
                 const checkCompletion = setInterval(() => {
                     fetch(`{% url "scripts_manager:get_import_logs" %}?log_file=${encodeURIComponent(data.log_file)}`)
                         .then(response => response.json())
@@ -655,116 +582,121 @@ document.addEventListener('DOMContentLoaded', function() {
                                         else if (line.includes('⚠️')) color = '#dcdcaa';
                                         else if (line.includes('📊') || line.includes('📥')) color = '#569cd6';
                                         else if (line.includes('🗄️') || line.includes('🔄')) color = '#c586c0';
-                                        
+
                                         formattedLogs += `<span style="color: ${color};">${escapeHtml(line)}</span>\n`;
                                     }
                                 });
                                 terminalContent.innerHTML = formattedLogs;
                                 const terminalDiv = terminalContent.parentElement;
                                 terminalDiv.scrollTop = terminalDiv.scrollHeight;
-                                
-                                // Vérifier si l'import est terminé
+
+                                // Verifier si l'import est termine
                                 if (logData.logs.includes('Fin de workflow') || logData.logs.includes('🎉')) {
                                     clearInterval(checkCompletion);
                                     if (logPollingInterval) clearInterval(logPollingInterval);
-                                    
+
                                     clearInterval(progressInterval);
-                                    progressFill.style.width = '100%';
-                                    progressFill.textContent = '100%';
-                                    
+                                    setProgress(100);
+
                                     // Masquer Laura.gif et afficher omg.gif
-                                    document.getElementById('lauraGifContainer').style.display = 'none';
-                                    document.getElementById('omgGifContainer').style.display = 'block';
-                                    
-                                    // Récupérer les résultats finaux depuis le log (parser les dernières lignes)
-                                    // Pour l'instant, on affiche juste un message de succès
-                                    progressText.textContent = 'Import terminé avec succès !';
-                                    resultContainer.className = 'result-container success';
+                                    document.getElementById('lauraGifContainer').classList.add('hidden');
+                                    document.getElementById('omgGifContainer').classList.remove('hidden');
+
+                                    // Recuperer les resultats finaux depuis le log (parser les dernieres lignes)
+                                    // Pour l'instant, on affiche juste un message de succes
+                                    progressText.textContent = 'Import termine avec succes !';
+                                    resultContainer.className = 'alert alert-success mt-5';
                                     resultContainer.innerHTML = `
-                                        <h3>✅ Import terminé !</h3>
-                                        <p>Consultez les logs ci-dessus pour les détails.</p>
-                                        <p><strong>Log :</strong> ${data.log_file}</p>
+                                        <div>
+                                            <h3 class="font-bold">Import termine !</h3>
+                                            <p>Consultez les logs ci-dessus pour les details.</p>
+                                            <p><strong>Log :</strong> ${data.log_file}</p>
+                                        </div>
                                     `;
-                                    resultContainer.style.display = 'block';
-                                    
-                                    // Réinitialiser le formulaire après 5 secondes
+
+                                    // Reinitialiser le formulaire apres 5 secondes
                                     setTimeout(() => {
                                         importForm.reset();
-                                        fileInfo.classList.remove('active');
-                                        progressContainer.classList.remove('active');
+                                        fileInfo.classList.add('hidden');
+                                        progressContainer.classList.add('hidden');
                                         submitBtn.disabled = false;
-                                        document.getElementById('omgGifContainer').style.display = 'none';
+                                        document.getElementById('omgGifContainer').classList.add('hidden');
                                     }, 5000);
                                 }
                             }
                         })
                         .catch(error => {
-                            console.error('Erreur lors de la vérification des logs:', error);
+                            console.error('Erreur lors de la verification des logs:', error);
                         });
-                }, 2000); // Vérifier toutes les 2 secondes
+                }, 2000); // Verifier toutes les 2 secondes
             } else if (data.success) {
-                // Import terminé immédiatement (cas peu probable)
+                // Import termine immediatement (cas peu probable)
                 clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                progressFill.textContent = '100%';
-                
-                document.getElementById('lauraGifContainer').style.display = 'none';
-                document.getElementById('omgGifContainer').style.display = 'block';
-                
-                progressText.textContent = 'Import terminé avec succès !';
-                resultContainer.className = 'result-container success';
-                
+                setProgress(100);
+
+                document.getElementById('lauraGifContainer').classList.add('hidden');
+                document.getElementById('omgGifContainer').classList.remove('hidden');
+
+                progressText.textContent = 'Import termine avec succes !';
+
                 let favoriteStatsHtml = '';
                 if (data.favorite_count_stats) {
                     const favStats = data.favorite_count_stats;
                     if (favStats.updated !== undefined) {
                         favoriteStatsHtml = `
-                            <div style="margin-top: 15px; padding: 15px; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                                <h4 style="margin-top: 0; color: #667eea;">❤️ Compteurs de favoris mis à jour</h4>
-                                <p><strong>${favStats.updated || 0}</strong> restaurants mis à jour</p>
-                                <p><strong>${favStats.zero_initialized || 0}</strong> restaurants initialisés à 0</p>
-                                <p><strong>${favStats.active_favorites || 0}</strong> favoris actifs au total</p>
-                                ${favStats.errors > 0 ? `<p style="color: #dc3545;">⚠️ ${favStats.errors} erreurs</p>` : ''}
+                            <div class="alert alert-info mt-4">
+                                <div>
+                                    <h4 class="font-bold">Compteurs de favoris mis a jour</h4>
+                                    <p><strong>${favStats.updated || 0}</strong> restaurants mis a jour</p>
+                                    <p><strong>${favStats.zero_initialized || 0}</strong> restaurants initialises a 0</p>
+                                    <p><strong>${favStats.active_favorites || 0}</strong> favoris actifs au total</p>
+                                    ${favStats.errors > 0 ? `<p class="text-error">${favStats.errors} erreurs</p>` : ''}
+                                </div>
                             </div>
                         `;
                     } else if (favStats.error) {
                         favoriteStatsHtml = `
-                            <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-                                <p style="color: #856404;">⚠️ Erreur lors de la mise à jour des compteurs de favoris: ${favStats.error}</p>
+                            <div class="alert alert-warning mt-4">
+                                <div>
+                                    <p>Erreur lors de la mise a jour des compteurs de favoris: ${favStats.error}</p>
+                                </div>
                             </div>
                         `;
                     }
                 }
-                
+
+                resultContainer.className = 'alert alert-success mt-5';
                 resultContainer.innerHTML = `
-                    <h3>✅ Import réussi !</h3>
-                    <p><strong>${data.imported}</strong> restaurants importés</p>
-                    ${data.duplicates > 0 ? `<p>⚠️ ${data.duplicates} IDs dupliqués détectés</p>` : ''}
-                    ${data.missing_tag_rows > 0 ? `<p>⚠️ ${data.missing_tag_rows} lignes sans tag (Ref)</p>` : ''}
-                    <p><strong>Backup :</strong> ${data.backup_dir}</p>
-                    <p><strong>Log :</strong> ${data.log_file}</p>
-                    ${favoriteStatsHtml}
+                    <div>
+                        <h3 class="font-bold">Import reussi !</h3>
+                        <p><strong>${data.imported}</strong> restaurants importes</p>
+                        ${data.duplicates > 0 ? `<p>${data.duplicates} IDs dupliques detectes</p>` : ''}
+                        ${data.missing_tag_rows > 0 ? `<p>${data.missing_tag_rows} lignes sans tag (Ref)</p>` : ''}
+                        <p><strong>Backup :</strong> ${data.backup_dir}</p>
+                        <p><strong>Log :</strong> ${data.log_file}</p>
+                        ${favoriteStatsHtml}
+                    </div>
                 `;
-                resultContainer.style.display = 'block';
-                
+
                 setTimeout(() => {
                     importForm.reset();
-                    fileInfo.classList.remove('active');
-                    progressContainer.classList.remove('active');
+                    fileInfo.classList.add('hidden');
+                    progressContainer.classList.add('hidden');
                     submitBtn.disabled = false;
                 }, 5000);
             } else {
                 clearInterval(progressInterval);
                 progressText.textContent = 'Erreur lors de l\'import';
-                document.getElementById('lauraGifContainer').style.display = 'none';
+                document.getElementById('lauraGifContainer').classList.add('hidden');
                 if (logPollingInterval) clearInterval(logPollingInterval);
-                resultContainer.className = 'result-container error';
+                resultContainer.className = 'alert alert-error mt-5';
                 resultContainer.innerHTML = `
-                    <h3>❌ Erreur</h3>
-                    <p>${data.error || 'Une erreur est survenue lors de l\'import'}</p>
-                    ${data.traceback ? `<pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">${data.traceback}</pre>` : ''}
+                    <div>
+                        <h3 class="font-bold">Erreur</h3>
+                        <p>${data.error || 'Une erreur est survenue lors de l\'import'}</p>
+                        ${data.traceback ? `<pre class="bg-base-100 p-3 rounded text-xs overflow-x-auto mt-2">${data.traceback}</pre>` : ''}
+                    </div>
                 `;
-                resultContainer.style.display = 'block';
                 submitBtn.disabled = false;
             }
         })
@@ -772,18 +704,19 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(progressInterval);
             if (logPollingInterval) clearInterval(logPollingInterval);
             // Masquer Laura.gif
-            document.getElementById('lauraGifContainer').style.display = 'none';
+            document.getElementById('lauraGifContainer').classList.add('hidden');
             progressText.textContent = 'Erreur lors de l\'import';
-            resultContainer.className = 'result-container error';
+            resultContainer.className = 'alert alert-error mt-5';
             resultContainer.innerHTML = `
-                <h3>❌ Erreur</h3>
-                <p>Une erreur est survenue : ${error.message}</p>
+                <div>
+                    <h3 class="font-bold">Erreur</h3>
+                    <p>Une erreur est survenue : ${error.message}</p>
+                </div>
             `;
-            resultContainer.style.display = 'block';
             submitBtn.disabled = false;
         });
     });
-    
+
     // Gestion des backups
     const refreshBackupsBtn = document.getElementById('refreshBackupsBtn');
     const backupsLoading = document.getElementById('backupsLoading');
@@ -791,7 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const backupsTableBody = document.getElementById('backupsTableBody');
     const backupsEmpty = document.getElementById('backupsEmpty');
     const restoreResult = document.getElementById('restoreResult');
-    
+
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -799,11 +732,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
-    
+
     function formatDate(timestamp) {
         if (!timestamp) return 'Date inconnue';
         try {
-            // Essayer de parser différents formats
+            // Essayer de parser differents formats
             const date = new Date(timestamp);
             if (isNaN(date.getTime())) {
                 return timestamp; // Retourner tel quel si non parsable
@@ -819,96 +752,94 @@ document.addEventListener('DOMContentLoaded', function() {
             return timestamp;
         }
     }
-    
+
     function loadBackups() {
-        // Vérifier que les éléments existent avant de les utiliser
+        // Verifier que les elements existent avant de les utiliser
         if (!backupsLoading || !backupsList || !backupsEmpty || !restoreResult) {
-            console.warn('⚠️ Éléments de backup introuvables, fonction loadBackups ignorée');
+            console.warn('Elements de backup introuvables, fonction loadBackups ignoree');
             return;
         }
-        
-        backupsLoading.style.display = 'block';
-        backupsList.style.display = 'none';
-        backupsEmpty.style.display = 'none';
-        restoreResult.style.display = 'none';
-        
+
+        backupsLoading.classList.remove('hidden');
+        backupsList.classList.add('hidden');
+        backupsEmpty.classList.add('hidden');
+        restoreResult.classList.add('hidden');
+
         fetch('{% url "scripts_manager:list_backups" %}')
             .then(response => response.json())
             .then(data => {
                 if (backupsLoading) {
-                    backupsLoading.style.display = 'none';
+                    backupsLoading.classList.add('hidden');
                 }
-                
+
                 if (data.success && data.backups && data.backups.length > 0) {
                     if (backupsTableBody) {
                         backupsTableBody.innerHTML = '';
-                        
+
                         data.backups.forEach(backup => {
                             const row = document.createElement('tr');
                             row.style.borderBottom = '1px solid #e9ecef';
-                            
+
                             const dateCell = document.createElement('td');
                             dateCell.style.padding = '12px';
                             dateCell.textContent = formatDate(backup.timestamp);
-                            
+
                             const countCell = document.createElement('td');
                             countCell.style.padding = '12px';
                             countCell.textContent = backup.count || 'N/A';
-                            
+
                             const sizeCell = document.createElement('td');
                             sizeCell.style.padding = '12px';
                             sizeCell.textContent = formatFileSize(backup.size || 0);
-                            
+
                             const actionsCell = document.createElement('td');
                             actionsCell.style.padding = '12px';
                             actionsCell.style.textAlign = 'center';
-                            
+
                             const restoreBtn = document.createElement('button');
-                            restoreBtn.className = 'btn';
-                            restoreBtn.style.padding = '8px 16px';
-                            restoreBtn.style.margin = '0 5px';
-                            restoreBtn.textContent = '🔄 Restaurer';
+                            restoreBtn.className = 'btn btn-primary btn-sm';
+                            restoreBtn.textContent = 'Restaurer';
                             restoreBtn.onclick = () => restoreBackup(backup.backup_dir, backup.backup_name);
-                            
+
                             actionsCell.appendChild(restoreBtn);
-                            
+
                             row.appendChild(dateCell);
                             row.appendChild(countCell);
                             row.appendChild(sizeCell);
                             row.appendChild(actionsCell);
-                            
+
                             backupsTableBody.appendChild(row);
                         });
                     }
-                    
+
                     if (backupsList) {
-                        backupsList.style.display = 'block';
+                        backupsList.classList.remove('hidden');
                     }
                 } else {
                     if (backupsEmpty) {
-                        backupsEmpty.style.display = 'block';
+                        backupsEmpty.classList.remove('hidden');
                     }
                 }
             })
             .catch(error => {
                 console.error('Erreur lors du chargement des backups:', error);
                 if (backupsLoading) {
-                    backupsLoading.style.display = 'none';
+                    backupsLoading.classList.add('hidden');
                 }
-                backupsEmpty.style.display = 'block';
-                backupsEmpty.innerHTML = `<p style="color: #dc3545;">Erreur lors du chargement: ${error.message}</p>`;
+                backupsEmpty.classList.remove('hidden');
+                backupsEmpty.innerHTML = `<div class="card-body items-center text-center py-10"><p class="text-error">Erreur lors du chargement: ${error.message}</p></div>`;
             });
     }
-    
+
     function restoreBackup(backupDir, backupName) {
-        if (!confirm(`⚠️ ATTENTION : Cette opération va remplacer TOUS les restaurants actuels par ceux du backup "${backupName}".\n\nUn backup de sécurité sera créé avant la restauration.\n\nVoulez-vous continuer ?`)) {
+        if (!confirm(`ATTENTION : Cette operation va remplacer TOUS les restaurants actuels par ceux du backup "${backupName}".\n\nUn backup de securite sera cree avant la restauration.\n\nVoulez-vous continuer ?`)) {
             return;
         }
-        
-        restoreResult.style.display = 'block';
-        restoreResult.className = 'result-container';
-        restoreResult.innerHTML = '<p>⏳ Restauration en cours...</p>';
-        
+
+        restoreResult.classList.remove('hidden');
+        restoreResult.className = 'alert mt-5';
+        restoreResult.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Restauration en cours...';
+
         fetch('{% url "scripts_manager:restore_backup" %}', {
             method: 'POST',
             headers: {
@@ -923,56 +854,62 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                restoreResult.className = 'result-container success';
+                restoreResult.className = 'alert alert-success mt-5';
                 restoreResult.innerHTML = `
-                    <h3>✅ Restauration réussie !</h3>
-                    <p><strong>${data.imported}</strong> restaurants restaurés</p>
-                    <p><strong>Backup restauré :</strong> ${data.backup_dir}</p>
-                    ${data.backup_before_dir ? `<p><strong>Backup de sécurité :</strong> ${data.backup_before_dir}</p>` : ''}
+                    <div>
+                        <h3 class="font-bold">Restauration reussie !</h3>
+                        <p><strong>${data.imported}</strong> restaurants restaures</p>
+                        <p><strong>Backup restaure :</strong> ${data.backup_dir}</p>
+                        ${data.backup_before_dir ? `<p><strong>Backup de securite :</strong> ${data.backup_before_dir}</p>` : ''}
+                    </div>
                 `;
             } else {
-                restoreResult.className = 'result-container error';
+                restoreResult.className = 'alert alert-error mt-5';
                 restoreResult.innerHTML = `
-                    <h3>❌ Erreur</h3>
-                    <p>${data.error || 'Une erreur est survenue lors de la restauration'}</p>
-                    ${data.traceback ? `<pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">${data.traceback}</pre>` : ''}
+                    <div>
+                        <h3 class="font-bold">Erreur</h3>
+                        <p>${data.error || 'Une erreur est survenue lors de la restauration'}</p>
+                        ${data.traceback ? `<pre class="bg-base-100 p-3 rounded text-xs overflow-x-auto mt-2">${data.traceback}</pre>` : ''}
+                    </div>
                 `;
             }
         })
         .catch(error => {
-            restoreResult.className = 'result-container error';
+            restoreResult.className = 'alert alert-error mt-5';
             restoreResult.innerHTML = `
-                <h3>❌ Erreur</h3>
-                <p>Une erreur est survenue : ${error.message}</p>
+                <div>
+                    <h3 class="font-bold">Erreur</h3>
+                    <p>Une erreur est survenue : ${error.message}</p>
+                </div>
             `;
         });
     }
-    
+
     if (refreshBackupsBtn) {
         refreshBackupsBtn.addEventListener('click', loadBackups);
-        
+
         // Charger les backups au chargement de la page
         loadBackups();
     } else {
-        console.log('ℹ️ Section backups non disponible sur cette page');
+        console.log('Section backups non disponible sur cette page');
     }
-    
+
     // Fonctions d'analyse (disponibles en DEV et PROD)
     function devFunction1() {
         const fileInput = document.getElementById('excel_file');
         if (!fileInput.files.length) {
-            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            alert('Veuillez d\'abord selectionner un fichier Excel');
             return;
         }
-        
+
         const devResult = document.getElementById('devResult');
-        devResult.style.display = 'block';
-        devResult.innerHTML = '<p>⏳ Analyse du fichier en cours...</p>';
-        
+        devResult.classList.remove('hidden');
+        devResult.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Analyse du fichier en cours...';
+
         const formData = new FormData();
         formData.append('excel_file', fileInput.files[0]);
         formData.append('action', 'analyze');
-        
+
         fetch('{% url "scripts_manager:dev_import_function" %}', {
             method: 'POST',
             body: formData,
@@ -984,35 +921,35 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 devResult.innerHTML = `
-                    <h4>✅ Analyse terminée</h4>
-                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data.result, null, 2)}</pre>
+                    <h4 class="font-bold mb-2">Analyse terminee</h4>
+                    <pre class="bg-base-100 p-4 rounded-lg overflow-x-auto text-xs">${JSON.stringify(data.result, null, 2)}</pre>
                 `;
             } else {
-                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+                devResult.innerHTML = `<p class="text-error">Erreur: ${data.error}</p>`;
             }
         })
         .catch(error => {
-            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+            devResult.innerHTML = `<p class="text-error">Erreur: ${error.message}</p>`;
         });
     }
-    
+
     function devFunction2() {
         const fileInput = document.getElementById('excel_file');
         if (!fileInput.files.length) {
-            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            alert('Veuillez d\'abord selectionner un fichier Excel');
             return;
         }
-        
+
         const devResult = document.getElementById('devResult');
-        devResult.style.display = 'block';
-        devResult.innerHTML = '<p>⏳ Prévisualisation en cours...</p>';
-        
+        devResult.classList.remove('hidden');
+        devResult.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Previsualisation en cours...';
+
         const formData = new FormData();
         formData.append('excel_file', fileInput.files[0]);
         formData.append('action', 'preview');
         const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
         formData.append('sheet_name', sheetName);
-        
+
         fetch('{% url "scripts_manager:dev_import_function" %}', {
             method: 'POST',
             body: formData,
@@ -1023,60 +960,61 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                let previewHtml = '<h4>📊 Prévisualisation des données (10 premières lignes)</h4>';
+                let previewHtml = '<h4 class="font-bold mb-2">Previsualisation des donnees (10 premieres lignes)</h4>';
                 if (data.preview && data.preview.length > 0) {
-                    previewHtml += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
-                    // En-têtes
-                    previewHtml += '<tr style="background: #f8f9fa;">';
+                    previewHtml += '<div class="overflow-x-auto"><table class="table table-xs table-zebra w-full">';
+                    // En-tetes
+                    previewHtml += '<thead><tr>';
                     Object.keys(data.preview[0]).forEach(key => {
-                        previewHtml += `<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">${key}</th>`;
+                        previewHtml += `<th>${key}</th>`;
                     });
-                    previewHtml += '</tr>';
-                    // Données
+                    previewHtml += '</tr></thead>';
+                    // Donnees
+                    previewHtml += '<tbody>';
                     data.preview.slice(0, 10).forEach(row => {
                         previewHtml += '<tr>';
                         Object.values(row).forEach(val => {
-                            previewHtml += `<td style="padding: 8px; border: 1px solid #dee2e6;">${val || ''}</td>`;
+                            previewHtml += `<td>${val || ''}</td>`;
                         });
                         previewHtml += '</tr>';
                     });
-                    previewHtml += '</table>';
-                    previewHtml += `<p style="margin-top: 10px; color: #6c757d;">Total: ${data.total || 0} lignes</p>`;
+                    previewHtml += '</tbody></table></div>';
+                    previewHtml += `<p class="mt-2 text-sm text-secondary">Total: ${data.total || 0} lignes</p>`;
                 } else {
-                    previewHtml += '<p>Aucune donnée trouvée</p>';
+                    previewHtml += '<p>Aucune donnee trouvee</p>';
                 }
                 devResult.innerHTML = previewHtml;
             } else {
-                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+                devResult.innerHTML = `<p class="text-error">Erreur: ${data.error}</p>`;
             }
         })
         .catch(error => {
-            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+            devResult.innerHTML = `<p class="text-error">Erreur: ${error.message}</p>`;
         });
     }
-    
+
     function devFunction3() {
-        if (!confirm('🧪 Cette fonction va importer uniquement les 5 premiers restaurants pour tester. Continuer ?')) {
+        if (!confirm('Cette fonction va importer uniquement les 5 premiers restaurants pour tester. Continuer ?')) {
             return;
         }
-        
+
         const fileInput = document.getElementById('excel_file');
         if (!fileInput.files.length) {
-            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            alert('Veuillez d\'abord selectionner un fichier Excel');
             return;
         }
-        
+
         const devResult = document.getElementById('devResult');
-        devResult.style.display = 'block';
-        devResult.innerHTML = '<p>⏳ Test d\'import partiel en cours...</p>';
-        
+        devResult.classList.remove('hidden');
+        devResult.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Test d\'import partiel en cours...';
+
         const formData = new FormData();
         formData.append('excel_file', fileInput.files[0]);
         formData.append('action', 'test_import');
         const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
         formData.append('sheet_name', sheetName);
         formData.append('limit', '5');
-        
+
         fetch('{% url "scripts_manager:dev_import_function" %}', {
             method: 'POST',
             body: formData,
@@ -1088,36 +1026,36 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 devResult.innerHTML = `
-                    <h4>✅ Test d'import terminé</h4>
-                    <p>${data.imported || 0} restaurant(s) importé(s) pour le test</p>
-                    <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data.result, null, 2)}</pre>
+                    <h4 class="font-bold mb-2">Test d'import termine</h4>
+                    <p>${data.imported || 0} restaurant(s) importe(s) pour le test</p>
+                    <pre class="bg-base-100 p-4 rounded-lg overflow-x-auto text-xs mt-2">${JSON.stringify(data.result, null, 2)}</pre>
                 `;
             } else {
-                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+                devResult.innerHTML = `<p class="text-error">Erreur: ${data.error}</p>`;
             }
         })
         .catch(error => {
-            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+            devResult.innerHTML = `<p class="text-error">Erreur: ${error.message}</p>`;
         });
     }
-    
+
     function devFunction4() {
         const fileInput = document.getElementById('excel_file');
         if (!fileInput.files.length) {
-            alert('⚠️ Veuillez d\'abord sélectionner un fichier Excel');
+            alert('Veuillez d\'abord selectionner un fichier Excel');
             return;
         }
-        
+
         const devResult = document.getElementById('devResult');
-        devResult.style.display = 'block';
-        devResult.innerHTML = '<p>⏳ Validation des données en cours...</p>';
-        
+        devResult.classList.remove('hidden');
+        devResult.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Validation des donnees en cours...';
+
         const formData = new FormData();
         formData.append('excel_file', fileInput.files[0]);
         formData.append('action', 'validate');
         const sheetName = document.getElementById('sheet_name').value || 'Feuil1';
         formData.append('sheet_name', sheetName);
-        
+
         fetch('{% url "scripts_manager:dev_import_function" %}', {
             method: 'POST',
             body: formData,
@@ -1128,13 +1066,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                let validationHtml = '<h4>✅ Validation terminée</h4>';
+                let validationHtml = '<h4 class="font-bold mb-2">Validation terminee</h4>';
                 if (data.validation) {
                     validationHtml += `<p><strong>Total lignes:</strong> ${data.validation.total || 0}</p>`;
                     validationHtml += `<p><strong>Lignes valides:</strong> ${data.validation.valid || 0}</p>`;
                     validationHtml += `<p><strong>Erreurs:</strong> ${data.validation.errors || 0}</p>`;
                     if (data.validation.error_details && data.validation.error_details.length > 0) {
-                        validationHtml += '<h5>Détails des erreurs:</h5><ul>';
+                        validationHtml += '<h5 class="font-semibold mt-2">Details des erreurs:</h5><ul class="list-disc list-inside">';
                         data.validation.error_details.slice(0, 10).forEach(err => {
                             validationHtml += `<li>${err}</li>`;
                         });
@@ -1143,14 +1081,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 devResult.innerHTML = validationHtml;
             } else {
-                devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${data.error}</p>`;
+                devResult.innerHTML = `<p class="text-error">Erreur: ${data.error}</p>`;
             }
         })
         .catch(error => {
-            devResult.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+            devResult.innerHTML = `<p class="text-error">Erreur: ${error.message}</p>`;
         });
     }
 });
 </script>
 {% endblock %}
-

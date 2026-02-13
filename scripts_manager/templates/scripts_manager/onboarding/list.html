@@ -5,93 +5,109 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">🎯 Restaurants Onboarding</h1>
-                <p class="text-[#535353]">Collection <code class="bg-[#F1EFEB] px-2 py-0.5 rounded text-sm">onboarding_restaurants</code> — indépendante de la base restaurants</p>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content mb-2">🎯 Restaurants Onboarding</h1>
+                    <p class="text-secondary">Collection <code class="bg-base-200 px-2 py-0.5 rounded text-sm">onboarding_restaurants</code> — indépendante de la base restaurants</p>
+                </div>
+                <a href="{% url 'scripts_manager:onboarding_import' %}" class="btn btn-primary">
+                    📥 Importer Excel
+                </a>
             </div>
-            <a href="{% url 'scripts_manager:onboarding_import' %}" class="btn-primary">
-                📥 Importer Excel
-            </a>
         </div>
     </div>
 
     <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold text-[#111111]">{{ stats.total }}</div>
-            <div class="text-xs text-[#535353] mt-1">Total</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold text-base-content">{{ stats.total }}</div>
+                <div class="text-xs text-secondary mt-1">Total</div>
+            </div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold text-[#111111]">{{ stats.coffee_shops }}</div>
-            <div class="text-xs text-[#535353] mt-1">Coffee shops</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold text-base-content">{{ stats.coffee_shops }}</div>
+                <div class="text-xs text-secondary mt-1">Coffee shops</div>
+            </div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold text-[#111111]">{{ stats.bars }}</div>
-            <div class="text-xs text-[#535353] mt-1">Bars</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold text-base-content">{{ stats.bars }}</div>
+                <div class="text-xs text-secondary mt-1">Bars</div>
+            </div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold text-[#111111]">{{ stats.restaurants }}</div>
-            <div class="text-xs text-[#535353] mt-1">Restaurants</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold text-base-content">{{ stats.restaurants }}</div>
+                <div class="text-xs text-secondary mt-1">Restaurants</div>
+            </div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold {% if stats.with_photos == stats.total %}text-[#60BC81]{% else %}text-[#D3695E]{% endif %}">{{ stats.with_photos }}</div>
-            <div class="text-xs text-[#535353] mt-1">Avec photos</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold {% if stats.with_photos == stats.total %}text-success{% else %}text-error{% endif %}">{{ stats.with_photos }}</div>
+                <div class="text-xs text-secondary mt-1">Avec photos</div>
+            </div>
         </div>
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1] text-center">
-            <div class="text-2xl font-bold {% if stats.with_logos == stats.total %}text-[#60BC81]{% else %}text-[#D3695E]{% endif %}">{{ stats.with_logos }}</div>
-            <div class="text-xs text-[#535353] mt-1">Avec logos</div>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4 text-center">
+                <div class="text-2xl font-bold {% if stats.with_logos == stats.total %}text-success{% else %}text-error{% endif %}">{{ stats.with_logos }}</div>
+                <div class="text-xs text-secondary mt-1">Avec logos</div>
+            </div>
         </div>
     </div>
 
     <!-- Filtres par lieu -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-        <div class="flex flex-wrap gap-3">
-            <a href="{% url 'scripts_manager:onboarding_list' %}"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if not filter_lieu %}bg-[#111111] text-[#FFFFFF]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %}">
-                Tous
-            </a>
-            <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Coffee+shop"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if filter_lieu == 'Coffee shop' %}bg-[#111111] text-[#FFFFFF]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %}">
-                ☕ Coffee shops
-            </a>
-            <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Bar"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if filter_lieu == 'Bar' %}bg-[#111111] text-[#FFFFFF]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %}">
-                🍸 Bars
-            </a>
-            <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Restaurant"
-               class="px-4 py-2 rounded-[14px] text-sm font-medium transition-colors {% if filter_lieu == 'Restaurant' %}bg-[#111111] text-[#FFFFFF]{% else %}bg-[#F1EFEB] text-[#535353] hover:bg-[#C9C1B1] hover:text-[#111111] border border-[#C9C1B1]{% endif %}">
-                🍽️ Restaurants
-            </a>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body p-4">
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'scripts_manager:onboarding_list' %}"
+                   class="btn btn-sm {% if not filter_lieu %}btn-neutral{% else %}btn-ghost border border-base-300{% endif %}">
+                    Tous
+                </a>
+                <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Coffee+shop"
+                   class="btn btn-sm {% if filter_lieu == 'Coffee shop' %}btn-neutral{% else %}btn-ghost border border-base-300{% endif %}">
+                    ☕ Coffee shops
+                </a>
+                <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Bar"
+                   class="btn btn-sm {% if filter_lieu == 'Bar' %}btn-neutral{% else %}btn-ghost border border-base-300{% endif %}">
+                    🍸 Bars
+                </a>
+                <a href="{% url 'scripts_manager:onboarding_list' %}?lieu=Restaurant"
+                   class="btn btn-sm {% if filter_lieu == 'Restaurant' %}btn-neutral{% else %}btn-ghost border border-base-300{% endif %}">
+                    🍽️ Restaurants
+                </a>
+            </div>
         </div>
     </div>
 
     {% if restaurants %}
     <!-- Tableau desktop -->
-    <div class="hidden md:block bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
+    <div class="hidden md:block card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-[#C9C1B1]">
-                <thead class="bg-[#F1EFEB]">
+            <table class="table table-zebra">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Tag</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Nom</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Lieu</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Spécialité</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Médias</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-[#535353] uppercase tracking-wider">Actions</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Tag</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Nom</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Lieu</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Spécialité</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Médias</th>
+                        <th class="text-xs font-medium text-secondary uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-[#FFFFFF] divide-y divide-[#C9C1B1]">
+                <tbody>
                     {% for restaurant in restaurants %}
-                    <tr class="hover:bg-[#F1EFEB] transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-xs text-[#535353]">{{ restaurant.tag }}</code>
+                    <tr class="hover">
+                        <td class="whitespace-nowrap">
+                            <code class="badge badge-ghost">{{ restaurant.tag }}</code>
                         </td>
-                        <td class="px-6 py-4 font-medium text-[#111111]">
+                        <td class="font-medium text-base-content">
                             {{ restaurant.name }}
                         </td>
-                        <td class="px-6 py-4">
+                        <td>
                             {% if restaurant.lieu == 'Coffee shop' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">☕ Coffee shop</span>
                             {% elif restaurant.lieu == 'Bar' %}
@@ -100,31 +116,32 @@
                             <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">🍽️ Restaurant</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-[#535353]">
+                        <td class="text-secondary">
                             {{ restaurant.specialite|default:"—" }}
                         </td>
-                        <td class="px-6 py-4">
+                        <td>
                             <div class="flex gap-2 text-sm">
                                 {% if restaurant.logo_url %}
-                                <span class="text-[#60BC81]">🖼️ ✓</span>
+                                <span class="text-success">🖼️ ✓</span>
                                 {% else %}
-                                <span class="text-[#D3695E]">🖼️ ✗</span>
+                                <span class="text-error">🖼️ ✗</span>
                                 {% endif %}
                                 {% if restaurant.image_urls %}
-                                <span class="text-[#60BC81]">📸 {{ restaurant.image_urls|length }}</span>
+                                <span class="text-success">📸 {{ restaurant.image_urls|length }}</span>
                                 {% else %}
-                                <span class="text-[#D3695E]">📸 0</span>
+                                <span class="text-error">📸 0</span>
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="whitespace-nowrap">
                             <div class="flex gap-2">
-                                <a href="{% url 'scripts_manager:onboarding_detail' restaurant.id %}" class="btn-secondary text-sm">
+                                <a href="{% url 'scripts_manager:onboarding_detail' restaurant.id %}" class="btn btn-ghost btn-sm">
                                     👁️ Voir
                                 </a>
-                                <form method="POST" action="{% url 'scripts_manager:onboarding_delete' restaurant.id %}" style="display: inline;" onsubmit="return confirm('Supprimer {{ restaurant.name }} ?');">
+                                <form method="POST" action="{% url 'scripts_manager:onboarding_delete' restaurant.id %}" style="display: inline;"
+                                      x-data x-on:submit.prevent="if(confirm('Supprimer {{ restaurant.name }} ?')) $el.submit()">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-danger text-sm">🗑️</button>
+                                    <button type="submit" class="btn btn-error btn-sm">🗑️</button>
                                 </form>
                             </div>
                         </td>
@@ -138,35 +155,38 @@
     <!-- Cartes mobile -->
     <div class="md:hidden space-y-4">
         {% for restaurant in restaurants %}
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-4 border border-[#C9C1B1]">
-            <div class="flex justify-between items-start mb-2">
-                <code class="bg-[#F1EFEB] px-3 py-1 rounded-[14px] text-xs text-[#535353]">{{ restaurant.tag }}</code>
-                {% if restaurant.lieu == 'Coffee shop' %}
-                <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">☕</span>
-                {% elif restaurant.lieu == 'Bar' %}
-                <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">🍸</span>
-                {% else %}
-                <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">🍽️</span>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <code class="badge badge-ghost">{{ restaurant.tag }}</code>
+                    {% if restaurant.lieu == 'Coffee shop' %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">☕</span>
+                    {% elif restaurant.lieu == 'Bar' %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">🍸</span>
+                    {% else %}
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">🍽️</span>
+                    {% endif %}
+                </div>
+                <h3 class="font-serif font-bold text-base-content text-lg">{{ restaurant.name }}</h3>
+                {% if restaurant.specialite %}
+                <p class="text-secondary text-sm mt-1">{{ restaurant.specialite }}</p>
                 {% endif %}
-            </div>
-            <h3 class="font-serif font-bold text-[#111111] text-lg">{{ restaurant.name }}</h3>
-            {% if restaurant.specialite %}
-            <p class="text-[#535353] text-sm mt-1">{{ restaurant.specialite }}</p>
-            {% endif %}
-            <div class="flex gap-2 mt-3">
-                <a href="{% url 'scripts_manager:onboarding_detail' restaurant.id %}" class="btn-secondary text-sm flex-1 text-center">👁️ Voir</a>
-                <form method="POST" action="{% url 'scripts_manager:onboarding_delete' restaurant.id %}" class="flex-1" onsubmit="return confirm('Supprimer {{ restaurant.name }} ?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-danger text-sm w-full">🗑️</button>
-                </form>
+                <div class="flex gap-2 mt-3">
+                    <a href="{% url 'scripts_manager:onboarding_detail' restaurant.id %}" class="btn btn-ghost btn-sm flex-1">👁️ Voir</a>
+                    <form method="POST" action="{% url 'scripts_manager:onboarding_delete' restaurant.id %}" class="flex-1"
+                          x-data x-on:submit.prevent="if(confirm('Supprimer {{ restaurant.name }} ?')) $el.submit()">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error btn-sm w-full">🗑️</button>
+                    </form>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-6 text-center text-[#535353]">
-        📭 Aucun restaurant d'onboarding trouvé.
-        <a href="{% url 'scripts_manager:onboarding_import' %}" class="text-[#111111] font-medium hover:underline">Importer depuis Excel</a>
+    <div class="alert alert-warning">
+        <span>📭 Aucun restaurant d'onboarding trouvé.
+        <a href="{% url 'scripts_manager:onboarding_import' %}" class="text-base-content font-medium hover:underline">Importer depuis Excel</a></span>
     </div>
     {% endif %}
 </div>

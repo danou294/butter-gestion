@@ -8,28 +8,30 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header / Fil d'Ariane -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <nav class="text-sm text-[#535353] mb-2">
-            <a href="{% url 'scripts_manager:guides_list' %}" class="hover:text-[#111111]">Guides</a>
-            {% if mode == 'edit' %}
-            <span class="mx-1">/</span>
-            <a href="{% url 'scripts_manager:guide_detail' guide_id %}" class="hover:text-[#111111]">{{ guide.name }}</a>
-            <span class="mx-1">/</span>
-            <span class="text-[#111111]">Éditer</span>
-            {% else %}
-            <span class="mx-1">/</span>
-            <span class="text-[#111111]">Nouveau</span>
-            {% endif %}
-        </nav>
-        <h1 class="text-3xl font-serif font-bold text-[#111111]">
-            {% if mode == 'create' %}Créer un nouveau guide{% else %}Éditer : {{ guide.name }}{% endif %}
-            {% if mode == 'edit' and guide.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
-        </h1>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <nav class="text-sm text-secondary mb-2">
+                <a href="{% url 'scripts_manager:guides_list' %}" class="hover:text-base-content">Guides</a>
+                {% if mode == 'edit' %}
+                <span class="mx-1">/</span>
+                <a href="{% url 'scripts_manager:guide_detail' guide_id %}" class="hover:text-base-content">{{ guide.name }}</a>
+                <span class="mx-1">/</span>
+                <span class="text-base-content">Éditer</span>
+                {% else %}
+                <span class="mx-1">/</span>
+                <span class="text-base-content">Nouveau</span>
+                {% endif %}
+            </nav>
+            <h1 class="text-3xl font-serif font-bold text-base-content">
+                {% if mode == 'create' %}Créer un nouveau guide{% else %}Éditer : {{ guide.name }}{% endif %}
+                {% if mode == 'edit' and guide.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+            </h1>
+        </div>
     </div>
 
     {% if messages %}
         {% for message in messages %}
-        <div class="rounded-[14px] p-4 border {% if message.tags == 'error' %}bg-[#F2D7D4] border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] border-[#60BC81]{% else %}bg-[#F1EFEB] border-[#C9C1B1]{% endif %}">
+        <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
@@ -38,87 +40,91 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Formulaire -->
         <div class="lg:col-span-2">
-            <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-                <form method="post">
-                    {% csrf_token %}
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
 
-                    {% if mode == 'create' %}
-                    <div class="mb-4">
-                        <label for="id" class="block text-sm font-medium text-[#535353] mb-1">ID du guide <span class="text-[#D3695E]">*</span></label>
-                        <input type="text" id="id" name="id" value="{% if form_data %}{{ form_data.id }}{% endif %}" required pattern="[A-Z0-9_]+" placeholder="MACHOC, SUSHI..."
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] uppercase">
-                        <p class="mt-1 text-xs text-[#535353]">Identifiant unique en MAJUSCULES. Exemple : MACHOC, NOUVEAUX</p>
-                    </div>
-                    {% else %}
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-[#535353] mb-1">ID du guide</label>
-                        <input type="text" value="{{ guide.id }}" disabled class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#535353]">
-                    </div>
-                    {% endif %}
+                        {% if mode == 'create' %}
+                        <div class="mb-4">
+                            <label for="id" class="block text-sm font-medium text-secondary mb-1">ID du guide <span class="text-error">*</span></label>
+                            <input type="text" id="id" name="id" value="{% if form_data %}{{ form_data.id }}{% endif %}" required pattern="[A-Z0-9_]+" placeholder="MACHOC, SUSHI..."
+                                   class="input input-bordered w-full bg-base-200 uppercase">
+                            <p class="mt-1 text-xs text-secondary">Identifiant unique en MAJUSCULES. Exemple : MACHOC, NOUVEAUX</p>
+                        </div>
+                        {% else %}
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-secondary mb-1">ID du guide</label>
+                            <input type="text" value="{{ guide.id }}" disabled class="input input-bordered w-full bg-base-200 text-secondary">
+                        </div>
+                        {% endif %}
 
-                    <div class="mb-4">
-                        <label for="name" class="block text-sm font-medium text-[#535353] mb-1">Nom du guide <span class="text-[#D3695E]">*</span></label>
-                        <input type="text" id="name" name="name" value="{% if mode == 'edit' %}{{ guide.name }}{% elif form_data %}{{ form_data.name }}{% endif %}" required maxlength="100" placeholder="Best mousse au chocolat"
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
-                    </div>
+                        <div class="mb-4">
+                            <label for="name" class="block text-sm font-medium text-secondary mb-1">Nom du guide <span class="text-error">*</span></label>
+                            <input type="text" id="name" name="name" value="{% if mode == 'edit' %}{{ guide.name }}{% elif form_data %}{{ form_data.name }}{% endif %}" required maxlength="100" placeholder="Best mousse au chocolat"
+                                   class="input input-bordered w-full bg-base-200">
+                        </div>
 
-                    <div class="mb-4">
-                        <label for="description" class="block text-sm font-medium text-[#535353] mb-1">Description</label>
-                        <textarea id="description" name="description" rows="4" maxlength="500" placeholder="Description du guide..."
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">{% if mode == 'edit' %}{{ guide.description }}{% elif form_data %}{{ form_data.description }}{% endif %}</textarea>
-                    </div>
+                        <div class="mb-4">
+                            <label for="description" class="block text-sm font-medium text-secondary mb-1">Description</label>
+                            <textarea id="description" name="description" rows="4" maxlength="500" placeholder="Description du guide..."
+                                      class="textarea textarea-bordered w-full bg-base-200">{% if mode == 'edit' %}{{ guide.description }}{% elif form_data %}{{ form_data.description }}{% endif %}</textarea>
+                        </div>
 
-                    <div class="mb-4">
-                        <label for="coverImageRef" class="block text-sm font-medium text-[#535353] mb-1">Photo de couverture</label>
-                        <input type="text" id="coverImageRef" name="coverImageRef" value="{% if mode == 'edit' %}{{ guide.coverImageRef }}{% elif form_data %}{{ form_data.coverImageRef }}{% endif %}" placeholder="CHEJ3, DAME2..."
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
-                        <p class="mt-1 text-xs text-[#535353]">Référence image (ex: CHEJ3). Doit exister dans Firebase Storage.</p>
-                    </div>
+                        <div class="mb-4">
+                            <label for="coverImageRef" class="block text-sm font-medium text-secondary mb-1">Photo de couverture</label>
+                            <input type="text" id="coverImageRef" name="coverImageRef" value="{% if mode == 'edit' %}{{ guide.coverImageRef }}{% elif form_data %}{{ form_data.coverImageRef }}{% endif %}" placeholder="CHEJ3, DAME2..."
+                                   class="input input-bordered w-full bg-base-200">
+                            <p class="mt-1 text-xs text-secondary">Référence image (ex: CHEJ3). Doit exister dans Firebase Storage.</p>
+                        </div>
 
-                    <div class="mb-4">
-                        <label for="restaurantIds" class="block text-sm font-medium text-[#535353] mb-1">Restaurants <span class="text-[#D3695E]">*</span></label>
-                        <textarea id="restaurantIds" name="restaurantIds" rows="3" required placeholder="CHEJ, DUR, SHAN, OSTB"
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] font-mono text-sm">{% if mode == 'edit' %}{{ guide.restaurantIds_display }}{% elif form_data %}{{ form_data.restaurantIds }}{% endif %}</textarea>
-                        <p class="mt-1 text-xs text-[#535353]">IDs séparés par virgules ou espaces. L'ordre sera respecté.</p>
-                    </div>
+                        <div class="mb-4">
+                            <label for="restaurantIds" class="block text-sm font-medium text-secondary mb-1">Restaurants <span class="text-error">*</span></label>
+                            <textarea id="restaurantIds" name="restaurantIds" rows="3" required placeholder="CHEJ, DUR, SHAN, OSTB"
+                                      class="textarea textarea-bordered w-full bg-base-200 font-mono text-sm">{% if mode == 'edit' %}{{ guide.restaurantIds_display }}{% elif form_data %}{{ form_data.restaurantIds }}{% endif %}</textarea>
+                            <p class="mt-1 text-xs text-secondary">IDs séparés par virgules ou espaces. L'ordre sera respecté.</p>
+                        </div>
 
-                    <div class="mb-4 p-4 rounded-[14px] border border-amber-200 bg-amber-50">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="isPremium" name="isPremium"
-                                   {% if mode == 'edit' and guide.isPremium %}checked{% elif form_data and form_data.isPremium %}checked{% endif %}
-                                   class="w-5 h-5 rounded border-[#C9C1B1] text-amber-600 focus:ring-amber-500">
-                            <div>
-                                <span class="text-sm font-medium text-[#111111]">Ce guide est Premium</span>
-                                <p class="text-xs text-[#535353]">Les utilisateurs non-premium verront un paywall au lieu du contenu.</p>
-                            </div>
-                        </label>
-                    </div>
+                        <div class="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="isPremium" name="isPremium"
+                                       {% if mode == 'edit' and guide.isPremium %}checked{% elif form_data and form_data.isPremium %}checked{% endif %}
+                                       class="checkbox checkbox-primary">
+                                <div>
+                                    <span class="text-sm font-medium text-base-content">Ce guide est Premium</span>
+                                    <p class="text-xs text-secondary">Les utilisateurs non-premium verront un paywall au lieu du contenu.</p>
+                                </div>
+                            </label>
+                        </div>
 
-                    <div class="mb-6">
-                        <label for="order" class="block text-sm font-medium text-[#535353] mb-1">Ordre d'affichage</label>
-                        <input type="number" id="order" name="order" value="{% if mode == 'edit' %}{{ guide.order }}{% elif form_data %}{{ form_data.order|default:0 }}{% else %}0{% endif %}" min="0" max="1000"
-                               class="w-32 px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111]">
-                    </div>
+                        <div class="mb-6">
+                            <label for="order" class="block text-sm font-medium text-secondary mb-1">Ordre d'affichage</label>
+                            <input type="number" id="order" name="order" value="{% if mode == 'edit' %}{{ guide.order }}{% elif form_data %}{{ form_data.order|default:0 }}{% else %}0{% endif %}" min="0" max="1000"
+                                   class="input input-bordered bg-base-200 w-32">
+                        </div>
 
-                    <div class="flex gap-3 justify-end">
-                        <a href="{% url 'scripts_manager:guides_list' %}" class="btn-secondary">Annuler</a>
-                        <button type="submit" class="btn-primary">{% if mode == 'create' %}Créer le guide{% else %}Enregistrer{% endif %}</button>
-                    </div>
-                </form>
+                        <div class="flex gap-3 justify-end">
+                            <a href="{% url 'scripts_manager:guides_list' %}" class="btn btn-ghost">Annuler</a>
+                            <button type="submit" class="btn btn-primary">{% if mode == 'create' %}Créer le guide{% else %}Enregistrer{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
         <!-- Aide -->
         <div>
-            <div class="bg-[#F1EFEB] rounded-[14px] p-6 border border-[#C9C1B1]">
-                <h3 class="font-serif font-bold text-[#111111] mb-3">Aide</h3>
-                <p class="text-sm text-[#535353] mb-3">Structure d'un guide : ID unique, nom, description, photo, liste ordonnée de restaurants.</p>
-                <p class="text-sm text-[#535353] mb-3">Format photo : <code class="bg-[#FFFFFF] px-1 rounded">TAG + NUMERO</code> (ex: CHEJ3).</p>
-                {% if mode == 'edit' %}
-                <hr class="border-[#C9C1B1] my-3">
-                <p class="text-xs text-[#535353]">Créé : {{ guide.createdAt|date:"d/m/Y H:i" }}</p>
-                <p class="text-xs text-[#535353]">Modifié : {{ guide.updatedAt|date:"d/m/Y H:i" }}</p>
-                {% endif %}
+            <div class="card bg-base-200 border border-base-300">
+                <div class="card-body">
+                    <h3 class="font-serif font-bold text-base-content mb-3">Aide</h3>
+                    <p class="text-sm text-secondary mb-3">Structure d'un guide : ID unique, nom, description, photo, liste ordonnée de restaurants.</p>
+                    <p class="text-sm text-secondary mb-3">Format photo : <code class="bg-base-100 px-1 rounded">TAG + NUMERO</code> (ex: CHEJ3).</p>
+                    {% if mode == 'edit' %}
+                    <hr class="border-base-300 my-3">
+                    <p class="text-xs text-secondary">Créé : {{ guide.createdAt|date:"d/m/Y H:i" }}</p>
+                    <p class="text-xs text-secondary">Modifié : {{ guide.updatedAt|date:"d/m/Y H:i" }}</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

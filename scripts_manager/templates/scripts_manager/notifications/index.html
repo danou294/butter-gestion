@@ -3,198 +3,232 @@
 {% block title %}Notifications Push - Butter{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ tab: 'all' }">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h1 class="text-3xl font-serif font-bold text-[#111111] mb-2">📱 Envoi de Notifications Push</h1>
-        <p class="text-[#535353]">Envoyez des notifications à vos utilisateurs</p>
-    </div>
-    
-    <!-- Tabs -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm border border-[#C9C1B1] overflow-hidden">
-        <div class="border-b border-[#C9C1B1]">
-            <nav class="flex -mb-px">
-                <button onclick="switchTab('all')" id="tab-btn-all" class="tab-button active px-6 py-4 text-sm font-medium border-b-2 border-[#111111] text-[#111111]">
-                    📢 À tous
-                </button>
-                <button onclick="switchTab('personalized')" id="tab-btn-personalized" class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-[#535353] hover:text-[#111111] hover:border-[#C9C1B1]">
-                    👤 Personnalisées
-                </button>
-                <button onclick="switchTab('group')" id="tab-btn-group" class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-[#535353] hover:text-[#111111] hover:border-[#C9C1B1]">
-                    👥 Groupe
-                </button>
-            </nav>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h1 class="text-3xl font-serif font-bold text-base-content mb-2">📱 Envoi de Notifications Push</h1>
+            <p class="text-secondary">Envoyez des notifications à vos utilisateurs</p>
         </div>
-        
-        <div class="p-6">
+    </div>
+
+    <!-- Tabs -->
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div class="tabs tabs-boxed bg-base-100 rounded-none border-b border-base-300 p-0">
+            <button @click="tab = 'all'" class="tab tab-lg flex-1" :class="tab === 'all' && 'tab-active'">
+                📢 À tous
+            </button>
+            <button @click="tab = 'personalized'" class="tab tab-lg flex-1" :class="tab === 'personalized' && 'tab-active'">
+                👤 Personnalisées
+            </button>
+            <button @click="tab = 'group'" class="tab tab-lg flex-1" :class="tab === 'group' && 'tab-active'">
+                👥 Groupe
+            </button>
+        </div>
+
+        <div class="card-body">
             <!-- Tab: À tous -->
-            <div id="tab-all" class="tab-content">
+            <div x-show="tab === 'all'" x-transition>
                 <form id="form-all" class="space-y-4 max-w-2xl">
                     <div>
-                        <label for="title-all" class="block text-sm font-medium text-[#111111] mb-2">Titre *</label>
-                        <input type="text" id="title-all" name="title" required 
+                        <label for="title-all" class="label">
+                            <span class="label-text text-base-content font-medium">Titre *</span>
+                        </label>
+                        <input type="text" id="title-all" name="title" required
                                placeholder="Ex: Nouvelle fonctionnalité disponible"
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                               class="input input-bordered w-full bg-base-200">
                     </div>
-                    
+
                     <div>
-                        <label for="body-all" class="block text-sm font-medium text-[#111111] mb-2">Message *</label>
-                        <textarea id="body-all" name="body" required rows="4" 
+                        <label for="body-all" class="label">
+                            <span class="label-text text-base-content font-medium">Message *</span>
+                        </label>
+                        <textarea id="body-all" name="body" required rows="4"
                                   placeholder="Ex: Découvrez notre nouvelle fonctionnalité..."
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                                  class="textarea textarea-bordered w-full bg-base-200"></textarea>
                     </div>
-                    
+
                     <div>
-                        <label for="data-all" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
-                        <textarea id="data-all" name="data" rows="3" 
+                        <label for="data-all" class="label">
+                            <span class="label-text text-base-content font-medium">Données supplémentaires (JSON, optionnel)</span>
+                        </label>
+                        <textarea id="data-all" name="data" rows="3"
                                   placeholder='{"type": "feature", "id": "123"}'
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
-                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                                  class="textarea textarea-bordered w-full bg-base-200 font-mono text-sm"></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-secondary">Format JSON valide requis</span>
+                        </label>
                     </div>
-                    
-                    <button type="submit" class="w-full btn-primary">
+
+                    <button type="submit" class="btn btn-primary w-full">
                         📤 Envoyer à tous les utilisateurs
                     </button>
                 </form>
             </div>
-            
+
             <!-- Tab: Personnalisées -->
-            <div id="tab-personalized" class="tab-content hidden">
+            <div x-show="tab === 'personalized'" x-transition>
                 <form id="form-personalized" class="space-y-4 max-w-2xl">
                     <div>
-                        <label for="title-personalized" class="block text-sm font-medium text-[#111111] mb-2">Titre * (utilisez {prenom} pour personnaliser)</label>
-                        <input type="text" id="title-personalized" name="title" required 
+                        <label for="title-personalized" class="label">
+                            <span class="label-text text-base-content font-medium">Titre * (utilisez {prenom} pour personnaliser)</span>
+                        </label>
+                        <input type="text" id="title-personalized" name="title" required
                                placeholder='Ex: Salut {prenom} !'
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                               class="input input-bordered w-full bg-base-200">
                     </div>
-                    
+
                     <div>
-                        <label for="body-personalized" class="block text-sm font-medium text-[#111111] mb-2">Message * (utilisez {prenom} pour personnaliser)</label>
-                        <textarea id="body-personalized" name="body" required rows="4" 
+                        <label for="body-personalized" class="label">
+                            <span class="label-text text-base-content font-medium">Message * (utilisez {prenom} pour personnaliser)</span>
+                        </label>
+                        <textarea id="body-personalized" name="body" required rows="4"
                                   placeholder='Ex: {prenom}, découvrez notre nouvelle fonctionnalité...'
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                                  class="textarea textarea-bordered w-full bg-base-200"></textarea>
                     </div>
-                    
+
                     <div>
-                        <label for="data-personalized" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
-                        <textarea id="data-personalized" name="data" rows="3" 
+                        <label for="data-personalized" class="label">
+                            <span class="label-text text-base-content font-medium">Données supplémentaires (JSON, optionnel)</span>
+                        </label>
+                        <textarea id="data-personalized" name="data" rows="3"
                                   placeholder='{"type": "feature", "id": "123"}'
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
-                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                                  class="textarea textarea-bordered w-full bg-base-200 font-mono text-sm"></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-secondary">Format JSON valide requis</span>
+                        </label>
                     </div>
-                    
-                    <button type="submit" class="w-full btn-primary">
+
+                    <button type="submit" class="btn btn-primary w-full">
                         👤 Envoyer des notifications personnalisées
                     </button>
                 </form>
             </div>
-            
+
             <!-- Tab: Groupe -->
-            <div id="tab-group" class="tab-content hidden">
+            <div x-show="tab === 'group'" x-transition>
                 <form id="form-group" class="space-y-4">
                     <!-- Recherche et Import Excel -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="user-search" class="block text-sm font-medium text-[#111111] mb-2">🔍 Rechercher un utilisateur</label>
-                            <input type="text" id="user-search" 
+                            <label for="user-search" class="label">
+                                <span class="label-text text-base-content font-medium">🔍 Rechercher un utilisateur</span>
+                            </label>
+                            <input type="text" id="user-search"
                                    placeholder="Rechercher par nom, UUID, RevenueCat ID ou téléphone..."
-                                   class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                                   class="input input-bordered w-full bg-base-200">
                         </div>
                         <div>
-                            <label for="excel-upload" class="block text-sm font-medium text-[#111111] mb-2">📊 Importer depuis Excel</label>
+                            <label for="excel-upload" class="label">
+                                <span class="label-text text-base-content font-medium">📊 Importer depuis Excel</span>
+                            </label>
                             <div class="flex gap-2">
-                                <input type="file" id="excel-upload" accept=".xlsx,.xls" 
+                                <input type="file" id="excel-upload" accept=".xlsx,.xls"
                                        class="hidden">
-                                <button type="button" onclick="document.getElementById('excel-upload').click()" 
-                                        class="flex-1 px-4 py-3 border border-[#C9C1B1] rounded-[14px] bg-[#F1EFEB] text-[#111111] hover:bg-[#E8E4DD] transition-colors">
+                                <button type="button" onclick="document.getElementById('excel-upload').click()"
+                                        class="btn btn-ghost flex-1 bg-base-200">
                                     📁 Choisir fichier
                                 </button>
-                                <select id="excel-id-type" 
-                                        class="px-4 py-3 border-0 rounded-none bg-[#F1EFEB] text-[#111111]">
+                                <select id="excel-id-type"
+                                        class="select select-bordered bg-base-200">
                                     <option value="uid">Colonne UUID Firebase</option>
                                     <option value="revenuecat">Colonne RevenueCat ID</option>
                                 </select>
-                                <select id="excel-column" 
-                                        class="px-4 py-3 border-0 rounded-none bg-[#F1EFEB] text-[#111111]">
+                                <select id="excel-column"
+                                        class="select select-bordered bg-base-200">
                                     <option value="">Sélectionner colonne</option>
                                 </select>
                             </div>
-                            <p class="mt-1 text-xs text-[#535353]" id="excel-info"></p>
+                            <label class="label">
+                                <span class="label-text-alt text-secondary" id="excel-info"></span>
+                            </label>
                         </div>
                     </div>
-                    
+
                     <!-- Tableau des utilisateurs -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-[#111111]">Sélectionner les utilisateurs *</label>
-                            <span id="selected-count" class="text-sm text-[#535353]">0 sélectionné(s)</span>
+                            <label class="label">
+                                <span class="label-text text-base-content font-medium">Sélectionner les utilisateurs *</span>
+                            </label>
+                            <span id="selected-count" class="text-sm text-secondary">0 sélectionné(s)</span>
                         </div>
-                        <div class="border border-[#C9C1B1] rounded-[14px] overflow-hidden bg-[#F1EFEB] max-h-[400px] overflow-y-auto">
-                            <table class="w-full">
-                                <thead class="bg-[#C9C1B1] sticky top-0">
+                        <div class="border border-base-300 rounded-lg overflow-hidden bg-base-200 max-h-[400px] overflow-y-auto">
+                            <table class="table table-zebra w-full">
+                                <thead class="bg-base-300 sticky top-0">
                                     <tr>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111] w-12">
-                                            <input type="checkbox" id="select-all" class="rounded border-[#C9C1B1]">
+                                        <th class="w-12">
+                                            <input type="checkbox" id="select-all" class="checkbox checkbox-primary checkbox-sm">
                                         </th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">Prénom</th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">UUID</th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">RevenueCat ID</th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">📱 Téléphone</th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-[#111111]">✉️ Email</th>
+                                        <th>Prénom</th>
+                                        <th>UUID</th>
+                                        <th>RevenueCat ID</th>
+                                        <th>📱 Téléphone</th>
+                                        <th>✉️ Email</th>
                                     </tr>
                                 </thead>
                                 <tbody id="users-table-body">
                                     {% for user in users %}
-                                    <tr class="user-row border-t border-[#C9C1B1] hover:bg-[#E8E4DD]" data-uid="{{ user.uid }}" data-prenom="{{ user.prenom|lower }}" data-phone="{{ user.phone|lower }}" data-email="{{ user.email|lower }}" data-app-user-id="{{ user.app_user_id|lower }}">
-                                        <td class="px-4 py-3">
-                                            <input type="checkbox" class="user-checkbox rounded border-[#C9C1B1]" value="{{ user.uid }}">
+                                    <tr class="user-row hover" data-uid="{{ user.uid }}" data-prenom="{{ user.prenom|lower }}" data-phone="{{ user.phone|lower }}" data-email="{{ user.email|lower }}" data-app-user-id="{{ user.app_user_id|lower }}">
+                                        <td>
+                                            <input type="checkbox" class="user-checkbox checkbox checkbox-primary checkbox-sm" value="{{ user.uid }}">
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.prenom }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#111111] font-mono">{{ user.uid }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#111111] font-mono text-xs">{{ user.app_user_id|default:"—" }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.phone }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#111111]">{{ user.email }}</td>
+                                        <td class="text-sm text-base-content">{{ user.prenom }}</td>
+                                        <td class="text-sm text-base-content font-mono">{{ user.uid }}</td>
+                                        <td class="text-sm text-base-content font-mono text-xs">{{ user.app_user_id|default:"—" }}</td>
+                                        <td class="text-sm text-base-content">{{ user.phone }}</td>
+                                        <td class="text-sm text-base-content">{{ user.email }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                    
+
                     <div>
-                        <label for="title-group" class="block text-sm font-medium text-[#111111] mb-2">Titre *</label>
-                        <input type="text" id="title-group" name="title" required 
+                        <label for="title-group" class="label">
+                            <span class="label-text text-base-content font-medium">Titre *</span>
+                        </label>
+                        <input type="text" id="title-group" name="title" required
                                placeholder="Ex: Notification spéciale"
-                               class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+                               class="input input-bordered w-full bg-base-200">
                     </div>
-                    
+
                     <div>
-                        <label for="body-group" class="block text-sm font-medium text-[#111111] mb-2">Message *</label>
-                        <textarea id="body-group" name="body" required rows="4" 
+                        <label for="body-group" class="label">
+                            <span class="label-text text-base-content font-medium">Message *</span>
+                        </label>
+                        <textarea id="body-group" name="body" required rows="4"
                                   placeholder="Ex: Message pour le groupe sélectionné..."
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]"></textarea>
+                                  class="textarea textarea-bordered w-full bg-base-200"></textarea>
                     </div>
-                    
+
                     <div>
-                        <label for="data-group" class="block text-sm font-medium text-[#111111] mb-2">Données supplémentaires (JSON, optionnel)</label>
-                        <textarea id="data-group" name="data" rows="3" 
+                        <label for="data-group" class="label">
+                            <span class="label-text text-base-content font-medium">Données supplémentaires (JSON, optionnel)</span>
+                        </label>
+                        <textarea id="data-group" name="data" rows="3"
                                   placeholder='{"type": "group", "id": "123"}'
-                                  class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent font-mono text-sm bg-[#F1EFEB] text-[#111111]"></textarea>
-                        <p class="mt-1 text-xs text-[#535353]">Format JSON valide requis</p>
+                                  class="textarea textarea-bordered w-full bg-base-200 font-mono text-sm"></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-secondary">Format JSON valide requis</span>
+                        </label>
                     </div>
-                    
-                    <button type="submit" class="w-full btn-primary">
+
+                    <button type="submit" class="btn btn-primary w-full">
                         👥 Envoyer au groupe sélectionné
                     </button>
                 </form>
             </div>
         </div>
     </div>
-    
+
     <!-- Results -->
-    <div id="results" class="hidden bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h3 class="text-xl font-serif font-bold text-[#111111] mb-4">📊 Résultats de l'envoi</h3>
-        <div id="results-content" class="space-y-2"></div>
+    <div id="results" class="hidden card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h3 class="text-xl font-serif font-bold text-base-content mb-4">📊 Résultats de l'envoi</h3>
+            <div id="results-content" class="space-y-2"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -203,7 +237,6 @@
 <!-- SheetJS pour parser Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-let currentTab = 'all';
 let allUsers = [
     {% for user in users %}
     {
@@ -215,29 +248,6 @@ let allUsers = [
     }{% if not forloop.last %},{% endif %}
     {% endfor %}
 ];
-
-function switchTab(tab) {
-    currentTab = tab;
-    
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.add('hidden');
-    });
-    
-    // Remove active class from all buttons
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active', 'border-amber-600', 'text-amber-600');
-        btn.classList.add('border-transparent', 'text-gray-500');
-    });
-    
-    // Show selected tab
-    document.getElementById(`tab-${tab}`).classList.remove('hidden');
-    
-    // Add active class to selected button
-    const activeBtn = document.getElementById(`tab-btn-${tab}`);
-    activeBtn.classList.add('active', 'border-[#111111]', 'text-[#111111]');
-    activeBtn.classList.remove('border-transparent', 'text-[#535353]');
-}
 
 // Form submissions
 document.getElementById('form-all').addEventListener('submit', async (e) => {
@@ -258,12 +268,12 @@ document.getElementById('form-group').addEventListener('submit', async (e) => {
 async function sendNotification(tab, endpoint) {
     const form = document.getElementById(`form-${tab}`);
     const formData = new FormData(form);
-    
+
     const data = {
         title: formData.get('title'),
         body: formData.get('body'),
     };
-    
+
     // Parse JSON data if provided
     const dataField = formData.get('data');
     if (dataField && dataField.trim()) {
@@ -274,7 +284,7 @@ async function sendNotification(tab, endpoint) {
             return;
         }
     }
-    
+
     // For group tab, get selected user IDs from checkboxes
     if (tab === 'group') {
         const checkboxes = document.querySelectorAll('.user-checkbox:checked');
@@ -285,14 +295,14 @@ async function sendNotification(tab, endpoint) {
         }
         data.userIds = selectedUsers;
     }
-    
+
     // Show loading
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '⏳ Envoi en cours...';
     showLoading();
-    
+
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -302,9 +312,9 @@ async function sendNotification(tab, endpoint) {
             },
             body: JSON.stringify(data),
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showResults(result);
         } else {
@@ -322,42 +332,18 @@ async function sendNotification(tab, endpoint) {
 function showResults(result) {
     const resultsDiv = document.getElementById('results');
     const resultsContent = document.getElementById('results-content');
-    
+
     resultsContent.innerHTML = `
         <div class="space-y-2">
-            <p><strong>✅ Succès:</strong> <span class="text-[#60BC81] font-semibold">${result.successCount}</span> notification(s) envoyée(s)</p>
-            <p><strong>❌ Échecs:</strong> <span class="text-[#D3695E] font-semibold">${result.failureCount}</span> notification(s) échouée(s)</p>
-            <p><strong>📱 Total:</strong> <span class="text-[#535353] font-semibold">${result.totalTokens || (result.successCount + result.failureCount)}</span> token(s) traité(s)</p>
+            <p><strong>✅ Succès:</strong> <span class="text-success font-semibold">${result.successCount}</span> notification(s) envoyée(s)</p>
+            <p><strong>❌ Échecs:</strong> <span class="text-error font-semibold">${result.failureCount}</span> notification(s) échouée(s)</p>
+            <p><strong>📱 Total:</strong> <span class="text-secondary font-semibold">${result.totalTokens || (result.successCount + result.failureCount)}</span> token(s) traité(s)</p>
             ${result.invalidUsers ? `<p><strong>⚠️ Utilisateurs invalides:</strong> ${result.invalidUsers.length}</p>` : ''}
         </div>
     `;
-    
+
     resultsDiv.classList.remove('hidden');
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
-}
-
-// Fonction pour obtenir le cookie CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Fonction pour afficher/masquer le loading
-function showLoading() {
-    // Peut être implémentée si nécessaire
-}
-function hideLoading() {
-    // Peut être implémentée si nécessaire
 }
 
 // Recherche d'utilisateurs
@@ -369,32 +355,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const excelUpload = document.getElementById('excel-upload');
     const excelColumn = document.getElementById('excel-column');
     const excelIdType = document.getElementById('excel-id-type');
-    
+
     // Recherche en temps réel
     if (searchInput) {
         searchInput.addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase().trim();
             const rows = usersTableBody.querySelectorAll('.user-row');
-            
+
             rows.forEach(row => {
                 const prenom = row.dataset.prenom || '';
                 const uid = row.dataset.uid || '';
                 const phone = row.dataset.phone || '';
                 const email = row.dataset.email || '';
                 const appUserId = row.dataset.appUserId || '';
-                
-                const matches = !searchTerm || 
-                    prenom.includes(searchTerm) || 
-                    uid.toLowerCase().includes(searchTerm) || 
+
+                const matches = !searchTerm ||
+                    prenom.includes(searchTerm) ||
+                    uid.toLowerCase().includes(searchTerm) ||
                     phone.includes(searchTerm) ||
                     email.includes(searchTerm) ||
                     appUserId.includes(searchTerm);
-                
+
                 row.style.display = matches ? '' : 'none';
             });
         });
     }
-    
+
     // Sélectionner/Désélectionner tout
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function(e) {
@@ -407,12 +393,12 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSelectedCount();
         });
     }
-    
+
     // Mettre à jour le compteur de sélection
     function updateSelectedCount() {
         const checked = usersTableBody.querySelectorAll('.user-checkbox:checked').length;
         selectedCountSpan.textContent = `${checked} sélectionné(s)`;
-        
+
         // Mettre à jour la checkbox "Tout sélectionner"
         const visibleCheckboxes = Array.from(usersTableBody.querySelectorAll('.user-checkbox'))
             .filter(cb => cb.closest('.user-row').style.display !== 'none');
@@ -420,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectAllCheckbox.checked = visibleCheckboxes.length > 0 && checkedVisible === visibleCheckboxes.length;
         selectAllCheckbox.indeterminate = checkedVisible > 0 && checkedVisible < visibleCheckboxes.length;
     }
-    
+
     // Écouter les changements sur les checkboxes individuelles
     if (usersTableBody) {
         usersTableBody.addEventListener('change', function(e) {
@@ -429,29 +415,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Import Excel
     if (excelUpload) {
         excelUpload.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
+
                     // Prendre la première feuille
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
+
                     if (jsonData.length === 0) {
                         alert('❌ Le fichier Excel est vide');
                         return;
                     }
-                    
+
                     // Remplir le select des colonnes avec les en-têtes
                     const headers = jsonData[0];
                     excelColumn.innerHTML = '<option value="">Sélectionner une colonne</option>';
@@ -463,18 +449,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             excelColumn.appendChild(option);
                         }
                     });
-                    
+
                     const idType = excelIdType.value;
                     const idTypeLabel = idType === 'revenuecat' ? 'RevenueCat ID' : 'UUID Firebase';
                     document.getElementById('excel-info').textContent = `${jsonData.length - 1} lignes trouvées. Sélectionnez la colonne contenant les ${idTypeLabel}s.`;
-                    
+
                     // Quand une colonne est sélectionnée, sélectionner les utilisateurs
                     excelColumn.onchange = function() {
                         const columnIndex = parseInt(this.value);
                         if (isNaN(columnIndex)) return;
-                        
+
                         const idType = excelIdType.value;
-                        
+
                         // Extraire les IDs de la colonne sélectionnée (ignorer la première ligne = en-tête)
                         const ids = [];
                         for (let i = 1; i < jsonData.length; i++) {
@@ -485,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (id) ids.push(id);
                             }
                         }
-                        
+
                         // Cocher les utilisateurs correspondants
                         let found = 0;
                         const checkboxes = usersTableBody.querySelectorAll('.user-checkbox');
@@ -497,22 +483,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else {
                                 matchId = row.dataset.uid || '';
                             }
-                            
+
                             if (ids.includes(matchId)) {
                                 cb.checked = true;
                                 found++;
                             }
                         });
-                        
+
                         updateSelectedCount();
                         const idTypeLabel = idType === 'revenuecat' ? 'RevenueCat ID' : 'UUID Firebase';
                         document.getElementById('excel-info').textContent = `${found} utilisateur(s) trouvé(s) et sélectionné(s) sur ${ids.length} ${idTypeLabel}(s) dans le fichier.`;
-                        
+
                         if (found < ids.length) {
                             alert(`⚠️ ${ids.length - found} ${idTypeLabel}(s) du fichier n'ont pas été trouvés dans la liste des utilisateurs.`);
                         }
                     };
-                    
+
                     // Mettre à jour le message quand le type d'ID change
                     excelIdType.onchange = function() {
                         const idType = this.value;
@@ -528,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsArrayBuffer(file);
         });
     }
-    
+
     // Initialiser le compteur
     updateSelectedCount();
 });

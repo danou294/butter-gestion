@@ -1,449 +1,225 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="butter">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Butter - Interface de Gestion{% endblock %}</title>
-    {% if firebase_env_label %}
-    <style>
-        .firebase-env-banner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: {% if firebase_env == 'dev' %}#FFC107{% else %}#60BC81{% endif %};
-            color: {% if firebase_env == 'dev' %}#000000{% else %}#FFFFFF{% endif %};
-            text-align: center;
-            padding: 6px 0;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 9999;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        body {
-            padding-top: 30px;
-        }
-        nav.sticky {
-            top: 30px !important;
-        }
-    </style>
-    {% endif %}
-    
-    {% load static %}
-    <!-- Tailwind CSS (compilé) -->
-    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
 
-    <!-- Google Fonts - Inria Sans & Inria Serif -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inria+Sans:wght@300;400;700&family=Inria+Serif:wght@400;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Inria Sans', system-ui, sans-serif;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Inria Serif', Georgia, serif;
-        }
-        
-        /* Animations fluides */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-        
-        /* Loading spinner */
-        .spinner {
-            border: 3px solid #F1EFEB;
-            border-top: 3px solid #535353;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        
-        /* Boutons modernes */
-        .btn-primary {
-            background: #60BC81;
-            color: #FFFFFF;
-            padding: 14px 28px;
-            border-radius: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn-primary:hover {
-            background: #4FA66F;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(96, 188, 129, 0.3);
-        }
-        
-        .btn-danger {
-            background: #D3695E;
-            color: #FFFFFF;
-            padding: 14px 28px;
-            border-radius: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn-danger:hover {
-            background: #C55A4F;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(211, 105, 94, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #C9C1B1;
-            color: #111111;
-            padding: 14px 28px;
-            border-radius: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn-secondary:hover {
-            background: #535353;
-            color: #FFFFFF;
-            transform: translateY(-2px);
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Smooth transitions */
-        * {
-            transition-property: color, background-color, border-color, opacity, transform;
-            transition-duration: 150ms;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        /* Dropdown menu styles */
-        .group:hover .group-hover\:rotate-180 {
-            transform: rotate(180deg);
-        }
-        
-        /* Ensure dropdown stays visible on hover */
-        .group:hover .group-hover\:opacity-100 {
-            opacity: 1;
-        }
-        
-        .group:hover .group-hover\:visible {
-            visibility: visible;
-        }
-    </style>
-    
-    {% block extra_css %}{% endblock %}
-</head>
-<body class="bg-[#F1EFEB] min-h-screen">
+
     {% if firebase_env_label %}
-    <div class="firebase-env-banner">
-        {{ firebase_env_label }} - Environnement Firebase actif
-    </div>
+    <style>
+        .firebase-env-banner { position:fixed;top:0;left:0;right:0;z-index:9999;text-align:center;padding:6px 0;font-size:12px;font-weight:bold;box-shadow:0 2px 4px rgba(0,0,0,.1);background:{% if firebase_env == 'dev' %}#FFC107;color:#000{% else %}#60BC81;color:#FFF{% endif %} }
+        body { padding-top: 30px; }
+        nav.sticky, .navbar.sticky { top: 30px !important; }
+    </style>
     {% endif %}
-    <!-- Navigation -->
-    <nav class="bg-[#FFFFFF]/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-[#C9C1B1]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="{% url 'scripts_manager:index' %}" class="text-2xl font-serif font-bold text-[#111111] hover:text-[#535353]">
+
+    <style>
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Inria Sans', system-ui, sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Inria Serif', Georgia, serif; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+        .fade-in { animation: fadeIn .3s ease-out; }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-base-200 min-h-screen">
+    {% if firebase_env_label %}
+    <div class="firebase-env-banner">{{ firebase_env_label }} - Environnement Firebase actif</div>
+    {% endif %}
+
+    <!-- Navbar -->
+    <nav class="bg-base-100/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-base-300" x-data="{ mobileOpen: false }">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo + Env -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <a href="{% url 'scripts_manager:index' %}" class="text-2xl font-serif font-bold text-base-content hover:text-primary transition-colors">
                         🧈 Butter
                     </a>
-                    
-                    <!-- Indicateur et sélecteur d'environnement Firebase -->
-                    <div class="flex items-center gap-2 px-3 py-1.5 {% if firebase_env == 'dev' %}bg-yellow-100 border border-yellow-300{% else %}bg-green-100 border border-green-300{% endif %} rounded-none">
-                        <span class="text-xs font-bold {% if firebase_env == 'dev' %}text-yellow-800{% else %}text-green-800{% endif %}">
-                            {{ firebase_env_label }}
-                        </span>
-                        <form method="post" action="{% url 'scripts_manager:switch_firebase_env' %}" class="inline" id="firebase-env-form">
-                            {% csrf_token %}
-                            <select name="env" 
-                                    onchange="document.getElementById('firebase-env-form').submit();"
-                                    class="text-xs px-2 py-0.5 border-0 rounded-none bg-transparent {% if firebase_env == 'dev' %}text-yellow-900{% else %}text-green-900{% endif %} font-medium cursor-pointer focus:outline-none"
-                                    style="border: none; border-radius: 0;">
-                                <option value="dev" {% if firebase_env == 'dev' %}selected{% endif %}>🔧 DEV</option>
-                                <option value="prod" {% if firebase_env == 'prod' %}selected{% endif %}>🚀 PROD</option>
-                            </select>
-                        </form>
+                    <form method="post" action="{% url 'scripts_manager:switch_firebase_env' %}" class="inline" x-ref="envForm">
+                        {% csrf_token %}
+                        <select name="env" @change="$refs.envForm.submit()"
+                                class="select select-xs font-bold border-0 rounded-full {% if firebase_env == 'dev' %}bg-warning/20 text-neutral{% else %}bg-success/20 text-neutral{% endif %}">
+                            <option value="dev" {% if firebase_env == 'dev' %}selected{% endif %}>🔧 DEV</option>
+                            <option value="prod" {% if firebase_env == 'prod' %}selected{% endif %}>🚀 PROD</option>
+                        </select>
+                    </form>
+                </div>
+
+                <!-- Desktop Nav -->
+                <div class="hidden lg:flex items-center gap-1">
+                    <!-- Accueil -->
+                    <a href="{% url 'scripts_manager:index' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'index' %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                        🏠 Accueil
+                    </a>
+
+                    <!-- Dropdown Gestion -->
+                    <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                        <button @click="open = !open"
+                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'restaurant' in request.resolver_match.url_name or 'photo' in request.resolver_match.url_name or 'user' in request.resolver_match.url_name or 'guide' in request.resolver_match.url_name or 'announcement' in request.resolver_match.url_name or 'onboarding' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                            📋 Gestion
+                            <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-cloak
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-start="opacity-100 translate-y-0"
+                             x-transition:leave-end="opacity-0 -translate-y-1"
+                             class="absolute left-0 top-full mt-1 w-52 bg-base-100 rounded-xl shadow-xl border border-base-300 py-2 z-50">
+                            <a href="{% url 'scripts_manager:restaurants_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'restaurant' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🍽️ Restaurants</a>
+                            <a href="{% url 'scripts_manager:guides_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'guide' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📖 Guides</a>
+                            <a href="{% url 'scripts_manager:announcements_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'announcement' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🎪 Annonces</a>
+                            <a href="{% url 'scripts_manager:photos_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'photo' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📸 Photos</a>
+                            <a href="{% url 'scripts_manager:users_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'user' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">👥 Utilisateurs</a>
+                            <a href="{% url 'scripts_manager:onboarding_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'onboarding' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🎯 Onboarding</a>
+                        </div>
                     </div>
-                    <!-- Burger Menu Button (Mobile) -->
-                    <button id="mobile-menu-button" class="md:hidden p-2 rounded-none text-[#111111] hover:bg-[#F1EFEB] transition-colors">
+
+                    <!-- Recherche -->
+                    <a href="{% url 'scripts_manager:search_restaurants' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {% if 'search_restaurants' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                        🔍 Recherche
+                    </a>
+
+                    <!-- Dropdown Base de données -->
+                    <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                        <button @click="open = !open"
+                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'import_restaurants' in request.resolver_match.url_name or 'restore_backup' in request.resolver_match.url_name or 'export' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                            💾 BDD
+                            <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" x-cloak
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-start="opacity-100 translate-y-0"
+                             x-transition:leave-end="opacity-0 -translate-y-1"
+                             class="absolute left-0 top-full mt-1 w-48 bg-base-100 rounded-xl shadow-xl border border-base-300 py-2 z-50">
+                            <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'import_restaurants' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📥 Import</a>
+                            <a href="{% url 'scripts_manager:restore_backup_index' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'restore_backup' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🔄 Restaurer</a>
+                            <a href="{% url 'scripts_manager:export_index' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'export' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📤 Export</a>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <a href="{% url 'scripts_manager:notifications_index' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {% if 'notification' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                        📱 Notifs
+                    </a>
+                </div>
+
+                <!-- User + Mobile burger -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    {% if user.is_authenticated %}
+                    <span class="text-sm text-secondary hidden sm:inline">👤 {{ user.username }}</span>
+                    <a href="{% url 'scripts_manager:logout' %}" class="btn btn-sm btn-ghost text-base-content">🚪</a>
+                    {% else %}
+                    <a href="{% url 'scripts_manager:login' %}" class="btn btn-sm btn-ghost text-base-content">🔓 Connexion</a>
+                    {% endif %}
+                    <button class="btn btn-ghost btn-sm lg:hidden text-base-content" @click="mobileOpen = !mobileOpen">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path x-show="mobileOpen" x-cloak stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
-                    <div id="desktop-menu" class="hidden md:flex items-center space-x-1">
-                        <!-- Accueil -->
-                        <a href="{% url 'scripts_manager:index' %}" 
-                           class="px-4 py-2 rounded-none text-sm font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                            🏠 Accueil
-                        </a>
-                        
-                        <!-- Séparateur -->
-                        <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
-                        
-                        <!-- Section : Gestion (Menu déroulant) -->
-                        <div class="relative group">
-                            <button class="px-4 py-2 rounded-none text-sm font-medium {% if 'restaurant' in request.resolver_match.url_name or 'photo' in request.resolver_match.url_name or 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors flex items-center gap-1">
-                                📋 Gestion
-                                <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div class="absolute left-0 mt-1 w-48 bg-[#FFFFFF] rounded-none shadow-lg border-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                <div class="py-2">
-                                    <a href="{% url 'scripts_manager:restaurants_list' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'restaurant' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        🍽️ Restaurants
-                                    </a>
-                                    <a href="{% url 'scripts_manager:guides_list' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'guide' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        📖 Guides
-                                    </a>
-                                    <a href="{% url 'scripts_manager:announcements_list' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'announcement' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        🎪 Annonces
-                                    </a>
-                                    <a href="{% url 'scripts_manager:photos_list' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'photo' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        📸 Photos
-                                    </a>
-                                    <a href="{% url 'scripts_manager:users_list' %}"
-                                       class="block px-4 py-2 text-sm {% if 'user' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        👥 Utilisateurs
-                                    </a>
-                                    <a href="{% url 'scripts_manager:onboarding_list' %}"
-                                       class="block px-4 py-2 text-sm {% if 'onboarding' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        🎯 Onboarding
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Séparateur -->
-                        <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
-
-                        <!-- Section : Recherche -->
-                        <a href="{% url 'scripts_manager:search_restaurants' %}" 
-                           class="px-4 py-2 rounded-none text-sm font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                            🔍 Recherche
-                        </a>
-                        
-                        <!-- Séparateur -->
-                        <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
-                        
-                        <!-- Section : Base de données (Menu déroulant) -->
-                        <div class="relative group">
-                            <button class="px-4 py-2 rounded-none text-sm font-medium {% if 'import_restaurants' in request.resolver_match.url_name or 'restore_backup' in request.resolver_match.url_name or 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors flex items-center gap-1">
-                                💾 Base de données
-                                <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div class="absolute left-0 mt-1 w-48 bg-[#FFFFFF] rounded-none shadow-lg border-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                <div class="py-2">
-                                    <a href="{% url 'scripts_manager:import_restaurants_index' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        📥 Import
-                                    </a>
-                                    <a href="{% url 'scripts_manager:restore_backup_index' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'restore_backup' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        🔄 Restaurer
-                                    </a>
-                                    <a href="{% url 'scripts_manager:export_index' %}" 
-                                       class="block px-4 py-2 text-sm {% if 'export' in request.resolver_match.url_name %}bg-[#F1EFEB] text-[#111111] font-medium{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                                        📤 Export
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Séparateur -->
-                        <div class="h-6 w-px bg-[#C9C1B1] mx-1"></div>
-                        
-                        <!-- Catégorie : Communication -->
-                        <a href="{% url 'scripts_manager:notifications_index' %}" 
-                           class="px-4 py-2 rounded-none text-sm font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB] hover:text-[#111111]{% endif %} transition-colors">
-                            📱 Notifications
-                        </a>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    {% if user.is_authenticated %}
-                    <span class="text-sm text-[#535353]">👤 {{ user.username }}</span>
-                    <a href="{% url 'scripts_manager:logout' %}" class="btn-secondary text-sm">
-                        🚪 Déconnexion
-                    </a>
-                    {% else %}
-                    <a href="{% url 'scripts_manager:login' %}" class="btn-secondary text-sm">
-                        🔓 Connexion
-                    </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden border-t border-[#C9C1B1]">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <!-- Sélecteur d'environnement Firebase (Mobile) -->
-                <div class="px-3 py-2 border-b border-[#C9C1B1] mb-2 {% if firebase_env == 'dev' %}bg-yellow-50{% else %}bg-green-50{% endif %}">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-bold {% if firebase_env == 'dev' %}text-yellow-800{% else %}text-green-800{% endif %}">
-                            {{ firebase_env_label }}
-                        </span>
-                        <form method="post" action="{% url 'scripts_manager:switch_firebase_env' %}" class="inline" id="firebase-env-form-mobile">
-                            {% csrf_token %}
-                            <select name="env" 
-                                    onchange="document.getElementById('firebase-env-form-mobile').submit();"
-                                    class="text-xs px-2 py-1 border-0 rounded-none bg-transparent {% if firebase_env == 'dev' %}text-yellow-900{% else %}text-green-900{% endif %} font-medium cursor-pointer focus:outline-none"
-                                    style="border: none; border-radius: 0;">
-                                <option value="dev" {% if firebase_env == 'dev' %}selected{% endif %}>🔧 DEV</option>
-                                <option value="prod" {% if firebase_env == 'prod' %}selected{% endif %}>🚀 PROD</option>
-                            </select>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- Accueil -->
-                <a href="{% url 'scripts_manager:index' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if request.resolver_match.url_name == 'index' %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🏠 Accueil</a>
-                
-                <!-- Séparateur -->
-                <div class="border-t border-[#C9C1B1] my-2"></div>
-                
-                <!-- Section : Gestion -->
-                <div class="px-3 py-1 text-xs font-semibold text-[#535353] uppercase tracking-wider">📋 Gestion</div>
-                <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'restaurant' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🍽️ Restaurants</a>
-                <a href="{% url 'scripts_manager:guides_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'guide' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📖 Guides</a>
-                <a href="{% url 'scripts_manager:announcements_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'announcement' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🎪 Annonces</a>
-                <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'photo' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📸 Photos</a>
-                <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'user' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">👥 Utilisateurs</a>
-                <a href="{% url 'scripts_manager:onboarding_list' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'onboarding' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🎯 Onboarding</a>
-
-                <!-- Séparateur -->
-                <div class="border-t border-[#C9C1B1] my-2"></div>
-
-                <!-- Section : Recherche -->
-                <a href="{% url 'scripts_manager:search_restaurants' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'search_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🔍 Recherche</a>
-                
-                <!-- Séparateur -->
-                <div class="border-t border-[#C9C1B1] my-2"></div>
-                
-                <!-- Section : Base de données -->
-                <div class="px-3 py-1 text-xs font-semibold text-[#535353] uppercase tracking-wider">💾 Base de données</div>
-                <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'import_restaurants' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📥 Import</a>
-                <a href="{% url 'scripts_manager:restore_backup_index' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'restore_backup' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">🔄 Restaurer</a>
-                <a href="{% url 'scripts_manager:export_index' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'export' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📤 Export</a>
-                
-                <!-- Séparateur -->
-                <div class="border-t border-[#C9C1B1] my-2"></div>
-                
-                <!-- Catégorie : Communication -->
-                <div class="px-3 py-1 text-xs font-semibold text-[#535353] uppercase tracking-wider">Communication</div>
-                <a href="{% url 'scripts_manager:notifications_index' %}" class="block px-3 py-2 rounded-none text-base font-medium {% if 'notification' in request.resolver_match.url_name %}bg-[#C9C1B1] text-[#111111]{% else %}text-[#535353] hover:bg-[#F1EFEB]{% endif %}">📱 Notifications</a>
-                {% if user.is_authenticated %}
-                <div class="border-t border-[#C9C1B1] mt-2 pt-2">
-                    <div class="px-3 py-2 text-sm text-[#535353]">👤 {{ user.username }}</div>
-                    <a href="{% url 'scripts_manager:logout' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">🚪 Déconnexion</a>
-                </div>
-                {% else %}
-                <div class="border-t border-[#C9C1B1] mt-2 pt-2">
-                    <a href="{% url 'scripts_manager:login' %}" class="block px-3 py-2 rounded-[14px] text-base font-medium text-[#535353] hover:bg-[#F1EFEB]">🔓 Connexion</a>
-                </div>
-                {% endif %}
+        <div x-show="mobileOpen" x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             @click.away="mobileOpen=false"
+             class="lg:hidden border-t border-base-300 bg-base-100 shadow-lg">
+            <div class="px-4 py-4 space-y-1">
+                <a href="{% url 'scripts_manager:index' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'index' %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">🏠 Accueil</a>
+                <div class="pt-2 pb-1 px-3 text-xs font-bold text-secondary uppercase tracking-wider">Gestion</div>
+                <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'restaurant' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🍽️ Restaurants</a>
+                <a href="{% url 'scripts_manager:guides_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'guide' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📖 Guides</a>
+                <a href="{% url 'scripts_manager:announcements_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'announcement' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🎪 Annonces</a>
+                <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'photo' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📸 Photos</a>
+                <a href="{% url 'scripts_manager:users_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'user' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">👥 Utilisateurs</a>
+                <a href="{% url 'scripts_manager:onboarding_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'onboarding' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🎯 Onboarding</a>
+                <div class="pt-2 pb-1 px-3 text-xs font-bold text-secondary uppercase tracking-wider">Outils</div>
+                <a href="{% url 'scripts_manager:search_restaurants' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'search_restaurants' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🔍 Recherche</a>
+                <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'import_restaurants' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📥 Import</a>
+                <a href="{% url 'scripts_manager:restore_backup_index' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'restore_backup' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🔄 Restaurer</a>
+                <a href="{% url 'scripts_manager:export_index' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'export' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📤 Export</a>
+                <a href="{% url 'scripts_manager:notifications_index' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'notification' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📱 Notifications</a>
             </div>
         </div>
     </nav>
-    
+
+    <!-- Toast alerts -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6" x-data="{ show: true }" x-show="show" x-transition>
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} mb-3 shadow-sm">
+            <span>{{ message }}</span>
+            <button class="btn btn-ghost btn-xs" @click="show=false">✕</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="mb-4 p-4 rounded-[14px] {% if message.tags == 'error' %}bg-[#F2D7D4] text-[#D3695E] border border-[#D3695E]{% elif message.tags == 'success' %}bg-[#D4F2DA] text-[#60BC81] border border-[#60BC81]{% else %}bg-[#F1EFEB] text-[#535353] border border-[#C9C1B1]{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-        
         {% block content %}{% endblock %}
     </main>
-    
+
     <!-- Global Loading Overlay -->
-    <div id="global-loading" class="hidden fixed inset-0 bg-[#111111]/20 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div class="bg-[#FFFFFF] rounded-[14px] shadow-2xl p-8 flex flex-col items-center space-y-4">
-            <div class="spinner"></div>
-            <p class="text-[#111111] font-medium">Chargement...</p>
+    <div id="global-loading" class="hidden fixed inset-0 bg-neutral/20 backdrop-blur-sm z-[100] flex items-center justify-center">
+        <div class="card bg-base-100 shadow-2xl">
+            <div class="card-body items-center text-center">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+                <p class="font-medium mt-2">Chargement...</p>
+            </div>
         </div>
     </div>
-    
+
     <script>
-        // Global loading overlay
-        function showLoading() {
-            document.getElementById('global-loading').classList.remove('hidden');
-        }
-        
-        function hideLoading() {
-            document.getElementById('global-loading').classList.add('hidden');
-        }
-        
-        // Auto-show loading on form submissions
+        // Loading helpers
+        function showLoading() { document.getElementById('global-loading').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('global-loading').classList.add('hidden'); }
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Forms with auto-loader class
-            document.querySelectorAll('form.auto-loader').forEach(form => {
-                form.addEventListener('submit', showLoading);
-            });
-            
-            // Links with trigger-loading class
-            document.querySelectorAll('a.trigger-loading').forEach(link => {
-                link.addEventListener('click', showLoading);
-            });
-            
-            // Hide loading when page is fully loaded
+            document.querySelectorAll('form.auto-loader').forEach(f => f.addEventListener('submit', showLoading));
+            document.querySelectorAll('a.trigger-loading').forEach(a => a.addEventListener('click', showLoading));
             window.addEventListener('load', hideLoading);
         });
-        
+
         // CSRF token helper
         function getCookie(name) {
-            let cookieValue = null;
+            let v = null;
             if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
+                for (const c of document.cookie.split(';')) {
+                    const t = c.trim();
+                    if (t.substring(0, name.length + 1) === (name + '=')) { v = decodeURIComponent(t.substring(name.length + 1)); break; }
                 }
             }
-            return cookieValue;
+            return v;
         }
-        
-        // Mobile menu toggle
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
-            
-            if (mobileMenuButton && mobileMenu) {
-                mobileMenuButton.addEventListener('click', function() {
-                    mobileMenu.classList.toggle('hidden');
-                });
-            }
-        });
     </script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

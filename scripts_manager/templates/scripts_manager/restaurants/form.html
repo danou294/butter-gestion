@@ -5,101 +5,99 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h1 class="text-3xl font-serif font-bold text-[#111111]">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
+            <h1 class="text-3xl font-serif font-bold text-base-content">
                 {% if action == 'create' %}➕ Nouveau Restaurant{% else %}✏️ Modifier Restaurant{% endif %}
             </h1>
-            <a href="{% url 'scripts_manager:restaurants_list' %}" class="btn-secondary">
-                ← Retour
-            </a>
+            <a href="{% url 'scripts_manager:restaurants_list' %}" class="btn btn-ghost">← Retour</a>
         </div>
     </div>
-    
+
     {% if error %}
-    <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4 text-[#D3695E]">
-        ❌ Erreur : {{ error }}
+    <div class="alert alert-error">
+        <span>❌ Erreur : {{ error }}</span>
     </div>
     {% endif %}
-    
+
     <!-- Form -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <form method="POST" class="space-y-6">
-            {% csrf_token %}
-            
-            <div>
-                <label for="name" class="block text-sm font-medium text-[#111111] mb-2">Nom *</label>
-                <input type="text" id="name" name="name" value="{{ restaurant.name|default:'' }}" required
-                       class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-            </div>
-            
-            <div>
-                <label for="address" class="block text-sm font-medium text-[#111111] mb-2">Adresse</label>
-                <input type="text" id="address" name="address" value="{{ restaurant.address|default:'' }}"
-                       class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="ville" class="block text-sm font-medium text-[#111111] mb-2">Ville</label>
-                    <input type="text" id="ville" name="ville" value="{{ restaurant.ville|default:'' }}"
-                           class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Nom *</span></label>
+                    <input type="text" id="name" name="name" value="{{ restaurant.name|default:'' }}" required
+                           class="input input-bordered w-full bg-base-200">
                 </div>
-                <div>
-                    <label for="codePostal" class="block text-sm font-medium text-[#111111] mb-2">Code Postal</label>
-                    <input type="text" id="codePostal" name="codePostal" value="{{ restaurant.codePostal|default:'' }}"
-                           class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Adresse</span></label>
+                    <input type="text" id="address" name="address" value="{{ restaurant.address|default:'' }}"
+                           class="input input-bordered w-full bg-base-200">
                 </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="telephone" class="block text-sm font-medium text-[#111111] mb-2">Téléphone</label>
-                    <input type="text" id="telephone" name="telephone" value="{{ restaurant.telephone|default:'' }}"
-                           class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Ville</span></label>
+                        <input type="text" id="ville" name="ville" value="{{ restaurant.ville|default:'' }}"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Code Postal</span></label>
+                        <input type="text" id="codePostal" name="codePostal" value="{{ restaurant.codePostal|default:'' }}"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
                 </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-[#111111] mb-2">Email</label>
-                    <input type="email" id="email" name="email" value="{{ restaurant.email|default:'' }}"
-                           class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Telephone</span></label>
+                        <input type="text" id="telephone" name="telephone" value="{{ restaurant.telephone|default:'' }}"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Email</span></label>
+                        <input type="email" id="email" name="email" value="{{ restaurant.email|default:'' }}"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
                 </div>
-            </div>
-            
-            <div>
-                <label for="siteWeb" class="block text-sm font-medium text-[#111111] mb-2">Site Web</label>
-                <input type="url" id="siteWeb" name="siteWeb" value="{{ restaurant.siteWeb|default:'' }}"
-                       class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-            </div>
-            
-            <div>
-                <label for="description" class="block text-sm font-medium text-[#111111] mb-2">Description</label>
-                <textarea id="description" name="description" rows="4"
-                          class="w-full px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">{{ restaurant.description|default:'' }}</textarea>
-            </div>
-            
-            <!-- Champs personnalisés -->
-            <div class="bg-[#F1EFEB] rounded-[14px] p-4 border border-[#C9C1B1]">
-                <h3 class="text-lg font-serif font-bold text-[#111111] mb-3">Champs personnalisés</h3>
-                <p class="text-sm text-[#535353] mb-4">
-                    Ajoutez des champs supplémentaires au format JSON. Chaque ligne doit être au format : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">nom_champ: valeur</code>
-                </p>
-                <div id="custom-fields" class="space-y-3">
-                    <button type="button" onclick="addCustomField()" class="btn-secondary">
-                        ➕ Ajouter un champ
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Site Web</span></label>
+                    <input type="url" id="siteWeb" name="siteWeb" value="{{ restaurant.siteWeb|default:'' }}"
+                           class="input input-bordered w-full bg-base-200">
+                </div>
+
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Description</span></label>
+                    <textarea id="description" name="description" rows="4"
+                              class="textarea textarea-bordered w-full bg-base-200">{{ restaurant.description|default:'' }}</textarea>
+                </div>
+
+                <!-- Champs personnalises -->
+                <div class="bg-base-200 rounded-box p-4 border border-base-300">
+                    <h3 class="text-lg font-serif font-bold text-base-content mb-2">Champs personnalisés</h3>
+                    <p class="text-sm text-secondary mb-4">
+                        Ajoutez des champs supplémentaires. Format : <code class="bg-base-100 px-2 py-1 rounded">nom_champ: valeur</code>
+                    </p>
+                    <div id="custom-fields" class="space-y-3">
+                        <button type="button" onclick="addCustomField()" class="btn btn-ghost btn-sm">
+                            ➕ Ajouter un champ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col md:flex-row gap-3 pt-4">
+                    <button type="submit" class="btn btn-primary flex-1">
+                        💾 {% if action == 'create' %}Créer{% else %}Enregistrer{% endif %}
                     </button>
+                    <a href="{% url 'scripts_manager:restaurants_list' %}" class="btn btn-ghost flex-1 text-center">Annuler</a>
                 </div>
-            </div>
-            
-            <!-- Actions -->
-            <div class="flex flex-col md:flex-row gap-3 pt-4">
-                <button type="submit" class="btn-primary flex-1">
-                    💾 {% if action == 'create' %}Créer{% else %}Enregistrer{% endif %}
-                </button>
-                <a href="{% url 'scripts_manager:restaurants_list' %}" class="btn-secondary flex-1 text-center">
-                    Annuler
-                </a>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -111,19 +109,16 @@ function addCustomField() {
     const fieldDiv = document.createElement('div');
     fieldDiv.className = 'flex gap-3 items-center';
     fieldDiv.innerHTML = `
-        <input type="text" name="custom_field_name_${customFieldIndex}" placeholder="Nom du champ" 
-               class="flex-1 px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]" required>
-        <input type="text" name="custom_field_value_${customFieldIndex}" placeholder="Valeur" 
-               class="flex-2 px-4 py-3 border border-[#C9C1B1] rounded-[14px] focus:ring-2 focus:ring-[#535353] focus:border-transparent bg-[#F1EFEB] text-[#111111]">
-        <button type="button" onclick="this.parentElement.remove()" class="btn-danger">
-            🗑️
-        </button>
+        <input type="text" name="custom_field_name_${customFieldIndex}" placeholder="Nom du champ"
+               class="input input-bordered flex-1 bg-base-100" required>
+        <input type="text" name="custom_field_value_${customFieldIndex}" placeholder="Valeur"
+               class="input input-bordered flex-[2] bg-base-100">
+        <button type="button" onclick="this.parentElement.remove()" class="btn btn-error btn-sm">🗑️</button>
     `;
     container.appendChild(fieldDiv);
     customFieldIndex++;
 }
 
-// Charger les champs personnalisés existants
 {% if restaurant %}
 {% for key, value in restaurant.items %}
 {% if key != 'id' and key != 'name' and key != 'Name' and key != 'nom' and key != 'address' and key != 'adresse' and key != 'ville' and key != 'codePostal' and key != 'telephone' and key != 'email' and key != 'siteWeb' and key != 'description' %}

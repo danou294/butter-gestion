@@ -3,146 +3,162 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Welcome Card -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-8 border border-[#C9C1B1]">
-        <h1 class="text-4xl font-serif font-bold text-[#111111] mb-4">🧈 Bienvenue sur Butter</h1>
-        <p class="text-lg text-[#535353]">Interface de gestion complète pour votre application Firebase</p>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h1 class="text-4xl font-serif font-bold text-base-content">🧈 Bienvenue sur Butter</h1>
+            <p class="text-lg text-secondary">Interface de gestion complète pour votre application Firebase</p>
+        </div>
     </div>
-    
+
     <!-- Configuration Status -->
-    <div class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1]">
-        <h2 class="text-2xl font-serif font-bold text-[#111111] mb-4">🔑 Configuration Firebase</h2>
-        
-        <!-- Environnement actif -->
-        <div class="mb-4 p-4 rounded-[14px] {% if firebase_env == 'dev' %}bg-yellow-50 border border-yellow-300{% else %}bg-green-50 border border-green-300{% endif %}">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="text-2xl">{{ firebase_env_label }}</span>
-                <p class="font-semibold {% if firebase_env == 'dev' %}text-yellow-800{% else %}text-green-800{% endif %}">
-                    Environnement actif : <strong>{{ firebase_env|upper }}</strong>
-                </p>
-            </div>
-            <p class="text-sm {% if firebase_env == 'dev' %}text-yellow-700{% else %}text-green-700{% endif %}">
-                Pour changer d'environnement, définissez la variable <code class="bg-white px-2 py-1 rounded">FIREBASE_ENV=dev</code> ou <code class="bg-white px-2 py-1 rounded">FIREBASE_ENV=prod</code>
-            </p>
-        </div>
-        
-        <!-- Fichier DEV -->
-        <div class="mb-4">
-            <h3 class="text-lg font-serif font-bold text-[#111111] mb-2">🔧 Environnement DEV</h3>
-            {% if service_account_dev_exists %}
-            <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xl">✅</span>
-                    <p class="font-semibold text-[#60BC81]">Fichier DEV présent</p>
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-2xl font-serif text-base-content">🔑 Configuration Firebase</h2>
+
+            <!-- Environnement actif -->
+            <div class="alert {% if firebase_env == 'dev' %}alert-warning{% else %}alert-success{% endif %} text-neutral">
+                <div>
+                    <span class="text-2xl">{{ firebase_env_label }}</span>
+                    <div>
+                        <p class="font-semibold text-neutral">Environnement actif : <strong>{{ firebase_env|upper }}</strong></p>
+                        <p class="text-sm text-neutral/70">
+                            Pour changer d'environnement, définissez la variable <code class="bg-neutral/10 px-2 py-0.5 rounded text-xs font-mono">FIREBASE_ENV=dev</code> ou <code class="bg-neutral/10 px-2 py-0.5 rounded text-xs font-mono">FIREBASE_ENV=prod</code>
+                        </p>
+                    </div>
                 </div>
-                <p class="text-xs text-[#60BC81]">
-                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_dev_path }}</code>
-                </p>
             </div>
-            {% else %}
-            <div class="bg-[#F1EFEB] border border-[#C9C1B1] rounded-[14px] p-4">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xl">⚠️</span>
-                    <p class="font-semibold text-[#535353]">Fichier DEV manquant</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <!-- Fichier DEV -->
+                <div>
+                    <h3 class="text-lg font-serif font-bold text-base-content mb-2">🔧 Environnement DEV</h3>
+                    {% if service_account_dev_exists %}
+                    <div class="alert alert-success text-neutral">
+                        <div>
+                            <span class="text-xl">✅</span>
+                            <div>
+                                <p class="font-semibold text-neutral">Fichier DEV présent</p>
+                                <p class="text-xs text-neutral/70"><code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_dev_path }}</code></p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-neutral">
+                        <div>
+                            <span class="text-xl">⚠️</span>
+                            <div>
+                                <p class="font-semibold text-neutral">Fichier DEV manquant</p>
+                                <p class="text-xs text-neutral/70"><code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_dev_path }}</code></p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                <p class="text-xs text-[#535353]">
-                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_dev_path }}</code>
-                </p>
-            </div>
-            {% endif %}
-        </div>
-        
-        <!-- Fichier PROD -->
-        <div class="mb-4">
-            <h3 class="text-lg font-serif font-bold text-[#111111] mb-2">🚀 Environnement PROD</h3>
-            {% if service_account_prod_exists %}
-            <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xl">✅</span>
-                    <p class="font-semibold text-[#60BC81]">Fichier PROD présent</p>
+
+                <!-- Fichier PROD -->
+                <div>
+                    <h3 class="text-lg font-serif font-bold text-base-content mb-2">🚀 Environnement PROD</h3>
+                    {% if service_account_prod_exists %}
+                    <div class="alert alert-success text-neutral">
+                        <div>
+                            <span class="text-xl">✅</span>
+                            <div>
+                                <p class="font-semibold text-neutral">Fichier PROD présent</p>
+                                <p class="text-xs text-neutral/70"><code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_prod_path }}</code></p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-error text-neutral">
+                        <div>
+                            <span class="text-xl">❌</span>
+                            <div>
+                                <p class="font-semibold text-neutral">Fichier PROD manquant</p>
+                                <p class="text-xs text-neutral/70"><code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_prod_path }}</code></p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                <p class="text-xs text-[#60BC81]">
-                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_prod_path }}</code>
-                </p>
             </div>
-            {% else %}
-            <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xl">❌</span>
-                    <p class="font-semibold text-[#D3695E]">Fichier PROD manquant</p>
+
+            <!-- Fichier actuellement utilisé -->
+            <div class="mt-4">
+                {% if service_account_exists %}
+                <div class="alert alert-success text-neutral">
+                    <div>
+                        <span class="text-2xl">✅</span>
+                        <div>
+                            <p class="font-semibold text-neutral">Fichier actif configuré</p>
+                            <p class="text-sm text-neutral/80">Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> est présent et sera utilisé automatiquement.</p>
+                            <p class="text-xs text-neutral/70">Chemin actif : <code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_path }}</code></p>
+                        </div>
+                    </div>
                 </div>
-                <p class="text-xs text-[#D3695E]">
-                    <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_prod_path }}</code>
-                </p>
+                {% else %}
+                <div class="alert alert-error text-neutral">
+                    <div>
+                        <span class="text-2xl">❌</span>
+                        <div>
+                            <p class="font-semibold text-neutral">Fichier actif manquant</p>
+                            <p class="text-sm text-neutral/80">Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> n'a pas été trouvé.</p>
+                            <p class="text-xs text-neutral/70">Chemin attendu : <code class="bg-neutral/10 px-2 py-0.5 rounded font-mono">{{ service_account_path }}</code></p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
-        
-        <!-- Fichier actuellement utilisé -->
-        {% if service_account_exists %}
-        <div class="bg-[#D4F2DA] border border-[#60BC81] rounded-[14px] p-4">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="text-2xl">✅</span>
-                <p class="font-semibold text-[#60BC81]">Fichier actif configuré</p>
-            </div>
-            <p class="text-sm text-[#60BC81] mb-2">
-                Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> est présent et sera utilisé automatiquement.
-            </p>
-            <p class="text-xs text-[#60BC81]">
-                Chemin actif : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
-            </p>
-        </div>
-        {% else %}
-        <div class="bg-[#F2D7D4] border border-[#D3695E] rounded-[14px] p-4">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="text-2xl">❌</span>
-                <p class="font-semibold text-[#D3695E]">Fichier actif manquant</p>
-            </div>
-            <p class="text-sm text-[#D3695E] mb-2">
-                Le fichier pour l'environnement <strong>{{ firebase_env|upper }}</strong> n'a pas été trouvé.
-            </p>
-            <p class="text-xs text-[#D3695E]">
-                Chemin attendu : <code class="bg-[#FFFFFF] px-2 py-1 rounded-[14px]">{{ service_account_path }}</code>
-            </p>
-        </div>
-        {% endif %}
     </div>
-    
+
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <a href="{% url 'scripts_manager:export_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">📤</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Export</h3>
-            <p class="text-[#535353]">Exporter les collections Firestore et utilisateurs Auth vers Excel</p>
+        <a href="{% url 'scripts_manager:export_index' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">📤</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Export</h3>
+                <p class="text-secondary">Exporter les collections Firestore et utilisateurs Auth vers Excel</p>
+            </div>
         </a>
-        
-        <a href="{% url 'scripts_manager:users_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">👥</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Utilisateurs</h3>
-            <p class="text-[#535353]">Gérer et suivre les utilisateurs avec RevenueCat</p>
+
+        <a href="{% url 'scripts_manager:users_list' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">👥</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Utilisateurs</h3>
+                <p class="text-secondary">Gérer et suivre les utilisateurs avec RevenueCat</p>
+            </div>
         </a>
-        
-        <a href="{% url 'scripts_manager:restaurants_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">🍽️</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Restaurants</h3>
-            <p class="text-[#535353]">CRUD complet pour la collection restaurants</p>
+
+        <a href="{% url 'scripts_manager:restaurants_list' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">🍽️</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Restaurants</h3>
+                <p class="text-secondary">CRUD complet pour la collection restaurants</p>
+            </div>
         </a>
-        
-        <a href="{% url 'scripts_manager:photos_list' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">📸</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Photos</h3>
-            <p class="text-[#535353]">Gérer les logos et photos des restaurants</p>
+
+        <a href="{% url 'scripts_manager:photos_list' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">📸</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Photos</h3>
+                <p class="text-secondary">Gérer les logos et photos des restaurants</p>
+            </div>
         </a>
-        
-        <a href="{% url 'scripts_manager:notifications_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">📱</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Notifications</h3>
-            <p class="text-[#535353]">Envoyer des notifications push aux utilisateurs</p>
+
+        <a href="{% url 'scripts_manager:notifications_index' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">📱</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Notifications</h3>
+                <p class="text-secondary">Envoyer des notifications push aux utilisateurs</p>
+            </div>
         </a>
-        
-        <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="bg-[#FFFFFF] rounded-[14px] shadow-sm p-6 border border-[#C9C1B1] hover:shadow-md hover:border-[#535353] transition-all group">
-            <div class="text-4xl mb-3">📥</div>
-            <h3 class="text-xl font-serif font-bold text-[#111111] mb-2 group-hover:text-[#535353] transition-colors">Import Batch</h3>
-            <p class="text-[#535353]">Importer des restaurants depuis Excel</p>
+
+        <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md hover:border-primary transition-all group">
+            <div class="card-body">
+                <div class="text-4xl mb-1">📥</div>
+                <h3 class="card-title font-serif text-base-content group-hover:text-primary transition-colors">Import Batch</h3>
+                <p class="text-secondary">Importer des restaurants depuis Excel</p>
+            </div>
         </a>
     </div>
 </div>
