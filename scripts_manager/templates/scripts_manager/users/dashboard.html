@@ -3,26 +3,59 @@
 {% block title %}Dashboard RevenueCat - Butter{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ scanning: {{ is_scanning|yesno:'true,false' }} }" x-cloak>
     <!-- Header -->
     <div class="card bg-base-100 shadow-sm border border-base-300">
         <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="text-3xl font-serif font-bold text-base-content">📊 Dashboard RevenueCat</h1>
-                <p class="text-secondary mt-1">Métriques de revenus et abonnements</p>
+                <p class="text-secondary mt-1">Métriques temps réel via API RevenueCat V2</p>
             </div>
-            <div class="flex items-center gap-4">
-                <a href="{% url 'scripts_manager:users_list' %}" class="text-secondary hover:text-base-content">
-                    ← Retour à la liste
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:users_list' %}" class="btn btn-ghost btn-sm text-secondary">
+                    ← Utilisateurs
+                </a>
+                <a href="{% url 'scripts_manager:dashboard_revenuecat' %}" class="btn btn-outline btn-sm">
+                    Rafraîchir
                 </a>
                 <a href="{% url 'scripts_manager:refresh_all_revenuecat' %}"
-                   class="btn btn-primary"
-                   onclick="return confirm('⚠️ Actualiser toutes les données RevenueCat ?');">
-                    🔄 Actualiser les données
+                   class="btn btn-primary btn-sm"
+                   onclick="return confirm('Lancer un scan complet de tous les utilisateurs ?\nCela peut prendre plusieurs minutes.');"
+                   x-bind:class="scanning ? 'btn-disabled' : ''">
+                    <span x-show="!scanning">🔄 Scan complet</span>
+                    <span x-show="scanning" class="loading loading-spinner loading-xs"></span>
+                    <span x-show="scanning">Scan en cours...</span>
                 </a>
             </div>
         </div>
     </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} text-neutral">
+        <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Scan Progress -->
+    {% if is_scanning %}
+    <div class="alert alert-info text-neutral"
+         x-data="scanPoller()"
+         x-init="startPolling()">
+        <div class="w-full">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="font-semibold" x-text="statusText">Scan en cours...</span>
+            </div>
+            <progress class="progress progress-primary w-full" :value="current" :max="total"></progress>
+            <p class="text-xs mt-1">
+                <span x-text="current">{{ scan_progress.current }}</span> / <span x-text="total">{{ scan_progress.total }}</span> utilisateurs scannés
+                — <span x-text="foundActive">0</span> actifs trouvés
+            </p>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Dashboard Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -30,7 +63,7 @@
         <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
             <div class="card-body">
                 <p class="text-sm font-medium text-secondary">Active Trials</p>
-                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_trials }}</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_trials|default:"0" }}</p>
                 <p class="text-xs text-secondary">In total</p>
             </div>
         </div>
@@ -39,7 +72,7 @@
         <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
             <div class="card-body">
                 <p class="text-sm font-medium text-secondary">Active Subscriptions</p>
-                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_subscriptions }}</p>
+                <p class="text-4xl font-bold font-serif text-primary mt-3 mb-2">{{ dashboard.active_subscriptions|default:"0" }}</p>
                 <p class="text-xs text-secondary">In total</p>
             </div>
         </div>
@@ -49,7 +82,7 @@
             <div class="card-body">
                 <p class="text-sm font-medium text-secondary">MRR</p>
                 <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">
-                    <span class="text-2xl font-semibold">{{ dashboard.mrr }}</span>
+                    <span class="text-2xl font-semibold">{{ dashboard.mrr|default:"0" }}</span>
                     <span class="text-lg text-secondary"> $US</span>
                 </p>
                 <p class="text-xs text-secondary">Monthly Recurring Revenue</p>
@@ -61,7 +94,7 @@
             <div class="card-body">
                 <p class="text-sm font-medium text-secondary">Revenue</p>
                 <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">
-                    <span class="text-2xl font-semibold">{{ dashboard.revenue_28_days }}</span>
+                    <span class="text-2xl font-semibold">{{ dashboard.revenue_28_days|default:"0" }}</span>
                     <span class="text-lg text-secondary"> $US</span>
                 </p>
                 <p class="text-xs text-secondary">Last 28 days</p>
@@ -72,35 +105,92 @@
         <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
             <div class="card-body">
                 <p class="text-sm font-medium text-secondary">New Customers</p>
-                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.new_customers_28_days }}</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.new_customers_28_days|default:"0" }}</p>
                 <p class="text-xs text-secondary">Last 28 days</p>
             </div>
         </div>
 
-        <!-- Active Customers -->
+        <!-- Active Users -->
         <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
             <div class="card-body">
-                <p class="text-sm font-medium text-secondary">Active Customers</p>
-                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_customers }}</p>
+                <p class="text-sm font-medium text-secondary">Active Users</p>
+                <p class="text-4xl font-bold font-serif text-base-content mt-3 mb-2">{{ dashboard.active_customers|default:"0" }}</p>
                 <p class="text-xs text-secondary">Last 28 days</p>
             </div>
         </div>
     </div>
 
-    <!-- Info Box -->
+    <!-- Transactions -->
+    {% if dashboard.transactions_28_days %}
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row items-center gap-4">
+            <div class="text-3xl">🧾</div>
+            <div>
+                <p class="text-sm font-medium text-secondary">Transactions (28 derniers jours)</p>
+                <p class="text-2xl font-bold font-serif text-base-content">{{ dashboard.transactions_28_days }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Source info -->
     <div class="card bg-base-200 shadow-sm border border-base-300">
         <div class="card-body">
             <h2 class="card-title text-lg font-serif font-bold text-base-content">ℹ️ Informations</h2>
-            <ul class="text-sm text-secondary space-y-2 mt-2">
-                <li>• <strong>Active Trials</strong> : Nombre d'essais actuellement actifs</li>
-                <li>• <strong>Active Subscriptions</strong> : Nombre d'abonnements actifs (hors essais)</li>
-                <li>• <strong>MRR</strong> : Revenu récurrent mensuel basé sur les abonnements actifs</li>
-                <li>• <strong>Revenue</strong> : Revenu total généré au cours des 28 derniers jours</li>
-                <li>• <strong>New Customers</strong> : Nouveaux clients ayant effectué un achat dans les 28 derniers jours</li>
-                <li>• <strong>Active Customers</strong> : Clients actifs (abonnements actifs + essais + période de grâce)</li>
-                <li class="mt-4 text-xs opacity-70">⚠️ Les prix des produits sont estimés. Vous pouvez les ajuster dans le code si nécessaire.</li>
-            </ul>
+            <div class="text-sm text-secondary space-y-2 mt-2">
+                <p>Source : <span class="badge badge-sm {% if dashboard.source == 'revenuecat_v2' %}badge-success{% else %}badge-warning{% endif %}">
+                    {% if dashboard.source == 'revenuecat_v2' %}API V2 (temps réel){% else %}Base de données (scan V1){% endif %}
+                </span></p>
+                <ul class="space-y-1 mt-2">
+                    <li>• <strong>Active Trials</strong> : Essais gratuits en cours</li>
+                    <li>• <strong>Active Subscriptions</strong> : Abonnements payants actifs</li>
+                    <li>• <strong>MRR</strong> : Revenu récurrent mensuel</li>
+                    <li>• <strong>Revenue</strong> : Revenu total sur 28 jours</li>
+                    <li>• <strong>New Customers</strong> : Nouveaux clients (28 jours)</li>
+                    <li>• <strong>Active Users</strong> : Utilisateurs actifs (28 jours)</li>
+                </ul>
+                <p class="text-xs mt-3">Le bouton "Rafraîchir" recharge les métriques V2. Le "Scan complet" parcourt chaque utilisateur Firebase pour enrichir les données individuelles (utile pour la page détail utilisateur).</p>
+            </div>
         </div>
     </div>
 </div>
+
+{% if is_scanning %}
+<script>
+function scanPoller() {
+    return {
+        current: {{ scan_progress.current|default:"0" }},
+        total: {{ scan_progress.total|default:"0" }},
+        foundActive: {{ scan_progress.found_active|default:"0" }},
+        statusText: 'Scan en cours...',
+        interval: null,
+        startPolling() {
+            this.interval = setInterval(() => this.poll(), 3000);
+        },
+        async poll() {
+            try {
+                const resp = await fetch('{% url "scripts_manager:rc_scan_status" %}');
+                const data = await resp.json();
+                this.current = data.current || 0;
+                this.total = data.total || 0;
+                this.foundActive = data.found_active || 0;
+
+                if (data.status === 'completed') {
+                    this.statusText = 'Scan terminé !';
+                    clearInterval(this.interval);
+                    setTimeout(() => location.reload(), 1500);
+                } else if (data.status && data.status.startsWith('error')) {
+                    this.statusText = 'Erreur : ' + data.status;
+                    clearInterval(this.interval);
+                } else {
+                    this.statusText = `Scan en cours... ${this.current}/${this.total}`;
+                }
+            } catch (e) {
+                // retry silently
+            }
+        }
+    };
+}
+</script>
+{% endif %}
 {% endblock %}

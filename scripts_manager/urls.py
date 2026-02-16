@@ -10,6 +10,7 @@ from . import search_restaurants_views
 from . import guides_views
 from . import announcements_views
 from . import onboarding_views
+from . import revenuecat_views
 
 app_name = 'scripts_manager'
 
@@ -60,6 +61,11 @@ urlpatterns = [
     
     # Utilisateurs
     path('utilisateurs/', users_views.users_list, name='users_list'),
+    path('utilisateurs/dashboard/', revenuecat_views.dashboard_revenuecat, name='dashboard_revenuecat'),
+    path('utilisateurs/dashboard/refresh/', revenuecat_views.refresh_all_revenuecat, name='refresh_all_revenuecat'),
+    path('utilisateurs/dashboard/scan-status/', revenuecat_views.scan_status_api, name='rc_scan_status'),
+    path('utilisateurs/<str:uid>/', users_views.user_detail, name='user_detail'),
+    path('utilisateurs/<str:uid>/refresh-revenuecat/', revenuecat_views.user_refresh_revenuecat, name='user_refresh_revenuecat'),
     
     # Gestion environnement Firebase
     path('firebase-env/switch/', firebase_env_views.switch_firebase_env, name='switch_firebase_env'),

@@ -621,3 +621,67 @@ def users_list(request):
     logger.info("=" * 80)
     
     return render(request, 'scripts_manager/users/list.html', context)
+
+
+@login_required
+def user_detail(request, uid):
+    """Page de détail d'un utilisateur avec statut RevenueCat."""
+    from .models import RevenueCatUserStatus
+    from . import revenuecat_service as rc_service
+
+    # Charger les données utilisateur
+    users = merge_users_data(request=request)
+    user = None
+    for u in users:
+        if u['uid'] == uid:
+            user = u
+            break
+
+    if not user:
+        from django.http import Http404
+        raise Http404(f"Utilisateur {uid} introuvable")
+
+    # Statut RevenueCat depuis la DB
+    current_status = None
+    try:
+        current_status = RevenueCatUserStatus.objects.filter(uid=uid).first()
+    except Exception:
+        pass
+
+    # Si pas de statut en DB mais un téléphone, tenter un refresh live
+    if not current_status and user.get('phone'):
+        rc_status = rc_service.get_user_rc_status(uid, user['phone'])
+        if rc_status:
+            rc_service.save_rc_status_to_db(uid, user['phone'], rc_status)
+            current_status = RevenueCatUserStatus.objects.filter(uid=uid).first()
+
+    # Historique pour le graphique
+    from .models import RevenueCatHistory
+    history = RevenueCatHistory.objects.filter(uid=uid).order_by('-snapshot_date')[:30]
+    history_count = history.count()
+
+    chart_data = {
+        'dates': [],
+        'statuses': [],
+        'is_active': [],
+        'is_sandbox': [],
+    }
+    for h in reversed(list(history)):
+        chart_data['dates'].append(h.snapshot_date.strftime('%d/%m'))
+        chart_data['statuses'].append(h.status)
+        chart_data['is_active'].append(1 if h.is_active else 0)
+        chart_data['is_sandbox'].append(1 if h.is_sandbox else 0)
+
+    import json
+    context = {
+        'user': user,
+        'current_status': current_status,
+        'history_count': history_count,
+        'chart_data': {
+            'dates': json.dumps(chart_data['dates']),
+            'statuses': json.dumps(chart_data['statuses']),
+            'is_active': json.dumps(chart_data['is_active']),
+            'is_sandbox': json.dumps(chart_data['is_sandbox']),
+        },
+    }
+    return render(request, 'scripts_manager/users/detail.html', context)
