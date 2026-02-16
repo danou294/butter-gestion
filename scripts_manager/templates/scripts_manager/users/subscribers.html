@@ -1,0 +1,258 @@
+{% extends 'scripts_manager/base.html' %}
+{% load tz %}
+
+{% block title %}Abonnés RevenueCat - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ scanning: {{ is_scanning|yesno:'true,false' }} }" x-cloak>
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-serif font-bold text-base-content">💳 Abonnés RevenueCat</h1>
+                <p class="text-secondary mt-1">Détail des abonnements par utilisateur</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:users_list' %}" class="btn btn-ghost btn-sm text-secondary">
+                    ← Utilisateurs
+                </a>
+                <a href="{% url 'scripts_manager:dashboard_revenuecat' %}" class="btn btn-outline btn-sm">
+                    📊 Dashboard
+                </a>
+                <a href="{% url 'scripts_manager:refresh_all_revenuecat' %}?next=scripts_manager:subscribers_list"
+                   class="btn btn-primary btn-sm"
+                   onclick="return confirm('Lancer un scan complet de tous les utilisateurs ?\nCela peut prendre plusieurs minutes.');"
+                   x-bind:class="scanning ? 'btn-disabled' : ''">
+                    <span x-show="!scanning">🔄 Scan complet</span>
+                    <span x-show="scanning" class="loading loading-spinner loading-xs"></span>
+                    <span x-show="scanning">Scan en cours...</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Progress -->
+    {% if is_scanning %}
+    <div class="alert alert-info text-neutral"
+         x-data="scanPoller()"
+         x-init="startPolling()">
+        <div class="w-full">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="font-semibold" x-text="statusText">Scan en cours...</span>
+            </div>
+            <progress class="progress progress-primary w-full" :value="current" :max="total"></progress>
+            <p class="text-xs mt-1">
+                <span x-text="current">{{ scan_progress.current }}</span> / <span x-text="total">{{ scan_progress.total }}</span> utilisateurs scannés
+                — <span x-text="foundActive">0</span> actifs trouvés
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Metrics -->
+    <div class="stats stats-vertical md:stats-horizontal shadow w-full border border-base-300">
+        <div class="stat">
+            <div class="stat-title">Total abonnés</div>
+            <div class="stat-value text-base-content">{{ metrics.total }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Actifs</div>
+            <div class="stat-value text-success">{{ metrics.active }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Essais</div>
+            <div class="stat-value text-info">{{ metrics.trial }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Expirés</div>
+            <div class="stat-value text-error">{{ metrics.expired }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-title">Sandbox</div>
+            <div class="stat-value text-warning">{{ metrics.sandbox }}</div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <form method="get" action="{% url 'scripts_manager:subscribers_list' %}" class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" name="q" value="{{ query }}"
+                           placeholder="Rechercher par nom, email, téléphone, UID, produit..."
+                           class="input input-bordered flex-1 bg-base-200">
+                    {% if status_filter != 'all' %}
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">🔍 Rechercher</button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {% for value, label in status_options %}
+                    <a href="?status={{ value }}{% if query %}&q={{ query }}{% endif %}"
+                       class="btn btn-sm {% if status_filter == value %}btn-primary{% else %}btn-ghost border border-base-300{% endif %}">
+                        {{ label }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="text-sm text-secondary">{{ results_count }} résultat{{ results_count|pluralize }}</div>
+
+    <!-- Subscribers Table -->
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Statut</th>
+                        <th>Produit</th>
+                        <th>Expiration</th>
+                        <th>Renouvellement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in subscribers %}
+                    <tr class="hover">
+                        <td>
+                            <div class="font-medium text-base-content">{{ sub.display_name }}</div>
+                            {% if sub.email %}
+                            <div class="text-sm text-secondary">{{ sub.email }}</div>
+                            {% endif %}
+                            {% if sub.phone %}
+                            <div class="text-xs text-secondary">{{ sub.phone }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.status == 'active' %}
+                            <span class="badge badge-success">Premium actif</span>
+                            {% elif sub.status == 'trial' %}
+                            <span class="badge badge-info">Essai</span>
+                            {% elif sub.status == 'grace' %}
+                            <span class="badge badge-warning text-neutral">Grâce</span>
+                            {% elif sub.status == 'expired' %}
+                            <span class="badge badge-error">Expiré</span>
+                            {% else %}
+                            <span class="badge badge-ghost">{{ sub.status_label }}</span>
+                            {% endif %}
+                            {% if sub.is_sandbox %}
+                            <span class="badge badge-warning badge-sm text-neutral ml-1">🧪</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.product_identifier %}
+                            <div class="text-sm text-base-content font-mono">{{ sub.product_identifier }}</div>
+                            {% if sub.period_type %}
+                            <div class="text-xs text-secondary">{{ sub.period_type|upper }}</div>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-secondary">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.expires_at %}
+                            <div class="text-sm text-base-content">{{ sub.expires_at|date:"d/m/Y" }}</div>
+                            <div class="text-xs text-secondary">{{ sub.expires_at|date:"H:i" }}</div>
+                            {% else %}
+                            <span class="text-secondary">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.will_renew %}
+                            <span class="text-success">✅ Auto</span>
+                            {% else %}
+                            <span class="text-error">❌ Non</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'scripts_manager:user_detail' sub.uid %}"
+                               class="btn btn-ghost btn-sm text-primary">
+                                Détails →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-12">
+                            <div class="text-secondary">
+                                {% if metrics.total == 0 %}
+                                <p class="text-lg font-medium mb-2">Aucun abonné dans la base</p>
+                                <p class="text-sm">Lancez un scan complet pour récupérer les données RevenueCat de vos utilisateurs.</p>
+                                <a href="{% url 'scripts_manager:refresh_all_revenuecat' %}?next=scripts_manager:subscribers_list"
+                                   class="btn btn-primary btn-sm mt-4"
+                                   onclick="return confirm('Lancer un scan complet ?');">
+                                    🔄 Lancer le scan
+                                </a>
+                                {% else %}
+                                <p>Aucun résultat pour cette recherche</p>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between">
+        <span class="text-sm text-secondary">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+        <div class="join">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}{% if query %}&q={{ query }}{% endif %}"
+               class="join-item btn btn-ghost">← Précédent</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}{% if query %}&q={{ query }}{% endif %}"
+               class="join-item btn btn-ghost">Suivant →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if is_scanning %}
+<script>
+function scanPoller() {
+    return {
+        current: {{ scan_progress.current|default:"0" }},
+        total: {{ scan_progress.total|default:"0" }},
+        foundActive: {{ scan_progress.found_active|default:"0" }},
+        statusText: 'Scan en cours...',
+        interval: null,
+        startPolling() {
+            this.interval = setInterval(() => this.poll(), 3000);
+        },
+        async poll() {
+            try {
+                const resp = await fetch('{% url "scripts_manager:rc_scan_status" %}');
+                const data = await resp.json();
+                this.current = data.current || 0;
+                this.total = data.total || 0;
+                this.foundActive = data.found_active || 0;
+
+                if (data.status === 'completed') {
+                    this.statusText = 'Scan terminé !';
+                    clearInterval(this.interval);
+                    setTimeout(() => location.reload(), 1500);
+                } else if (data.status && data.status.startsWith('error')) {
+                    this.statusText = 'Erreur : ' + data.status;
+                    clearInterval(this.interval);
+                } else {
+                    this.statusText = `Scan en cours... ${this.current}/${this.total}`;
+                }
+            } catch (e) {
+                // retry silently
+            }
+        }
+    };
+}
+</script>
+{% endif %}
+{% endblock %}

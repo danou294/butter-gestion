@@ -7,9 +7,15 @@
 <div class="space-y-6">
     <!-- Header -->
     <div class="card bg-base-100 shadow-sm border border-base-300">
-        <div class="card-body">
-            <h1 class="text-3xl font-serif font-bold text-base-content">👥 Utilisateurs</h1>
-            <p class="text-secondary">Gestion et suivi des utilisateurs</p>
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-serif font-bold text-base-content">👥 Utilisateurs</h1>
+                <p class="text-secondary">Gestion et suivi des utilisateurs</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:subscribers_list' %}" class="btn btn-outline btn-sm">💳 Abonnés</a>
+                <a href="{% url 'scripts_manager:dashboard_revenuecat' %}" class="btn btn-outline btn-sm">📊 Dashboard RC</a>
+            </div>
         </div>
     </div>
 
@@ -83,7 +89,7 @@
                 </thead>
                 <tbody>
                     {% for user in users %}
-                    <tr>
+                    <tr class="hover">
                         <td>
                             <div class="font-medium text-base-content">{{ user.display_name|default:"N/A" }}</div>
                             <div class="text-sm text-secondary">{{ user.uid|truncatechars:20 }}</div>
@@ -105,6 +111,9 @@
                             {% if user.last_sign_in_display %}
                             <div class="text-xs text-secondary mt-1">{{ user.last_sign_in_display }}</div>
                             {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'scripts_manager:user_detail' user.uid %}" class="btn btn-ghost btn-sm text-primary">Détails →</a>
                         </td>
                     </tr>
                     {% empty %}
