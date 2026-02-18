@@ -97,6 +97,18 @@
                             </label>
                         </div>
 
+                        <div class="mb-4 p-4 rounded-lg border border-pink-200 bg-pink-50">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="isFeatured" name="isFeatured"
+                                       {% if mode == 'edit' and guide.isFeatured %}checked{% elif form_data and form_data.isFeatured %}checked{% endif %}
+                                       class="checkbox checkbox-secondary">
+                                <div>
+                                    <span class="text-sm font-medium text-base-content">Coup de coeur de la semaine</span>
+                                    <p class="text-xs text-secondary">Les restaurants de ce guide apparaîtront dans le carousel "Coups de coeur" en haut de la page Guides.</p>
+                                </div>
+                            </label>
+                        </div>
+
                         <div class="mb-6">
                             <label for="order" class="block text-sm font-medium text-secondary mb-1">Ordre d'affichage</label>
                             <input type="number" id="order" name="order" value="{% if mode == 'edit' %}{{ guide.order }}{% elif form_data %}{{ form_data.order|default:0 }}{% else %}0{% endif %}" min="0" max="1000"

@@ -18,6 +18,7 @@
                     {{ guide.name }}
                     <span class="ml-2 badge badge-ghost">{{ guide.id }}</span>
                     {% if guide.isPremium %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+                    {% if guide.isFeatured %}<span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-pink-100 text-pink-800">Coup de coeur</span>{% endif %}
                 </h1>
                 <div class="flex flex-wrap gap-2">
                     <a href="{% url 'scripts_manager:guide_edit' guide.id %}" class="btn btn-ghost">✏️ Éditer</a>
@@ -47,6 +48,7 @@
                         <div><dt class="text-secondary">Ordre</dt><dd><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-base-200 text-secondary">{{ guide.order }}</span></dd></div>
                         <div><dt class="text-secondary">Photo</dt><dd>{% if guide.coverImageRef %}<code>{{ guide.coverImageRef }}</code>{% else %}-{% endif %}</dd></div>
                         <div><dt class="text-secondary">Type</dt><dd>{% if guide.isPremium %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% else %}<span class="badge badge-success">Gratuit</span>{% endif %}</dd></div>
+                        <div><dt class="text-secondary">Coup de coeur</dt><dd>{% if guide.isFeatured %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">Oui</span>{% else %}<span class="text-secondary">Non</span>{% endif %}</dd></div>
                         <div><dt class="text-secondary">Restaurants</dt><dd><span class="badge badge-success">{{ restaurants|length }}</span></dd></div>
                         <div><dt class="text-secondary">Créé</dt><dd>{{ guide.createdAt|date:"d/m/Y H:i" }}</dd></div>
                         <div><dt class="text-secondary">Modifié</dt><dd>{{ guide.updatedAt|date:"d/m/Y H:i" }}</dd></div>

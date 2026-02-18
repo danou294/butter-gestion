@@ -132,6 +132,7 @@ def guide_create(request):
             restaurant_ids_raw = request.POST.get('restaurantIds', '').strip()
             order = int(request.POST.get('order', 0))
             is_premium = request.POST.get('isPremium') == 'on'
+            is_featured = request.POST.get('isFeatured') == 'on'
 
             # Validation
             if not guide_id:
@@ -178,14 +179,16 @@ def guide_create(request):
                 'restaurantIds': restaurant_ids,
                 'order': order,
                 'isPremium': is_premium,
+                'isFeatured': is_featured,
                 'createdAt': datetime.utcnow(),
                 'updatedAt': datetime.utcnow(),
             }
 
             doc_ref.set(guide_data)
 
+            featured_label = " (Coup de coeur)" if is_featured else ""
             premium_label = " (Premium)" if is_premium else ""
-            messages.success(request, f"Guide '{name}'{premium_label} créé avec succès !")
+            messages.success(request, f"Guide '{name}'{premium_label}{featured_label} créé avec succès !")
             return redirect('scripts_manager:guide_detail', guide_id=guide_id)
 
         except ValueError as e:
@@ -235,6 +238,7 @@ def guide_edit(request, guide_id):
             restaurant_ids_raw = request.POST.get('restaurantIds', '').strip()
             order = int(request.POST.get('order', 0))
             is_premium = request.POST.get('isPremium') == 'on'
+            is_featured = request.POST.get('isFeatured') == 'on'
 
             # Validation
             if not name:
@@ -263,13 +267,15 @@ def guide_edit(request, guide_id):
                 'restaurantIds': restaurant_ids,
                 'order': order,
                 'isPremium': is_premium,
+                'isFeatured': is_featured,
                 'updatedAt': datetime.utcnow(),
             }
 
             doc_ref.update(update_data)
 
+            featured_label = " (Coup de coeur)" if is_featured else ""
             premium_label = " (Premium)" if is_premium else ""
-            messages.success(request, f"Guide '{name}'{premium_label} mis à jour avec succès !")
+            messages.success(request, f"Guide '{name}'{premium_label}{featured_label} mis à jour avec succès !")
             return redirect('scripts_manager:guide_detail', guide_id=guide_id)
 
         except ValueError as e:
@@ -442,6 +448,8 @@ def guides_import_csv(request):
                     col_map['Photo couverture'] = i
                 elif h_lower == 'premium' and 'Premium' not in col_map:
                     col_map['Premium'] = i
+                elif ('coup' in h_lower or 'featured' in h_lower) and 'Featured' not in col_map:
+                    col_map['Featured'] = i
 
             def get_cell(row, key):
                 idx = col_map.get(key)
@@ -463,6 +471,8 @@ def guides_import_csv(request):
                     cover_image_ref = get_cell(row, 'Photo couverture')
                     premium_raw = get_cell(row, 'Premium').lower()
                     is_premium = premium_raw in ['oui', 'yes', 'true', '1', 'premium']
+                    featured_raw = get_cell(row, 'Featured').lower()
+                    is_featured = featured_raw in ['oui', 'yes', 'true', '1', 'featured']
 
                     if not guide_id or not name:
                         errors.append(f"Ligne {row_num} : ID (Ref) ou nom manquant")
@@ -482,6 +492,7 @@ def guides_import_csv(request):
                         'coverImageRef': cover_image_ref,
                         'restaurantIds': restaurant_ids,
                         'isPremium': is_premium,
+                        'isFeatured': is_featured,
                         'order': imported_count,
                         'updatedAt': datetime.utcnow(),
                     }

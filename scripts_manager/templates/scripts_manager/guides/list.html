@@ -63,6 +63,7 @@
                         <td class="py-3 px-4">
                             <strong class="text-base-content">{{ guide.name }}</strong>
                             {% if guide.isPremium %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Premium</span>{% endif %}
+                            {% if guide.isFeatured %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">Coup de coeur</span>{% endif %}
                             {% if guide.description %}
                             <br>
                             <span class="text-sm text-secondary">{{ guide.description|truncatewords:15 }}</span>
