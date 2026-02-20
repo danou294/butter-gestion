@@ -1,0 +1,241 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}{% if mode == 'create' %}Créer{% else %}Éditer{% endif %} Quick Filter - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:quick_filters_list' %}" class="btn btn-ghost btn-sm">← Retour</a>
+                <h1 class="text-2xl font-serif font-bold text-base-content">
+                    {% if mode == 'create' %}➕ Nouveau Quick Filter{% else %}✏️ Éditer « {{ quick_filter.title }} »{% endif %}
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Infos de base -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h2 class="text-lg font-serif font-bold text-base-content mb-4">Informations</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-secondary mb-1">Titre <span class="text-error">*</span></label>
+                        <input type="text" id="title" name="title"
+                               value="{% if mode == 'edit' %}{{ quick_filter.title }}{% elif form_data %}{{ form_data.title }}{% endif %}"
+                               required placeholder="Ex: Date intimiste"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
+                    <div>
+                        <label for="subtitle" class="block text-sm font-medium text-secondary mb-1">Sous-titre <span class="text-error">*</span></label>
+                        <input type="text" id="subtitle" name="subtitle"
+                               value="{% if mode == 'edit' %}{{ quick_filter.subtitle }}{% elif form_data %}{{ form_data.subtitle }}{% endif %}"
+                               required placeholder="Ex: dans l'ouest"
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="isActive"
+                               {% if mode == 'create' %}checked{% elif mode == 'edit' and quick_filter.isActive %}checked{% endif %}
+                               class="checkbox checkbox-primary">
+                        <span class="text-sm text-secondary">Actif (visible dans l'app)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h2 class="text-lg font-serif font-bold text-base-content mb-4">Aperçu</h2>
+                <div class="flex justify-center">
+                    <div style="width: 120px; height: 44px; background: white; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 6px 8px; display: flex; flex-direction: column; justify-content: center;">
+                        <div id="preview-title" style="font-size: 9px; font-weight: 600; color: #000;">Date intimiste</div>
+                        <div id="preview-subtitle" style="font-size: 9px; color: #6D6D6D;">dans l'ouest</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h2 class="text-lg font-serif font-bold text-base-content mb-4">Paramètres de filtre</h2>
+                <p class="text-sm text-secondary mb-6">Sélectionnez les critères de recherche pour ce quick filter. Quand l'utilisateur tape dessus, une recherche sera lancée avec ces filtres pré-remplis.</p>
+
+                <!-- Zones -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">📍 Zones</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for zone in filter_options.zones %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="zones" value="{{ zone }}"
+                                   {% if mode == 'edit' and zone in quick_filter.filters.zones %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ zone }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Moments -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">🕐 Moments</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for moment in filter_options.moments %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="moments" value="{{ moment }}"
+                                   {% if mode == 'edit' and moment in quick_filter.filters.moments %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ moment }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Cuisines -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">🍽️ Cuisines</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for cuisine in filter_options.cuisines %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="cuisines" value="{{ cuisine }}"
+                                   {% if mode == 'edit' and cuisine in quick_filter.filters.cuisines %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ cuisine }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Prix -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">💰 Prix</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for p in filter_options.prix %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="prix" value="{{ p }}"
+                                   {% if mode == 'edit' and p in quick_filter.filters.prix %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ p }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Lieux -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">📌 Type d'endroit</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for lieu in filter_options.lieux %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="lieux" value="{{ lieu }}"
+                                   {% if mode == 'edit' and lieu in quick_filter.filters.lieux %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ lieu }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Ambiance -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">✨ Ambiance</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for amb in filter_options.ambiance %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="ambiance" value="{{ amb }}"
+                                   {% if mode == 'edit' and amb in quick_filter.filters.ambiance %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ amb }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Restrictions -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-base-content mb-2">🥗 Restrictions</h3>
+                    <div class="flex flex-wrap gap-3">
+                        {% for rest in filter_options.restrictions %}
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="restrictions" value="{{ rest }}"
+                                   {% if mode == 'edit' and rest in quick_filter.filters.restrictions %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">{{ rest }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Booleans -->
+                <div class="mb-2">
+                    <h3 class="text-sm font-bold text-base-content mb-2">⚡ Options</h3>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="openNow"
+                                   {% if mode == 'edit' and quick_filter.filters.openNow %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">Ouvert maintenant</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="noReservation"
+                                   {% if mode == 'edit' and quick_filter.filters.noReservation %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">Sans réservation</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="hasTerrace"
+                                   {% if mode == 'edit' and quick_filter.filters.hasTerrace %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">Terrasse</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="hasPrivateRoom"
+                                   {% if mode == 'edit' and quick_filter.filters.hasPrivateRoom %}checked{% endif %}
+                                   class="checkbox checkbox-sm checkbox-primary">
+                            <span class="text-sm">Salle privatisable</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 justify-end">
+            <a href="{% url 'scripts_manager:quick_filters_list' %}" class="btn btn-ghost">Annuler</a>
+            <button type="submit" class="btn btn-primary">
+                {% if mode == 'create' %}Créer le filtre{% else %}Enregistrer{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    var titleInput = document.getElementById('title');
+    var subtitleInput = document.getElementById('subtitle');
+    var previewTitle = document.getElementById('preview-title');
+    var previewSubtitle = document.getElementById('preview-subtitle');
+
+    function updatePreview() {
+        previewTitle.textContent = titleInput.value || 'Titre';
+        previewSubtitle.textContent = subtitleInput.value || 'sous-titre';
+    }
+
+    titleInput.addEventListener('input', updatePreview);
+    subtitleInput.addEventListener('input', updatePreview);
+    updatePreview();
+})();
+</script>
+{% endblock %}

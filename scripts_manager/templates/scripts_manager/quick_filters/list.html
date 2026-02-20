@@ -1,0 +1,102 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Quick Filters - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ deleteOpen: false, deleteId: '', deleteTitle: '' }">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content mb-2">🔍 Quick Filters</h1>
+                    <p class="text-secondary">
+                        {{ total_count }} filtre(s) rapide(s)
+                        <span class="badge badge-success ml-2">{{ active_count }} actif(s)</span>
+                    </p>
+                </div>
+                <a href="{% url 'scripts_manager:quick_filter_create' %}" class="btn btn-primary">➕ Nouveau filtre</a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}alert alert-error{% elif message.tags == 'success' %}alert alert-success{% else %}alert alert-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if quick_filters %}
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200 border-b border-base-300">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">Titre</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">Sous-titre</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">Statut</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">Filtres</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-48">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qf in quick_filters %}
+                    <tr class="border-b border-base-300 hover:bg-base-200">
+                        <td class="py-3 px-4">
+                            <strong class="text-base-content">{{ qf.title }}</strong>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-secondary">{{ qf.subtitle }}</td>
+                        <td class="py-3 px-4">
+                            {% if qf.isActive %}
+                            <span class="badge badge-success">Actif</span>
+                            {% else %}
+                            <span class="badge badge-ghost">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="badge badge-ghost">{{ qf.filter_count }} param.</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{% url 'scripts_manager:quick_filter_edit' qf.id %}" class="btn btn-outline btn-sm">Éditer</a>
+                                <a href="{% url 'scripts_manager:quick_filter_get_json' qf.id %}" class="btn btn-outline btn-success btn-sm" target="_blank">JSON</a>
+                                <button type="button" class="btn btn-outline btn-error btn-sm" @click="deleteId = '{{ qf.id }}'; deleteTitle = '{{ qf.title|escapejs }}'; deleteOpen = true">Supprimer</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        Aucun quick filter. <a href="{% url 'scripts_manager:quick_filter_create' %}" class="font-medium text-success hover:underline ml-1">Créer le premier</a>
+    </div>
+    {% endif %}
+
+    <!-- Modal suppression -->
+    <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-neutral bg-opacity-50 z-0" aria-hidden="true" @click="deleteOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="relative z-10 inline-block align-bottom bg-base-100 text-left overflow-hidden shadow-xl border border-base-300 sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" @click.stop>
+                <div class="px-6 py-4">
+                    <h3 class="text-lg font-serif font-bold text-base-content">Confirmer la suppression</h3>
+                    <p class="mt-2 text-secondary">Supprimer le quick filter <strong x-text="deleteTitle"></strong> ?</p>
+                    <p class="mt-2 text-sm text-error">Cette action est irréversible.</p>
+                </div>
+                <div class="px-6 py-4 bg-base-200 flex justify-end gap-3">
+                    <button type="button" @click="deleteOpen = false" class="btn btn-ghost">Annuler</button>
+                    <form method="post" x-bind:action="'/quick-filters/' + deleteId + '/delete/'" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error">Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

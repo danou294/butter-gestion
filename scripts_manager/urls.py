@@ -11,6 +11,7 @@ from . import guides_views
 from . import announcements_views
 from . import onboarding_views
 from . import revenuecat_views
+from . import quick_filters_views
 
 app_name = 'scripts_manager'
 
@@ -115,6 +116,13 @@ urlpatterns = [
     path('onboarding-restaurants/import/confirm/', onboarding_views.onboarding_import_confirm, name='onboarding_import_confirm'),
     path('onboarding-restaurants/<str:restaurant_id>/', onboarding_views.onboarding_detail, name='onboarding_detail'),
     path('onboarding-restaurants/<str:restaurant_id>/delete/', onboarding_views.onboarding_delete, name='onboarding_delete'),
+
+    # Quick Filters
+    path('quick-filters/', quick_filters_views.quick_filters_list, name='quick_filters_list'),
+    path('quick-filters/create/', quick_filters_views.quick_filter_create, name='quick_filter_create'),
+    path('quick-filters/<str:filter_id>/edit/', quick_filters_views.quick_filter_edit, name='quick_filter_edit'),
+    path('quick-filters/<str:filter_id>/delete/', quick_filters_views.quick_filter_delete, name='quick_filter_delete'),
+    path('quick-filters/<str:filter_id>/json/', quick_filters_views.quick_filter_get_json, name='quick_filter_get_json'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
