@@ -64,6 +64,12 @@
                         🏠 Accueil
                     </a>
 
+                    <!-- Dashboard -->
+                    <a href="{% url 'scripts_manager:dashboard' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'dashboard' %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                        📊 Dashboard
+                    </a>
+
                     <!-- Dropdown Gestion -->
                     <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
                         <button @click="open = !open"
@@ -154,6 +160,7 @@
              class="lg:hidden border-t border-base-300 bg-base-100 shadow-lg">
             <div class="px-4 py-4 space-y-1">
                 <a href="{% url 'scripts_manager:index' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'index' %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">🏠 Accueil</a>
+                <a href="{% url 'scripts_manager:dashboard' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">📊 Dashboard</a>
                 <div class="pt-2 pb-1 px-3 text-xs font-bold text-secondary uppercase tracking-wider">Gestion</div>
                 <a href="{% url 'scripts_manager:restaurants_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'restaurant' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🍽️ Restaurants</a>
                 <a href="{% url 'scripts_manager:guides_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'guide' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📖 Guides</a>

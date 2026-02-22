@@ -12,6 +12,7 @@ from . import announcements_views
 from . import onboarding_views
 from . import revenuecat_views
 from . import quick_filters_views
+from . import signups_views
 
 app_name = 'scripts_manager'
 
@@ -116,6 +117,9 @@ urlpatterns = [
     path('onboarding-restaurants/import/confirm/', onboarding_views.onboarding_import_confirm, name='onboarding_import_confirm'),
     path('onboarding-restaurants/<str:restaurant_id>/', onboarding_views.onboarding_detail, name='onboarding_detail'),
     path('onboarding-restaurants/<str:restaurant_id>/delete/', onboarding_views.onboarding_delete, name='onboarding_delete'),
+
+    # Dashboard unifié (inscriptions + RevenueCat)
+    path('dashboard/', signups_views.dashboard, name='dashboard'),
 
     # Quick Filters
     path('quick-filters/', quick_filters_views.quick_filters_list, name='quick_filters_list'),

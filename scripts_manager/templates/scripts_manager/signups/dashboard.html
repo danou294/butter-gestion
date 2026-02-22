@@ -1,0 +1,245 @@
+{% extends 'scripts_manager/base.html' %}
+
+{% block title %}Dashboard - Butter{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header + Filtre dates -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content">📊 Dashboard</h1>
+                    <p class="text-secondary mt-1">Vue d'ensemble — inscriptions & abonnements</p>
+                </div>
+                <form method="get" class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="label"><span class="label-text text-xs">Du</span></label>
+                        <input type="date" name="date_from" value="{{ date_from }}"
+                               class="input input-bordered input-sm bg-base-200 w-40">
+                    </div>
+                    <div>
+                        <label class="label"><span class="label-text text-xs">Au</span></label>
+                        <input type="date" name="date_to" value="{{ date_to }}"
+                               class="input input-bordered input-sm bg-base-200 w-40">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ SECTION REVENUECAT ═══════════ -->
+    {% if rc %}
+    <div class="space-y-4">
+        <h2 class="text-xl font-serif font-bold text-base-content px-1">💳 Abonnements RevenueCat</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">Active Trials</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ rc.active_trials|default:"0" }}</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">Active Subscriptions</p>
+                    <p class="text-3xl font-bold font-serif text-primary mt-2">{{ rc.active_subscriptions|default:"0" }}</p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">MRR</p>
+                    <p class="text-2xl font-bold font-serif text-base-content mt-2">{{ rc.mrr|default:"0" }} <span class="text-sm text-secondary">$US</span></p>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">Revenue (28j)</p>
+                    <p class="text-2xl font-bold font-serif text-base-content mt-2">{{ rc.revenue_28_days|default:"0" }} <span class="text-sm text-secondary">$US</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════ SECTION INSCRIPTIONS ═══════════ -->
+    <div class="space-y-4">
+        <h2 class="text-xl font-serif font-bold text-base-content px-1">👥 Inscriptions</h2>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <!-- Total all time -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">Total comptes</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ total_users_all_time }}</p>
+                    <p class="text-xs text-secondary">all time</p>
+                </div>
+            </div>
+            <!-- Période -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">Sur la période</p>
+                    <p class="text-3xl font-bold font-serif text-primary mt-2">{{ total_signups }}</p>
+                </div>
+            </div>
+            <!-- Phone -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">📱 Téléphone</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ totals.phone }}</p>
+                </div>
+            </div>
+            <!-- Apple -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">🍎 Apple</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ totals.apple }}</p>
+                </div>
+            </div>
+            <!-- Google -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">🔵 Google</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ totals.google }}</p>
+                </div>
+            </div>
+            <!-- Email -->
+            <div class="card bg-base-100 shadow-sm border border-base-300 hover:-translate-y-0.5 hover:shadow-md transition-all">
+                <div class="card-body p-4">
+                    <p class="text-xs font-medium text-secondary">✉️ Email</p>
+                    <p class="text-3xl font-bold font-serif text-base-content mt-2">{{ totals.email }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+                <h3 class="card-title text-lg font-serif font-bold text-base-content mb-4">Inscriptions par jour</h3>
+                <div style="position: relative; height: 320px;">
+                    <canvas id="signupsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+            <div class="card-body pb-0">
+                <h3 class="card-title text-lg font-serif font-bold text-base-content">Détail par jour</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Jour</th>
+                            <th>Date</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">📱 Phone</th>
+                            <th class="text-center">🍎 Apple</th>
+                            <th class="text-center">🔵 Google</th>
+                            <th class="text-center">✉️ Email</th>
+                            <th class="text-center">❓ Inconnu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_rows %}
+                        <tr class="hover">
+                            <td class="font-medium">{{ row.day_name }}</td>
+                            <td>{{ row.date }}</td>
+                            <td class="text-center font-bold">{{ row.total }}</td>
+                            <td class="text-center">{{ row.phone }}</td>
+                            <td class="text-center">{{ row.apple }}</td>
+                            <td class="text-center">{{ row.google }}</td>
+                            <td class="text-center">{{ row.email }}</td>
+                            <td class="text-center">{{ row.inconnu }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-secondary py-12">Aucune inscription sur cette période</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = {{ chart_labels_json|safe }};
+    const phoneData = {{ chart_phone_json|safe }};
+    const appleData = {{ chart_apple_json|safe }};
+    const googleData = {{ chart_google_json|safe }};
+    const emailData = {{ chart_email_json|safe }};
+    const inconnuData = {{ chart_inconnu_json|safe }};
+
+    if (labels.length === 0) return;
+
+    const ctx = document.getElementById('signupsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Téléphone',
+                    data: phoneData,
+                    backgroundColor: '#60BC81',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Apple',
+                    data: appleData,
+                    backgroundColor: '#333333',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Google',
+                    data: googleData,
+                    backgroundColor: '#4285F4',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Email',
+                    data: emailData,
+                    backgroundColor: '#C9C1B1',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Inconnu',
+                    data: inconnuData,
+                    backgroundColor: '#D3695E',
+                    borderRadius: 4,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, padding: 20 }
+                },
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
