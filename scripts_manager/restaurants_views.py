@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import firestore
 from google.cloud import storage
 from google.oauth2 import service_account
-from .firebase_utils import get_service_account_path, get_firebase_bucket
+from .firebase_utils import get_service_account_path, get_firebase_bucket, get_storage_service_account_path
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +49,11 @@ def get_firestore_client(request=None):
 # Initialiser le client Storage
 def get_storage_client(request=None):
     """
-    Retourne un client Storage configuré
-    
-    Args:
-        request: Objet request Django (optionnel) pour déterminer l'environnement
+    Retourne un client Storage configuré.
+    Toujours prod — les photos sont stockées uniquement sur le bucket prod.
     """
     try:
-        service_account_path = get_service_account_path(request)
+        service_account_path = get_storage_service_account_path()
         credentials = service_account.Credentials.from_service_account_file(
             service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']

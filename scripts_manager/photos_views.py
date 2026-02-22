@@ -16,7 +16,7 @@ from google.cloud import storage
 from google.oauth2 import service_account
 from PIL import Image, ImageOps
 from config import FIREBASE_BUCKET_PROD, SERVICE_ACCOUNT_PATH_PROD
-from .firebase_utils import get_service_account_path, get_firebase_bucket
+from .firebase_utils import get_service_account_path, get_firebase_bucket, get_storage_service_account_path
 from .restaurants_views import get_firestore_client
 
 logger = logging.getLogger(__name__)
@@ -35,13 +35,11 @@ def build_query_without_page(request):
 # Initialiser le client Storage
 def get_storage_client(request=None):
     """
-    Retourne un client Storage configuré
-    
-    Args:
-        request: Objet request Django (optionnel) pour déterminer l'environnement
+    Retourne un client Storage configuré.
+    Toujours prod — les photos sont stockées uniquement sur le bucket prod.
     """
     try:
-        service_account_path = get_service_account_path(request)
+        service_account_path = get_storage_service_account_path()
         credentials = service_account.Credentials.from_service_account_file(
             service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']
@@ -54,13 +52,11 @@ def get_storage_client(request=None):
 # Obtenir les credentials pour la signature
 def get_storage_credentials(request=None):
     """
-    Retourne les credentials pour la signature d'URL
-    
-    Args:
-        request: Objet request Django (optionnel) pour déterminer l'environnement
+    Retourne les credentials pour la signature d'URL.
+    Toujours prod — les photos sont stockées uniquement sur le bucket prod.
     """
     try:
-        service_account_path = get_service_account_path(request)
+        service_account_path = get_storage_service_account_path()
         return service_account.Credentials.from_service_account_file(
             service_account_path,
             scopes=['https://www.googleapis.com/auth/cloud-platform']

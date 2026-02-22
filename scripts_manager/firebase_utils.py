@@ -57,3 +57,12 @@ def get_firebase_bucket(request=None):
     Toujours prod — les photos sont stockées uniquement sur le bucket prod.
     """
     return "butter-vdef.firebasestorage.app"
+
+
+def get_storage_service_account_path():
+    """
+    Retourne le chemin du service account pour Firebase Storage.
+    Toujours prod — les photos/logos/menus sont stockés uniquement sur le bucket prod.
+    """
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    return str(BASE_DIR / "firebase_credentials" / "serviceAccountKey.prod.json")
