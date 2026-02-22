@@ -14,8 +14,7 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import firestore
 from google.cloud import storage
 from google.oauth2 import service_account
-from config import FIREBASE_BUCKET
-from .firebase_utils import get_service_account_path
+from .firebase_utils import get_service_account_path, get_firebase_bucket
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ def get_restaurants_with_missing_photos(request=None):
         if not client:
             return set()
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         prefix = "Photos restaurants/"
         blobs = list(bucket.list_blobs(prefix=prefix))
         
@@ -154,7 +153,7 @@ def get_restaurants_with_missing_logos(request=None):
         if not client:
             return set()
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         prefix = "Logos/"
         blobs = list(bucket.list_blobs(prefix=prefix))
         
@@ -208,7 +207,7 @@ def get_restaurant_media_info(restaurant_ids):
         if not client:
             return {}
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         media_info = {rid: {'has_logo': False, 'logo_count': 0, 'photo_count': 0, 'photos': []} for rid in restaurant_ids}
         
         # Récupérer les logos

@@ -15,8 +15,8 @@ from django.contrib.auth.decorators import login_required
 from google.cloud import storage
 from google.oauth2 import service_account
 from PIL import Image, ImageOps
-from config import FIREBASE_BUCKET, FIREBASE_BUCKET_PROD, SERVICE_ACCOUNT_PATH_PROD
-from .firebase_utils import get_service_account_path
+from config import FIREBASE_BUCKET_PROD, SERVICE_ACCOUNT_PATH_PROD
+from .firebase_utils import get_service_account_path, get_firebase_bucket
 from .restaurants_views import get_firestore_client
 
 logger = logging.getLogger(__name__)
@@ -96,11 +96,11 @@ def photos_list(request):
                     'query_string': build_query_without_page(request)
                 })
             
-            bucket = client.bucket(FIREBASE_BUCKET)
+            bucket = client.bucket(get_firebase_bucket(request))
             
             if bucket.client != client:
                 logger.warning("Le bucket n'utilise pas le bon client, recréation...")
-                bucket = client.bucket(FIREBASE_BUCKET)
+                bucket = client.bucket(get_firebase_bucket(request))
             
             blobs = list(bucket.list_blobs(prefix=folder_path))
             
@@ -174,7 +174,7 @@ def photo_detail(request, folder, photo_name):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         blob = bucket.blob(full_path)
         
         if not blob.exists():
@@ -250,7 +250,7 @@ def photo_upload(request):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         blob = bucket.blob(full_path)
         
         # Définir le content type
@@ -298,7 +298,7 @@ def photo_delete(request, folder, photo_name):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         blob = bucket.blob(full_path)
         
         if not blob.exists():
@@ -330,7 +330,7 @@ def photo_get_url(request, folder, photo_name):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         blob = bucket.blob(full_path)
         
         if not blob.exists():
@@ -373,7 +373,7 @@ def photo_rename(request, folder, photo_name):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         old_blob = bucket.blob(old_path)
         
         if not old_blob.exists():
@@ -468,7 +468,7 @@ def photo_convert_png_to_webp(request):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         
         # Lister tous les PNG
         logger.info(f"🔍 Recherche des images PNG dans {folder_path}...")
@@ -591,7 +591,7 @@ def photo_bulk_delete(request):
         if not client:
             return JsonResponse({'error': 'Erreur de connexion à Firebase Storage'}, status=500)
         
-        bucket = client.bucket(FIREBASE_BUCKET)
+        bucket = client.bucket(get_firebase_bucket(request))
         
         deleted = 0
         errors = 0

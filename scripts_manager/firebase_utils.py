@@ -49,3 +49,14 @@ def get_service_account_path(request=None):
         return str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.dev.json")
     else:
         return str(FIREBASE_CREDENTIALS_DIR / "serviceAccountKey.prod.json")
+
+
+def get_firebase_bucket(request=None):
+    """
+    Retourne le nom du bucket Firebase Storage selon l'environnement actif (session ou env var).
+    """
+    env = get_firebase_env_from_session(request)
+    if env == 'dev':
+        return "butter-def.firebasestorage.app"
+    else:
+        return "butter-vdef.firebasestorage.app"
