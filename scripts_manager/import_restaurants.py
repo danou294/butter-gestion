@@ -1171,14 +1171,14 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         log(f"❌ Init Firestore échouée: {e}\n{traceback.format_exc()}", log_file)
         raise
 
-    # 1) Backup (optionnel — ne bloque pas l'import si quota dépassé)
+    # 1) Backup
     backup_meta = {}
     try:
         log(f"🗄️  Backup de '{COLLECTION_SOURCE}' ...", log_file)
         backup_meta = export_collection(db, COLLECTION_SOURCE, backup_dir, log_file)
     except Exception as e:
-        log(f"⚠️  Backup ignoré (quota ou erreur): {e}", log_file)
-        log(f"⚠️  L'import continue sans backup.", log_file)
+        log(f"❌ Backup échoué: {e}\n{traceback.format_exc()}", log_file)
+        raise
 
     # 2) Convert Excel → records
     try:
