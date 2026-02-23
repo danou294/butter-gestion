@@ -742,28 +742,62 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         has_terrace = any("terrasse" in x.lower() for x in (ambiance_tags + lieu_tags + terrace_tags))
         terrace_locs = [x for x in (lieu_tags + terrace_tags) if "terrasse" in x.lower()]
         
-        stations_metro = []
-        station1 = entry.get("Station de metro 1", "").strip()
-        lignes1 = entry.get("Lignes 1", "").strip()
-        if station1 and station1.lower() not in ["non", "", "nan"]:
-            lines1 = [l.strip() for l in lignes1.split(",") if l.strip()] if lignes1 else []
-            stations_metro.append({"station": station1, "lines": lines1})
+        # Parse des stations de métro — support multi-adresses (séparées par |)
+        raw_station1 = entry.get("Station de metro 1", "").strip()
+        raw_lignes1 = entry.get("Lignes 1", "").strip()
+        raw_station2 = entry.get("Stations de metro 2 ", "").strip()
+        raw_lignes2 = entry.get("Lignes 2 ", "").strip()
 
-        station2 = entry.get("Stations de metro 2 ", "").strip()
-        lignes2 = entry.get("Lignes 2 ", "").strip()
-        if station2 and station2.lower() not in ["non", "", "nan"]:
-            lines2 = [l.strip() for l in lignes2.split(",") if l.strip()] if lignes2 else []
-            stations_metro.append({"station": station2, "lines": lines2})
+        num_addresses = len(all_addresses)
+        is_multi = num_addresses > 1
 
-        # Construire le tableau multi-adresses pour Firestore (après stations_metro)
+        if is_multi:
+            # Multi-adresses : splitter par | pour distribuer les stations par adresse
+            stations1_parts = [s.strip() for s in raw_station1.split("|")] if raw_station1 else []
+            lignes1_parts = [s.strip() for s in raw_lignes1.split("|")] if raw_lignes1 else []
+            stations2_parts = [s.strip() for s in raw_station2.split("|")] if raw_station2 else []
+            lignes2_parts = [s.strip() for s in raw_lignes2.split("|")] if raw_lignes2 else []
+
+            # Construire les stations par adresse
+            per_address_metros = []
+            for i in range(num_addresses):
+                addr_metros = []
+                # Station 1 pour cette adresse
+                s1 = stations1_parts[i].strip() if i < len(stations1_parts) else ""
+                l1 = lignes1_parts[i].strip() if i < len(lignes1_parts) else ""
+                if s1 and s1.lower() not in ["non", "", "nan"]:
+                    lines1 = [l.strip() for l in l1.split(",") if l.strip()] if l1 else []
+                    addr_metros.append({"station": s1, "lines": lines1})
+                # Station 2 pour cette adresse
+                s2 = stations2_parts[i].strip() if i < len(stations2_parts) else ""
+                l2 = lignes2_parts[i].strip() if i < len(lignes2_parts) else ""
+                if s2 and s2.lower() not in ["non", "", "nan"]:
+                    lines2 = [l.strip() for l in l2.split(",") if l.strip()] if l2 else []
+                    addr_metros.append({"station": s2, "lines": lines2})
+                per_address_metros.append(addr_metros)
+
+            # Root stations_metro = celles de la première adresse
+            stations_metro = per_address_metros[0] if per_address_metros else []
+        else:
+            # Adresse unique : comportement classique
+            stations_metro = []
+            if raw_station1 and raw_station1.lower() not in ["non", "", "nan"]:
+                lines1 = [l.strip() for l in raw_lignes1.split(",") if l.strip()] if raw_lignes1 else []
+                stations_metro.append({"station": raw_station1, "lines": lines1})
+            if raw_station2 and raw_station2.lower() not in ["non", "", "nan"]:
+                lines2 = [l.strip() for l in raw_lignes2.split(",") if l.strip()] if raw_lignes2 else []
+                stations_metro.append({"station": raw_station2, "lines": lines2})
+            per_address_metros = [stations_metro]
+
+        # Construire le tableau multi-adresses pour Firestore
         addresses_array = []
-        for i in range(len(all_addresses)):
+        for i in range(num_addresses):
             addr_entry = {
                 "address": all_addresses[i],
                 "arrondissement": all_arrondissements[i] if i < len(all_arrondissements) else "",
                 "latitude": all_coords[i][0] if i < len(all_coords) else None,
                 "longitude": all_coords[i][1] if i < len(all_coords) else None,
-                "stations_metro": stations_metro if i == 0 else [],
+                "stations_metro": per_address_metros[i] if i < len(per_address_metros) else [],
             }
             addresses_array.append(addr_entry)
 
