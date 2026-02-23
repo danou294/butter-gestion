@@ -367,12 +367,12 @@ def arrondissement_to_code_postal(v):
     return s
 
 def parse_arrondissements(v):
-    """Parse un champ arrondissement multi-valeurs (séparés par , ou .) en liste de codes postaux."""
+    """Parse un champ arrondissement multi-valeurs (séparés par |, , ou .) en liste de codes postaux."""
     s = clean_text(v)
     if not s:
         return [""]
-    # Split par , ou .
-    parts = re.split(r"[,.]", s)
+    # Split par | (multi-adresses) puis par , ou . (multi-arrondissements par adresse)
+    parts = re.split(r"[|,.]", s)
     result = [arrondissement_to_code_postal(p.strip()) for p in parts if p.strip()]
     return result if result else [""]
 
