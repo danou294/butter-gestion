@@ -366,6 +366,45 @@ def arrondissement_to_code_postal(v):
         pass
     return s
 
+def parse_arrondissements(v):
+    """Parse un champ arrondissement multi-valeurs (séparés par , ou .) en liste de codes postaux."""
+    s = clean_text(v)
+    if not s:
+        return [""]
+    # Split par , ou .
+    parts = re.split(r"[,.]", s)
+    result = [arrondissement_to_code_postal(p.strip()) for p in parts if p.strip()]
+    return result if result else [""]
+
+def parse_multi_addresses(address_str):
+    """Parse un champ adresse multi-valeurs (séparés par |) en liste d'adresses."""
+    if not address_str:
+        return [""]
+    parts = [a.strip() for a in address_str.split("|") if a.strip()]
+    return parts if parts else [""]
+
+def parse_multi_coords(lat_str, lon_str):
+    """Parse des coordonnées multi-valeurs (séparées par ;) en liste de tuples (lat, lng)."""
+    coords = []
+    lats = [x.strip() for x in lat_str.split(";")] if lat_str else []
+    lons = [x.strip() for x in lon_str.split(";")] if lon_str else []
+    max_len = max(len(lats), len(lons))
+    for i in range(max_len):
+        lat = None
+        lon = None
+        if i < len(lats) and lats[i]:
+            try:
+                lat = float(lats[i].replace(",", "."))
+            except (ValueError, AttributeError):
+                lat = None
+        if i < len(lons) and lons[i]:
+            try:
+                lon = float(lons[i].replace(",", "."))
+            except (ValueError, AttributeError):
+                lon = None
+        coords.append((lat, lon))
+    return coords
+
 def normalize_id_from_tag(tag):
     rid = re.sub(r"[^a-zA-Z0-9_-]+", "-", tag).strip("-").upper()
     return rid
@@ -415,6 +454,26 @@ def collect_location_name_from_columns(row):
     except Exception as e:
         return ""
 
+def _normalize_tag_case(tag, tag_group_name):
+    """Normalise la casse des tags pour correspondre aux valeurs attendues par Flutter.
+    Corrige les incohérences comme 'dîner' → 'Dîner', 'date' → 'Date', 'Sud-américain' → 'Sud-Américain'
+    """
+    # Mapping des valeurs canoniques par groupe de tags
+    canonical_values = {
+        "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Drinks', 'Dîner', 'Sans réservation'],
+        "ambiance": ['Entre amis', 'En famille', 'Date', 'Festif'],
+        "cuisine": ['Italien', 'Méditerranéen', 'Asiatique', 'Français', 'Sud-Américain', 'Américain', 'Japonais', 'Indien', 'Africain', 'Other', 'Israélien'],
+        "lieu_tags": ['Bar', 'Cave à manger', 'Coffee shop', 'Terrasse', 'Fast', 'Brasserie', 'Hôtel', 'Gastronomique', 'Salle privatisable'],
+        "location_type": ['Bar', 'Cave à manger', 'Coffee shop', 'Terrasse', 'Fast', 'Brasserie', 'Hôtel', 'Gastronomique', 'Salle privatisable'],
+    }
+    group_canonicals = canonical_values.get(tag_group_name)
+    if group_canonicals:
+        tag_lower = tag.lower().strip()
+        for canonical in group_canonicals:
+            if canonical.lower() == tag_lower:
+                return canonical
+    return tag
+
 def collect_tags_from_excel_columns(row, tag_group_name):
     """Collecte des tags depuis les colonnes Excel _TAG et _AFFICHAGE"""
     try:
@@ -435,6 +494,13 @@ def collect_tags_from_excel_columns(row, tag_group_name):
         for col in columns_to_check:
             if col in row.index:
                 val = row[col]
+                # Gérer les colonnes dupliquées (ex: 2x "Préférences") → pandas retourne une Series
+                if isinstance(val, pd.Series):
+                    non_null = val.dropna()
+                    if len(non_null) > 0:
+                        val = non_null.iloc[0]
+                    else:
+                        continue
                 if pd.notna(val) and str(val).strip().lower() not in ["non", "", "nan"]:
                     val_str = str(val).strip()
                     tags = [tag.strip() for tag in val_str.split(",") if tag.strip()]
@@ -462,8 +528,12 @@ def collect_tags_from_excel_columns(row, tag_group_name):
                             if tag not in results:
                                 results.append(tag)
                         else:
-                            if tag not in results:
-                                results.append(tag)
+                            # Normalisation de la casse pour éviter les doublons (ex: "dîner" → "Dîner", "date" → "Date")
+                            normalized_tag = _normalize_tag_case(tag, tag_group_name)
+                            # Nettoyer les caractères parasites (ex: backtick final)
+                            normalized_tag = normalized_tag.rstrip('`').strip()
+                            if normalized_tag and normalized_tag not in results:
+                                results.append(normalized_tag)
         return results
     except Exception as e:
         return []
@@ -481,7 +551,15 @@ def collect_affichage_tags(row):
     ]
     for col in affichage_columns:
         if col in row.index:
-            value = str(row[col]).strip()
+            val = row[col]
+            # Gérer les colonnes dupliquées → pandas retourne une Series
+            if isinstance(val, pd.Series):
+                non_null = val.dropna()
+                if len(non_null) > 0:
+                    val = non_null.iloc[0]
+                else:
+                    continue
+            value = str(val).strip()
             if value and value.lower() not in ["", "nan", "non"]:
                 items = [item.strip() for item in value.split(",") if item.strip()]
                 for item in items:
@@ -560,8 +638,13 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         name = clean_text(entry.get("Vrai Nom") or entry.get("Nom de base") or "")
         raw_name = clean_text(entry.get("Nom de base") or "")
         tag = clean_text(entry.get("Ref") or entry.get("tag") or "")
-        address = clean_text(entry.get("Adresse") or "")
-        arrondissement = arrondissement_to_code_postal(entry.get("Arrondissement"))
+        raw_address = clean_text(entry.get("Adresse") or "")
+        all_addresses = parse_multi_addresses(raw_address)
+        address = all_addresses[0]  # Premier élément = rétrocompat
+
+        all_arrondissements = parse_arrondissements(entry.get("Arrondissement"))
+        arrondissement = all_arrondissements[0]  # Premier élément = rétrocompat
+
         phone = clean_text(entry.get("Téléphone") or "")
         website = clean_text(entry.get("Site web") or "")
         reservation_link = clean_text(entry.get("Lien de réservation") or "")
@@ -573,36 +656,26 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         hours_structured = process_hours(hours_raw) if hours_raw else {}
         commentaire = clean_text(entry.get("Infos") or "")
         
-        latitude = None
-        longitude = None
         lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
         lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
-        
+
         # Log initial pour le restaurant
         restaurant_name = name or tag or "Restaurant inconnu"
-        
-        if lat_str:
-            try:
-                latitude = float(lat_str.replace(",", "."))
-                if log_file:
-                    log(f"📍 [{restaurant_name}] Latitude trouvée dans Excel: {latitude:.6f}", log_file)
-            except (ValueError, AttributeError) as e:
-                latitude = None
-                if log_file:
-                    log(f"⚠️  [{restaurant_name}] Erreur parsing latitude '{lat_str}': {e}", log_file)
-        if lon_str:
-            try:
-                longitude = float(lon_str.replace(",", "."))
-                if log_file:
-                    log(f"📍 [{restaurant_name}] Longitude trouvée dans Excel: {longitude:.6f}", log_file)
-            except (ValueError, AttributeError) as e:
-                longitude = None
-                if log_file:
-                    log(f"⚠️  [{restaurant_name}] Erreur parsing longitude '{lon_str}': {e}", log_file)
-        
-        # Vérifier si on a besoin de géocoder
+
+        # Parse multi-coordonnées (séparées par ;)
+        all_coords = parse_multi_coords(lat_str, lon_str)
+
+        # Premier jeu de coordonnées = rétrocompat
+        latitude = all_coords[0][0] if all_coords else None
+        longitude = all_coords[0][1] if all_coords else None
+
+        if latitude is not None and longitude is not None:
+            if log_file:
+                log(f"📍 [{restaurant_name}] Coordonnées trouvées dans Excel: lat={latitude:.6f}, lon={longitude:.6f}", log_file)
+
+        # Vérifier si on a besoin de géocoder (uniquement l'adresse principale)
         needs_geocoding = (latitude is None or longitude is None) and address
-        
+
         if needs_geocoding:
             geocoding_counter[0] += 1
             if log_file:
@@ -612,7 +685,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
                 if longitude is None:
                     missing.append("longitude")
                 log(f"🌍 [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Démarrage géocodage - Adresse: '{address}' - Manque: {', '.join(missing)}", log_file)
-            
+
             coords = geocode_address(address, log_file, restaurant_name=restaurant_name)
             if coords:
                 if latitude is None:
@@ -625,6 +698,11 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
                         log(f"✅ [{restaurant_name}] Longitude obtenue par géocodage: {longitude:.6f}", log_file)
                 if log_file:
                     log(f"✅ [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Géocodage terminé avec succès", log_file)
+                # Mettre à jour les coords du premier élément
+                if all_coords:
+                    all_coords[0] = (latitude, longitude)
+                else:
+                    all_coords = [(latitude, longitude)]
                 time.sleep(1.1)
             else:
                 if log_file:
@@ -635,6 +713,9 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         else:
             if log_file:
                 log(f"✅ [{restaurant_name}] Coordonnées complètes (pas de géocodage nécessaire): lat={latitude:.6f}, lon={longitude:.6f}", log_file)
+
+        if len(all_addresses) > 1 and log_file:
+            log(f"📍 [{restaurant_name}] Multi-adresses détectées: {len(all_addresses)} adresses, arrondissements={all_arrondissements}", log_file)
         
         ambiance_tags = collect_tags_from_excel_columns(row, "ambiance")
         price_range = collect_tags_from_excel_columns(row, "price_range")
@@ -667,13 +748,25 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         if station1 and station1.lower() not in ["non", "", "nan"]:
             lines1 = [l.strip() for l in lignes1.split(",") if l.strip()] if lignes1 else []
             stations_metro.append({"station": station1, "lines": lines1})
-        
+
         station2 = entry.get("Stations de metro 2 ", "").strip()
         lignes2 = entry.get("Lignes 2 ", "").strip()
         if station2 and station2.lower() not in ["non", "", "nan"]:
             lines2 = [l.strip() for l in lignes2.split(",") if l.strip()] if lignes2 else []
             stations_metro.append({"station": station2, "lines": lines2})
-        
+
+        # Construire le tableau multi-adresses pour Firestore (après stations_metro)
+        addresses_array = []
+        for i in range(len(all_addresses)):
+            addr_entry = {
+                "address": all_addresses[i],
+                "arrondissement": all_arrondissements[i] if i < len(all_arrondissements) else "",
+                "latitude": all_coords[i][0] if i < len(all_coords) else None,
+                "longitude": all_coords[i][1] if i < len(all_coords) else None,
+                "stations_metro": stations_metro if i == 0 else [],
+            }
+            addresses_array.append(addr_entry)
+
         rid = normalize_id_from_tag(tag)
         doc = {
             "id": rid,
@@ -721,6 +814,9 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "stations_metro": stations_metro,
             "specialite_tag": specialite_tag,
             "lieu_tag": lieu_tag,
+            # Multi-adresses
+            "addresses": addresses_array,
+            "arrondissements": all_arrondissements,
         }
         return rid, doc
 
@@ -747,16 +843,19 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             except Exception:
                 entry[col] = ""
         
-        address = clean_text(entry.get("Adresse") or "")
+        raw_addr = clean_text(entry.get("Adresse") or "")
+        first_address = parse_multi_addresses(raw_addr)[0]
         lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
         lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
-        
-        has_lat = bool(lat_str)
-        has_lon = bool(lon_str)
-        
+
+        # Vérifier si les premières coordonnées sont parsables
+        first_coords = parse_multi_coords(lat_str, lon_str)
+        has_lat = first_coords and first_coords[0][0] is not None
+        has_lon = first_coords and first_coords[0][1] is not None
+
         if has_lat and has_lon:
             geocoding_stats["with_coords"] += 1
-        elif address:
+        elif first_address:
             geocoding_stats["needs_geocoding"] += 1
         else:
             geocoding_stats["no_address"] += 1
