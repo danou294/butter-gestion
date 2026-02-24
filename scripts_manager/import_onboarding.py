@@ -105,11 +105,11 @@ def clean_text(value):
 
 def parse_onboarding_excel(excel_path, sheet_name=None):
     """
-    Parse le fichier Excel d'onboarding et retourne les enregistrements.
+    Parse le fichier Excel ou CSV d'onboarding et retourne les enregistrements.
 
     Args:
-        excel_path: Chemin vers le fichier Excel
-        sheet_name: Nom de la feuille (optionnel, utilise la première par défaut)
+        excel_path: Chemin vers le fichier Excel ou CSV
+        sheet_name: Nom de la feuille (optionnel, uniquement pour Excel)
 
     Returns:
         tuple: (records, report)
@@ -125,20 +125,37 @@ def parse_onboarding_excel(excel_path, sheet_name=None):
         'by_specialite': {},
     }
 
+    is_csv = str(excel_path).lower().endswith('.csv')
+
     try:
-        xls = pd.ExcelFile(excel_path)
-        available_sheets = xls.sheet_names
-
-        if sheet_name and sheet_name in available_sheets:
-            df = pd.read_excel(xls, sheet_name=sheet_name)
+        if is_csv:
+            # CSV : essayer plusieurs encodages
+            df = None
+            for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
+                try:
+                    df = pd.read_csv(excel_path, encoding=enc, sep=None, engine='python')
+                    break
+                except UnicodeDecodeError:
+                    continue
+            if df is None:
+                report['errors'].append("Encodage CSV non supporté")
+                return [], report
+            report['sheet_name'] = 'CSV'
+            report['available_sheets'] = ['CSV']
         else:
-            df = pd.read_excel(xls, sheet_name=0)
-            sheet_name = available_sheets[0]
+            xls = pd.ExcelFile(excel_path)
+            available_sheets = xls.sheet_names
 
-        report['sheet_name'] = sheet_name
-        report['available_sheets'] = available_sheets
+            if sheet_name and sheet_name in available_sheets:
+                df = pd.read_excel(xls, sheet_name=sheet_name)
+            else:
+                df = pd.read_excel(xls, sheet_name=0)
+                sheet_name = available_sheets[0]
+
+            report['sheet_name'] = sheet_name
+            report['available_sheets'] = available_sheets
     except Exception as e:
-        report['errors'].append(f"Erreur lecture Excel: {str(e)}")
+        report['errors'].append(f"Erreur lecture fichier: {str(e)}")
         return [], report
 
     # Trouver les colonnes

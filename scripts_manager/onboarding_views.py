@@ -98,15 +98,16 @@ def onboarding_import(request):
         excel_file = request.FILES.get('excel_file')
 
         if not excel_file:
-            messages.error(request, "Veuillez sélectionner un fichier Excel.")
+            messages.error(request, "Veuillez sélectionner un fichier.")
             return redirect('scripts_manager:onboarding_import')
 
-        if not excel_file.name.endswith(('.xlsx', '.xls')):
-            messages.error(request, "Le fichier doit être au format Excel (.xlsx ou .xls).")
+        if not excel_file.name.endswith(('.xlsx', '.xls', '.csv')):
+            messages.error(request, "Le fichier doit être au format Excel (.xlsx, .xls) ou CSV (.csv).")
             return redirect('scripts_manager:onboarding_import')
 
-        # Sauvegarder temporairement
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+        # Sauvegarder temporairement avec la bonne extension
+        suffix = '.csv' if excel_file.name.endswith('.csv') else '.xlsx'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             for chunk in excel_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name

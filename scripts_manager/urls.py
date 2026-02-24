@@ -13,6 +13,8 @@ from . import onboarding_views
 from . import revenuecat_views
 from . import quick_filters_views
 from . import signups_views
+from . import coups_de_coeur_views
+from . import recommended_views
 
 app_name = 'scripts_manager'
 
@@ -55,6 +57,8 @@ urlpatterns = [
     path('import-restaurants/logs/', views.get_import_logs, name='get_import_logs'),
     path('import-restaurants/download-logs/', views.download_import_logs, name='download_import_logs'),
     path('import-restaurants/analyze-sheets/', views.analyze_excel_sheets, name='analyze_excel_sheets'),
+    path('import-restaurants/example-csv/<str:variant>/', views.download_example_csv, name='download_example_csv'),
+    path('import-restaurants/parse-list/', views.parse_restaurant_list_file, name='parse_restaurant_list_file'),
     
     # Restauration de Backups
     path('restore-backup/', views.restore_backup_index, name='restore_backup_index'),
@@ -127,6 +131,14 @@ urlpatterns = [
     path('quick-filters/<str:filter_id>/edit/', quick_filters_views.quick_filter_edit, name='quick_filter_edit'),
     path('quick-filters/<str:filter_id>/delete/', quick_filters_views.quick_filter_delete, name='quick_filter_delete'),
     path('quick-filters/<str:filter_id>/json/', quick_filters_views.quick_filter_get_json, name='quick_filter_get_json'),
+
+    # Coups de coeur de la semaine
+    path('coups-de-coeur/', coups_de_coeur_views.coups_de_coeur_manage, name='coups_de_coeur_manage'),
+    path('coups-de-coeur/save/', coups_de_coeur_views.coups_de_coeur_save, name='coups_de_coeur_save'),
+
+    # Recommandés pour toi
+    path('recommandes/', recommended_views.recommended_manage, name='recommended_manage'),
+    path('recommandes/save/', recommended_views.recommended_save, name='recommended_save'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),

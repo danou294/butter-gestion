@@ -16,13 +16,36 @@
         <div>
             <strong>Instructions :</strong>
             <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                <li>Le fichier Excel doit contenir les colonnes requises (Ref, Nom de base, Vrai Nom, Adresse, etc.)</li>
+                <li>Le fichier doit etre au format <strong>Excel (.xlsx, .xls)</strong> ou <strong>CSV (.csv)</strong></li>
                 <li>La premiere ligne doit contenir les en-tetes de colonnes</li>
+                <li>Colonnes requises : Ref, Nom de base, Vrai Nom, Adresse, etc.</li>
                 <li>Un backup automatique sera cree avant l'import</li>
                 <li>La collection actuelle sera <strong>remplacee</strong> par les nouvelles donnees</li>
                 <li>Le processus peut prendre plusieurs minutes selon le nombre de restaurants</li>
                 <li><strong>Environnement actif :</strong> {{ firebase_env_label }}</li>
             </ul>
+        </div>
+    </div>
+
+    <!-- Modeles CSV telechargeables -->
+    <div class="card bg-base-100 shadow-sm border border-primary/30">
+        <div class="card-body">
+            <h3 class="card-title text-lg font-serif text-base-content">📥 Modeles CSV a telecharger</h3>
+            <p class="text-secondary text-sm mb-4">Telechargez un modele CSV pour preparer votre fichier d'import :</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <a href="{% url 'scripts_manager:download_example_csv' variant='minimal' %}"
+                   class="btn btn-primary btn-md gap-2" download>
+                    📄 Telecharger — Exemple minimal
+                </a>
+                <a href="{% url 'scripts_manager:download_example_csv' variant='complet' %}"
+                   class="btn btn-secondary btn-md gap-2" download>
+                    📋 Telecharger — Exemple complet
+                </a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                <p class="text-xs text-gray-400 text-center">7 colonnes essentielles (Ref, Nom, Adresse...)</p>
+                <p class="text-xs text-gray-400 text-center">32 colonnes (infos, liens, horaires, tags...)</p>
+            </div>
         </div>
     </div>
 
@@ -60,12 +83,12 @@
                 <!-- Upload area -->
                 <div id="uploadArea" class="border-2 border-dashed border-base-300 rounded-lg p-10 text-center cursor-pointer transition-colors hover:border-primary hover:bg-base-200">
                     <div class="text-5xl mb-4">📄</div>
-                    <h3 class="text-lg font-semibold text-base-content">Glissez-deposez votre fichier Excel ici</h3>
-                    <p class="text-secondary my-2">ou</p>
-                    <button type="button" class="btn btn-ghost" onclick="console.log('Bouton clique'); document.getElementById('excel_file').click();">
-                        Parcourir les fichiers
+                    <h3 class="text-lg font-semibold text-base-content">Glissez-deposez votre fichier ici</h3>
+                    <p class="text-secondary text-sm mt-1 mb-3">Formats acceptes : <strong>.csv</strong>, .xlsx, .xls</p>
+                    <button type="button" class="btn btn-primary" onclick="console.log('Bouton clique'); document.getElementById('excel_file').click();">
+                        Choisir un fichier CSV ou Excel
                     </button>
-                    <input type="file" id="excel_file" name="excel_file" class="hidden" accept=".xlsx,.xls" required onchange="console.log('Input change detecte directement:', this.files.length);">
+                    <input type="file" id="excel_file" name="excel_file" class="hidden" accept=".xlsx,.xls,.csv" required onchange="console.log('Input change detecte directement:', this.files.length);">
                 </div>
 
                 <!-- File info -->
@@ -76,9 +99,9 @@
                 </div>
 
                 <!-- Sheet selector -->
-                <div class="form-control mt-5">
+                <div class="form-control mt-5" id="sheetSelectorContainer">
                     <label for="sheet_name" class="label">
-                        <span class="label-text font-medium">Feuille Excel a importer :</span>
+                        <span class="label-text font-medium">Feuille a importer :</span>
                     </label>
                     <select
                         id="sheet_name"
@@ -86,10 +109,10 @@
                         class="select select-bordered w-full"
                         disabled
                     >
-                        <option value="">Selectionnez un fichier Excel d'abord</option>
+                        <option value="">Selectionnez un fichier d'abord</option>
                     </select>
                     <label class="label">
-                        <span class="label-text-alt text-secondary">Les feuilles disponibles seront chargees automatiquement apres la selection du fichier</span>
+                        <span class="label-text-alt text-secondary">Les feuilles disponibles seront chargees automatiquement (non applicable pour les CSV)</span>
                     </label>
                 </div>
 
@@ -126,8 +149,8 @@
 
                 <!-- Submit -->
                 <div class="mt-8 text-center">
-                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                        Lancer l'import
+                    <button type="submit" class="btn btn-primary btn-lg gap-2" id="submitBtn">
+                        🚀 Lancer l'import
                     </button>
                 </div>
             </form>
@@ -313,13 +336,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const sheetSelect = document.getElementById('sheet_name');
 
-        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-            console.warn('Fichier non Excel:', file.name);
-            alert('Veuillez selectionner un fichier Excel (.xlsx ou .xls)');
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls') && !file.name.endsWith('.csv')) {
+            console.warn('Fichier non supporte:', file.name);
+            alert('Veuillez selectionner un fichier Excel (.xlsx, .xls) ou CSV (.csv)');
             // Reinitialiser le select
             if (sheetSelect) {
                 sheetSelect.disabled = true;
-                sheetSelect.innerHTML = '<option value="">Selectionnez un fichier Excel d\'abord</option>';
+                sheetSelect.innerHTML = '<option value="">Selectionnez un fichier d\'abord</option>';
             }
             // Reinitialiser l'affichage du fichier
             fileName.textContent = '';
@@ -328,10 +351,27 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        console.log('Fichier Excel valide, mise a jour de l\'affichage');
+        console.log('Fichier valide, mise a jour de l\'affichage');
         fileName.textContent = file.name;
         fileSize.textContent = formatFileSize(file.size);
         fileInfo.classList.remove('hidden');
+
+        // Pour les CSV, pas besoin d'analyser les feuilles
+        if (file.name.endsWith('.csv')) {
+            console.log('Fichier CSV detecte, pas de selection de feuille');
+            if (sheetSelect) {
+                sheetSelect.innerHTML = '<option value="CSV" selected>CSV (pas de feuille)</option>';
+                sheetSelect.disabled = true;
+            }
+            // Masquer le selecteur de feuille pour les CSV
+            const sheetContainer = document.getElementById('sheetSelectorContainer');
+            if (sheetContainer) sheetContainer.classList.add('hidden');
+            return;
+        }
+
+        // Afficher le selecteur de feuille pour Excel
+        const sheetContainer = document.getElementById('sheetSelectorContainer');
+        if (sheetContainer) sheetContainer.classList.remove('hidden');
 
         // Analyser les feuilles du fichier Excel (en arriere-plan, ne bloque pas)
         try {

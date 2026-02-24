@@ -573,10 +573,10 @@ def run_import_restaurants(request):
         
         excel_file = request.FILES['excel_file']
         sheet_name = request.POST.get('sheet_name', 'Feuil1')
-        
-        # Vérifier l'extension
-        if not excel_file.name.endswith(('.xlsx', '.xls')):
-            return JsonResponse({'error': 'Le fichier doit être un fichier Excel (.xlsx ou .xls)'}, status=400)
+
+        # Vérifier l'extension (Excel ou CSV)
+        if not excel_file.name.endswith(('.xlsx', '.xls', '.csv')):
+            return JsonResponse({'error': 'Le fichier doit être un fichier Excel (.xlsx, .xls) ou CSV (.csv)'}, status=400)
         
         # Sauvegarder le fichier temporairement
         file_path = INPUT_DIR / excel_file.name
@@ -663,35 +663,42 @@ def dev_import_function(request):
         action = request.POST.get('action')
         
         if action == 'analyze':
-            # Analyser le fichier Excel
+            # Analyser le fichier Excel ou CSV
             if 'excel_file' not in request.FILES:
                 return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-            
+
             excel_file = request.FILES['excel_file']
             file_path = INPUT_DIR / excel_file.name
             with open(file_path, 'wb+') as destination:
                 for chunk in excel_file.chunks():
                     destination.write(chunk)
-            
+
             try:
                 import pandas as pd
-                xls = pd.ExcelFile(file_path)
-                
+                is_csv = excel_file.name.endswith('.csv')
+
                 result = {
-                    'sheets': xls.sheet_names,
                     'file_size': file_path.stat().st_size,
-                    'file_name': excel_file.name
+                    'file_name': excel_file.name,
+                    'format': 'CSV' if is_csv else 'Excel',
                 }
-                
-                # Analyser la première feuille
-                if xls.sheet_names:
-                    df = pd.read_excel(file_path, sheet_name=xls.sheet_names[0], nrows=0)
+
+                if is_csv:
+                    df = pd.read_csv(file_path, nrows=0, sep=None, engine='python')
+                    result['sheets'] = ['CSV']
                     result['columns'] = df.columns.tolist()
                     result['column_count'] = len(df.columns)
-                
+                else:
+                    xls = pd.ExcelFile(file_path)
+                    result['sheets'] = xls.sheet_names
+                    if xls.sheet_names:
+                        df = pd.read_excel(file_path, sheet_name=xls.sheet_names[0], nrows=0)
+                        result['columns'] = df.columns.tolist()
+                        result['column_count'] = len(df.columns)
+
                 if file_path.exists():
                     file_path.unlink()
-                
+
                 return JsonResponse({'success': True, 'result': result})
             except Exception as e:
                 if file_path.exists():
@@ -702,24 +709,31 @@ def dev_import_function(request):
             # Prévisualiser les données
             if 'excel_file' not in request.FILES:
                 return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-            
+
             excel_file = request.FILES['excel_file']
             sheet_name = request.POST.get('sheet_name', 'Feuil1')
             file_path = INPUT_DIR / excel_file.name
             with open(file_path, 'wb+') as destination:
                 for chunk in excel_file.chunks():
                     destination.write(chunk)
-            
+
             try:
                 import pandas as pd
-                df = pd.read_excel(file_path, sheet_name=sheet_name, nrows=10)
-                
-                preview = df.to_dict('records')
-                total = len(pd.read_excel(file_path, sheet_name=sheet_name))
-                
+                is_csv = excel_file.name.endswith('.csv')
+
+                if is_csv:
+                    df = pd.read_csv(file_path, nrows=10, sep=None, engine='python')
+                    total = sum(1 for _ in open(file_path, encoding='utf-8')) - 1  # -1 for header
+                else:
+                    df = pd.read_excel(file_path, sheet_name=sheet_name, nrows=10)
+                    total = len(pd.read_excel(file_path, sheet_name=sheet_name))
+
+                # Convertir NaN en chaîne vide pour JSON
+                preview = df.fillna('').to_dict('records')
+
                 if file_path.exists():
                     file_path.unlink()
-                
+
                 return JsonResponse({
                     'success': True,
                     'preview': preview,
@@ -849,28 +863,37 @@ def analyze_excel_sheets(request):
     try:
         if 'excel_file' not in request.FILES:
             return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
-        
+
         excel_file = request.FILES['excel_file']
-        
+
+        # CSV : pas de feuilles, retourner directement
+        if excel_file.name.endswith('.csv'):
+            return JsonResponse({
+                'success': True,
+                'sheets': ['CSV'],
+                'default_sheet': 'CSV',
+                'is_csv': True,
+            })
+
         # Vérifier l'extension
         if not excel_file.name.endswith(('.xlsx', '.xls')):
-            return JsonResponse({'error': 'Le fichier doit être un fichier Excel (.xlsx ou .xls)'}, status=400)
-        
+            return JsonResponse({'error': 'Le fichier doit être un fichier Excel (.xlsx, .xls) ou CSV (.csv)'}, status=400)
+
         # Sauvegarder le fichier temporairement
         file_path = INPUT_DIR / excel_file.name
         with open(file_path, 'wb+') as destination:
             for chunk in excel_file.chunks():
                 destination.write(chunk)
-        
+
         try:
             import pandas as pd
             xls = pd.ExcelFile(file_path)
             sheets = xls.sheet_names
-            
+
             # Supprimer le fichier temporaire
             if file_path.exists():
                 file_path.unlink()
-            
+
             return JsonResponse({
                 'success': True,
                 'sheets': sheets,
@@ -882,7 +905,7 @@ def analyze_excel_sheets(request):
                 file_path.unlink()
             logger.error(f"Erreur lors de l'analyse des feuilles: {e}")
             return JsonResponse({'error': f'Erreur lors de l\'analyse: {str(e)}'}, status=500)
-            
+
     except Exception as e:
         logger.error(f"Erreur analyze_excel_sheets: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -1035,3 +1058,136 @@ def restore_backup(request):
         return JsonResponse({
             'error': 'Une erreur interne est survenue lors de la restauration.',
         }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def parse_restaurant_list_file(request):
+    """
+    Endpoint partagé : accepte un CSV/Excel contenant des noms de restaurants,
+    les matche contre la collection Firestore 'restaurants',
+    et renvoie les IDs matchés + les noms non trouvés.
+    """
+    from .restaurants_views import get_firestore_client
+
+    if 'file' not in request.FILES:
+        return JsonResponse({'error': 'Aucun fichier fourni'}, status=400)
+
+    uploaded = request.FILES['file']
+    name = uploaded.name.lower()
+
+    if not name.endswith(('.csv', '.xlsx', '.xls')):
+        return JsonResponse({'error': 'Format non supporté (.csv, .xlsx, .xls)'}, status=400)
+
+    # Sauvegarder temporairement
+    file_path = INPUT_DIR / uploaded.name
+    with open(file_path, 'wb+') as dest:
+        for chunk in uploaded.chunks():
+            dest.write(chunk)
+
+    try:
+        import pandas as pd
+
+        # Lire le fichier
+        if name.endswith('.csv'):
+            for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
+                try:
+                    df = pd.read_csv(file_path, encoding=enc, sep=None, engine='python')
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                return JsonResponse({'error': 'Encodage CSV non supporté'}, status=400)
+        else:
+            df = pd.read_excel(file_path)
+
+        if len(df) == 0:
+            return JsonResponse({'error': 'Fichier vide'}, status=400)
+
+        # Extraire les noms : chercher colonne "Nom", "name", "Vrai Nom", "restaurant"
+        # sinon prendre la première colonne
+        name_col = None
+        for candidate in ['Nom', 'nom', 'Name', 'name', 'Vrai Nom', 'Restaurant', 'restaurant']:
+            if candidate in df.columns:
+                name_col = candidate
+                break
+        if name_col is None:
+            name_col = df.columns[0]
+
+        names_from_file = [
+            str(v).strip() for v in df[name_col].dropna()
+            if str(v).strip() and str(v).strip().lower() != 'nan'
+        ]
+
+        if not names_from_file:
+            return JsonResponse({'error': 'Aucun nom de restaurant trouvé dans le fichier'}, status=400)
+
+        # Charger tous les restaurants depuis Firestore
+        db = get_firestore_client(request)
+        all_docs = db.collection('restaurants').stream()
+        restaurants_by_name = {}
+        for doc in all_docs:
+            data = doc.to_dict()
+            rname = (data.get('name') or doc.id).strip()
+            restaurants_by_name[rname.lower()] = {
+                'id': doc.id,
+                'name': rname,
+                'cuisine': data.get('cuisine', ''),
+                'arrondissement': data.get('arrondissement', ''),
+            }
+
+        # Matcher
+        matched = []
+        not_found = []
+        seen_ids = set()
+        for file_name in names_from_file:
+            key = file_name.lower().strip()
+            r = restaurants_by_name.get(key)
+            if r and r['id'] not in seen_ids:
+                matched.append(r)
+                seen_ids.add(r['id'])
+            else:
+                if not r:
+                    not_found.append(file_name)
+
+        return JsonResponse({
+            'success': True,
+            'matched': matched,
+            'not_found': not_found,
+            'total_in_file': len(names_from_file),
+        })
+
+    except Exception as e:
+        logger.error(f"Erreur parse_restaurant_list_file: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        if file_path.exists():
+            file_path.unlink()
+
+
+@login_required
+@require_http_methods(["GET"])
+def download_example_csv(request, variant):
+    """Télécharge un fichier CSV d'exemple pour l'import de restaurants"""
+    from pathlib import Path
+
+    static_dir = Path(__file__).resolve().parent / 'static' / 'csv_examples'
+    filename_map = {
+        'minimal': 'exemple_import_minimal.csv',
+        'complet': 'exemple_import_complet.csv',
+        'liste': 'exemple_liste_restaurants.csv',
+        'onboarding': 'exemple_onboarding.csv',
+    }
+
+    filename = filename_map.get(variant)
+    if not filename:
+        return JsonResponse({'error': 'Variante inconnue'}, status=404)
+
+    file_path = static_dir / filename
+    if not file_path.exists():
+        return JsonResponse({'error': 'Fichier introuvable'}, status=404)
+
+    content = file_path.read_text(encoding='utf-8')
+    response = HttpResponse(content, content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

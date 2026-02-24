@@ -41,10 +41,17 @@
 
                 <div class="border-2 border-dashed border-base-300 rounded p-8 text-center hover:border-secondary transition-colors">
                     <div class="text-4xl mb-3">📄</div>
-                    <p class="text-base-content font-medium mb-2">Sélectionnez votre fichier Excel</p>
-                    <p class="text-secondary text-sm mb-4">Formats acceptés : .xlsx, .xls</p>
-                    <input type="file" name="excel_file" accept=".xlsx,.xls" required
+                    <p class="text-base-content font-medium mb-2">Sélectionnez votre fichier</p>
+                    <p class="text-secondary text-sm mb-4">Formats acceptés : <strong>.csv</strong>, .xlsx, .xls</p>
+                    <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required
                            class="file-input file-input-bordered w-full bg-base-200">
+                </div>
+
+                <div class="mt-3 text-center">
+                    <a href="{% url 'scripts_manager:download_example_csv' variant='onboarding' %}"
+                       class="btn btn-ghost btn-sm gap-1" download>
+                        📄 Télécharger un exemple CSV
+                    </a>
                 </div>
 
                 <div class="mt-6 text-center">

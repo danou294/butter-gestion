@@ -577,27 +577,50 @@ def collect_specialite_affichage(row):
 
 def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: str, out_csv: str, log_file: str):
     if not os.path.exists(excel_path):
-        raise FileNotFoundError(f"Excel introuvable: {excel_path}")
-    
-    xls = pd.ExcelFile(excel_path)
-    log(f"📋 Feuilles disponibles: {xls.sheet_names}", log_file)
-    
-    if not xls.sheet_names:
-        raise ValueError("Aucune feuille trouvée dans le fichier Excel")
-    
-    if sheet_name not in xls.sheet_names:
-        sheet_name = xls.sheet_names[0]
-        log(f"⚠️  Feuille '{sheet_name}' non trouvée, utilisation de: {sheet_name}", log_file)
-    
-    df = xls.parse(sheet_name)
-    log(f"📊 Données chargées: {len(df)} lignes, {len(df.columns)} colonnes", log_file)
-    
-    if len(df) == 0:
-        raise ValueError("Le fichier Excel ne contient aucune donnée")
-    
-    # Utiliser la première ligne comme en-têtes
-    df.columns = df.iloc[0]
-    rows = df.iloc[1:].copy()
+        raise FileNotFoundError(f"Fichier introuvable: {excel_path}")
+
+    is_csv = excel_path.lower().endswith('.csv')
+
+    if is_csv:
+        # CSV : la première ligne est directement les en-têtes
+        log("📄 Format CSV détecté", log_file)
+        # Essayer plusieurs encodages courants
+        for encoding in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
+            try:
+                df = pd.read_csv(excel_path, encoding=encoding, sep=None, engine='python')
+                log(f"📊 CSV chargé (encodage: {encoding}): {len(df)} lignes, {len(df.columns)} colonnes", log_file)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError("Impossible de lire le CSV — encodage non supporté")
+
+        if len(df) == 0:
+            raise ValueError("Le fichier CSV ne contient aucune donnée")
+
+        rows = df.copy()
+    else:
+        # Excel : double en-tête (row 0 = catégories, row 1 = vrais en-têtes)
+        xls = pd.ExcelFile(excel_path)
+        log(f"📋 Feuilles disponibles: {xls.sheet_names}", log_file)
+
+        if not xls.sheet_names:
+            raise ValueError("Aucune feuille trouvée dans le fichier Excel")
+
+        if sheet_name not in xls.sheet_names:
+            sheet_name = xls.sheet_names[0]
+            log(f"⚠️  Feuille '{sheet_name}' non trouvée, utilisation de: {sheet_name}", log_file)
+
+        df = xls.parse(sheet_name)
+        log(f"📊 Données chargées: {len(df)} lignes, {len(df.columns)} colonnes", log_file)
+
+        if len(df) == 0:
+            raise ValueError("Le fichier Excel ne contient aucune donnée")
+
+        # Utiliser la première ligne comme en-têtes
+        df.columns = df.iloc[0]
+        rows = df.iloc[1:].copy()
+
     log(f"📝 Données à traiter: {len(rows)} lignes", log_file)
     
     # Variables pour le géocodage (utiliser des listes pour permettre la modification dans la fonction interne)
@@ -1161,8 +1184,9 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         ensure_dir(backup_dir)
         log_file = os.path.join(backup_dir, "import_run.log")
     
+    file_type = "CSV" if excel_path.lower().endswith('.csv') else "Excel"
     log("🚀 Démarrage import end-to-end", log_file)
-    log(f"→ Excel: {excel_path}", log_file)
+    log(f"→ Fichier ({file_type}): {excel_path}", log_file)
     log(f"→ Environnement: {current_env.upper()}", log_file)
 
     try:
@@ -1185,7 +1209,7 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         out_json = os.path.join(backup_dir, "restaurants_from_excel_by_tag.json")
         out_ndjson = os.path.join(backup_dir, "restaurants_from_excel_by_tag.ndjson")
         out_csv = os.path.join(backup_dir, "restaurants_from_excel_by_tag.csv")
-        log("🔁 Conversion Excel → JSON/NDJSON/CSV ...", log_file)
+        log(f"🔁 Conversion {file_type} → JSON/NDJSON/CSV ...", log_file)
         records, conv_report = convert_excel(excel_path, sheet_name, out_json, out_ndjson, out_csv, log_file)
         if not records:
             log("❌ Conversion a produit 0 enregistrements. Abandon.", log_file)
