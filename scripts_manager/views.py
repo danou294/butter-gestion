@@ -1177,6 +1177,7 @@ def download_example_csv(request, variant):
         'complet': 'exemple_import_complet.csv',
         'liste': 'exemple_liste_restaurants.csv',
         'onboarding': 'exemple_onboarding.csv',
+        'guides': 'exemple_guides.csv',
     }
 
     filename = filename_map.get(variant)

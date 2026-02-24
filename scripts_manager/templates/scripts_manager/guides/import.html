@@ -10,9 +10,9 @@
             <nav class="text-sm text-secondary mb-2">
                 <a href="{% url 'scripts_manager:guides_list' %}" class="hover:text-base-content">Guides</a>
                 <span class="mx-1">/</span>
-                <span class="text-base-content">Importer Excel</span>
+                <span class="text-base-content">Importer CSV / Excel</span>
             </nav>
-            <h1 class="text-3xl font-serif font-bold text-base-content">📤 Importer des guides depuis un Excel</h1>
+            <h1 class="text-3xl font-serif font-bold text-base-content">📥 Importer des guides depuis CSV / Excel</h1>
         </div>
     </div>
 
@@ -29,14 +29,14 @@
                 <form method="post" enctype="multipart/form-data" id="guides-import-form">
                     {% csrf_token %}
                     <div class="mb-4">
-                        <span class="block text-sm font-medium text-secondary mb-1">Fichier Excel <span class="text-error">*</span></span>
+                        <span class="block text-sm font-medium text-secondary mb-1">Fichier CSV ou Excel <span class="text-error">*</span></span>
                         <label for="excel_file" class="flex flex-col items-center justify-center w-full min-h-[120px] border-2 border-dashed border-base-300 rounded-lg bg-base-200 cursor-pointer hover:bg-base-300 hover:border-secondary hover:text-base-content transition-colors">
-                            <span class="text-secondary text-center px-4" id="file-label-text">Cliquez ici ou déposez un fichier .xlsx</span>
+                            <span class="text-secondary text-center px-4" id="file-label-text">Cliquez ici ou déposez un fichier .csv ou .xlsx</span>
                             <span class="text-sm text-secondary mt-1" id="file-name"></span>
-                            <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required
-                                   class="sr-only" aria-label="Choisir un fichier Excel">
+                            <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls,.csv" required
+                                   class="sr-only" aria-label="Choisir un fichier CSV ou Excel">
                         </label>
-                        <p class="mt-1 text-xs text-secondary">Format .xlsx (template_guides_v3.xlsx / template_guide_v3.xlsx)</p>
+                        <p class="mt-1 text-xs text-secondary">Formats acceptés : .csv, .xlsx, .xls</p>
                     </div>
                     <div class="mb-4 p-3 rounded-lg border border-base-300 bg-base-200 text-sm text-secondary">
                         <strong>Attention :</strong>
@@ -56,7 +56,7 @@
 
         <div class="card bg-base-200 border border-base-300">
             <div class="card-body">
-                <h3 class="font-serif font-bold text-base-content mb-4">Format attendu (Excel)</h3>
+                <h3 class="font-serif font-bold text-base-content mb-4">Format attendu (CSV / Excel)</h3>
                 <p class="text-sm text-secondary mb-3">1ère ligne = en-têtes de colonnes :</p>
                 <div class="overflow-x-auto">
                     <table class="table table-zebra w-full text-sm border border-base-300 overflow-hidden">
@@ -74,8 +74,13 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="text-sm text-secondary mt-4">Utilisez le fichier exemple <code class="bg-base-100 px-1 rounded">template_guides_v3.xlsx</code> ou <code class="bg-base-100 px-1 rounded">template_guide_v3.xlsx</code>.</p>
-                <p class="text-xs text-secondary mt-3">Éditez avec Excel ou Google Sheets, enregistrez en .xlsx.</p>
+                <div class="mt-4">
+                    <a href="{% url 'scripts_manager:download_example_csv' variant='guides' %}"
+                       class="btn btn-ghost btn-sm gap-1" download>
+                        📄 Télécharger un exemple CSV
+                    </a>
+                </div>
+                <p class="text-xs text-secondary mt-3">Éditez avec Excel ou Google Sheets, enregistrez en .csv ou .xlsx.</p>
             </div>
         </div>
     </div>

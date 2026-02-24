@@ -3,6 +3,8 @@ Views pour la gestion des Guides dans le backoffice Django
 Écrit directement dans Firestore (collection 'guides')
 """
 
+import csv
+import io
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -10,6 +12,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from datetime import datetime
 import json
+import pandas as pd
 
 from .restaurants_views import get_firestore_client
 from .config import FIREBASE_BUCKET_PROD
@@ -400,38 +403,61 @@ def _cell_str(value):
 @login_required
 def guides_import_csv(request):
     """
-    Import de guides depuis un fichier Excel (.xlsx).
+    Import de guides depuis un fichier Excel (.xlsx) ou CSV (.csv).
     Format attendu (1ère ligne = en-têtes) : Nom, Ref, Description, Restaurants, Photo couverture
-    Compatible avec template_guides_v3.xlsx / template_guide_v3.xlsx
     """
     if request.method == 'POST':
         try:
-            # Récupérer le fichier (nom identique à l'import restaurants pour fiabilité)
             uploaded = request.FILES.get('excel_file') or request.FILES.get('csv_file')
             if not uploaded:
-                messages.error(request, "Aucun fichier fourni. Choisissez un fichier Excel (.xlsx).")
+                messages.error(request, "Aucun fichier fourni.")
                 return redirect('scripts_manager:guides_list')
 
             name_lower = (uploaded.name or '').lower()
-            if not (name_lower.endswith('.xlsx') or name_lower.endswith('.xls')):
-                messages.error(request, "Le fichier doit être un Excel (.xlsx ou .xls).")
+            is_csv = name_lower.endswith('.csv')
+
+            if not (name_lower.endswith('.xlsx') or name_lower.endswith('.xls') or is_csv):
+                messages.error(request, "Le fichier doit être un Excel (.xlsx, .xls) ou CSV (.csv).")
                 return redirect('scripts_manager:guides_list')
 
-            from openpyxl import load_workbook
-
-            wb = load_workbook(filename=uploaded, read_only=True, data_only=True)
-            ws = wb.active
-            rows = list(ws.iter_rows(values_only=True))
-            wb.close()
+            if is_csv:
+                # Lire le CSV avec pandas (multi-encodage)
+                import tempfile
+                import os
+                suffix = '.csv'
+                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                    for chunk in uploaded.chunks():
+                        tmp.write(chunk)
+                    tmp_path = tmp.name
+                try:
+                    df = None
+                    for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
+                        try:
+                            df = pd.read_csv(tmp_path, encoding=enc, sep=None, engine='python')
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    if df is None:
+                        messages.error(request, "Encodage CSV non supporté.")
+                        return redirect('scripts_manager:guides_list')
+                    # Convertir en liste de tuples (header + rows)
+                    rows = [tuple(df.columns)] + [tuple(row) for row in df.values]
+                finally:
+                    os.unlink(tmp_path)
+            else:
+                from openpyxl import load_workbook
+                wb = load_workbook(filename=uploaded, read_only=True, data_only=True)
+                ws = wb.active
+                rows = list(ws.iter_rows(values_only=True))
+                wb.close()
 
             if not rows:
-                messages.error(request, "Le fichier Excel est vide.")
+                messages.error(request, "Le fichier est vide.")
                 return redirect('scripts_manager:guides_list')
 
-            # 1ère ligne = en-têtes (compatible template_guides_v3.xlsx / template_guide_v3.xlsx)
+            # 1ère ligne = en-têtes
             headers = [_cell_str(c) for c in rows[0]]
             col_map = {}
-            # Correspondance en-têtes (ordre : plus spécifique en premier pour Photo couverture)
             for i, h in enumerate(headers):
                 h_lower = (h or '').lower().strip()
                 if not h_lower:
@@ -521,3 +547,68 @@ def guides_import_csv(request):
             return redirect('scripts_manager:guides_list')
 
     return render(request, 'scripts_manager/guides/import.html')
+
+
+# ==================== EXPORT CSV / EXCEL ====================
+
+@login_required
+def guides_export(request):
+    """Exporte tous les guides en CSV ou Excel."""
+    fmt = request.GET.get('format', 'csv')
+
+    try:
+        db = get_firestore_client(request)
+        guides_docs = db.collection('guides').order_by('order').stream()
+
+        guides = []
+        for doc in guides_docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            guides.append(data)
+
+        guides.sort(key=lambda x: (x.get('order', 0), x.get('name', '')))
+
+        headers = ['Nom', 'Ref', 'Description', 'Restaurants', 'Photo couverture', 'Premium', 'Coup de coeur']
+        rows = []
+        for g in guides:
+            restaurant_ids = g.get('restaurantIds', [])
+            rows.append({
+                'Nom': g.get('name', ''),
+                'Ref': g.get('id', ''),
+                'Description': g.get('description', '') or '',
+                'Restaurants': ', '.join(restaurant_ids) if restaurant_ids else '',
+                'Photo couverture': g.get('coverImageRef', '') or '',
+                'Premium': 'oui' if g.get('isPremium') else 'non',
+                'Coup de coeur': 'oui' if g.get('isFeatured') else 'non',
+            })
+
+        if fmt == 'xlsx':
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Guides'
+            ws.append(headers)
+            for row in rows:
+                ws.append([row.get(h, '') for h in headers])
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 50)
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            response = HttpResponse(buf.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="guides.xlsx"'
+            return response
+        else:
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="guides.csv"'
+            response.write('\ufeff')
+            writer = csv.DictWriter(response, fieldnames=headers)
+            writer.writeheader()
+            writer.writerows(rows)
+            return response
+
+    except Exception as e:
+        messages.error(request, f"Erreur lors de l'export : {str(e)}")
+        return redirect('scripts_manager:guides_list')

@@ -110,6 +110,7 @@ urlpatterns = [
     path('guides/', guides_views.guides_list, name='guides_list'),
     path('guides/create/', guides_views.guide_create, name='guide_create'),
     path('guides/import/', guides_views.guides_import_csv, name='guides_import_csv'),
+    path('guides/export/', guides_views.guides_export, name='guides_export'),
     path('guides/<str:guide_id>/', guides_views.guide_detail, name='guide_detail'),
     path('guides/<str:guide_id>/edit/', guides_views.guide_edit, name='guide_edit'),
     path('guides/<str:guide_id>/delete/', guides_views.guide_delete, name='guide_delete'),

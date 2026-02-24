@@ -18,8 +18,14 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
+                    <a href="{% url 'scripts_manager:guides_export' %}?format=csv" class="btn btn-ghost btn-sm gap-1">
+                        📄 CSV
+                    </a>
+                    <a href="{% url 'scripts_manager:guides_export' %}?format=xlsx" class="btn btn-ghost btn-sm gap-1">
+                        📊 Excel
+                    </a>
                     <a href="{% url 'scripts_manager:guides_import_csv' %}" class="btn btn-ghost">
-                        📤 Importer CSV
+                        📥 Importer CSV / Excel
                     </a>
                     <a href="{% url 'scripts_manager:guide_create' %}" class="btn btn-primary">
                         ➕ Nouveau guide
