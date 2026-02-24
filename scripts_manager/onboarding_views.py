@@ -3,13 +3,15 @@ Vues pour la gestion des restaurants d'onboarding.
 Collection Firestore : onboarding_restaurants
 """
 import os
+import csv
+import io
 import json
 import logging
 import tempfile
 from pathlib import Path
 
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
@@ -170,3 +172,52 @@ def onboarding_import_confirm(request):
         messages.error(request, f"Erreur lors de l'import: {errors_str}")
 
     return redirect('scripts_manager:onboarding_list')
+
+
+@login_required
+def onboarding_export(request):
+    """Exporte les restaurants d'onboarding en CSV ou Excel."""
+    fmt = request.GET.get('format', 'csv')
+
+    restaurants = get_all_onboarding_restaurants(request)
+
+    # Trier par lieu puis par nom
+    lieu_order = {'Coffee shop': 0, 'Bar': 1, 'Restaurant': 2}
+    restaurants.sort(key=lambda r: (lieu_order.get(r.get('lieu', ''), 9), r.get('name', '')))
+
+    headers = ['Nom du restaurant', 'Tag', 'Lieu', 'Spécialité']
+    rows = []
+    for r in restaurants:
+        rows.append({
+            'Nom du restaurant': r.get('name', ''),
+            'Tag': r.get('tag', ''),
+            'Lieu': r.get('lieu', ''),
+            'Spécialité': r.get('specialite', '') or '',
+        })
+
+    if fmt == 'xlsx':
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Onboarding'
+        ws.append(headers)
+        for row in rows:
+            ws.append([row.get(h, '') for h in headers])
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        response = HttpResponse(buf.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="onboarding_restaurants.xlsx"'
+        return response
+    else:
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="onboarding_restaurants.csv"'
+        response.write('\ufeff')
+        writer = csv.DictWriter(response, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(rows)
+        return response

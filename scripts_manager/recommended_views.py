@@ -4,7 +4,10 @@ Fonctionne via la collection Firestore 'guides' — le guide avec isFeatured=tru
 est celui affiché dans la section "Recommandés pour toi" de la home.
 """
 
+import csv
+import io
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from datetime import datetime
@@ -151,3 +154,65 @@ def recommended_save(request):
         messages.error(request, f"Erreur lors de la sauvegarde : {str(e)}")
 
     return redirect('scripts_manager:recommended_manage')
+
+
+@login_required
+def recommended_export(request):
+    """Exporte les recommandés actuels en CSV ou Excel."""
+    fmt = request.GET.get('format', 'csv')
+
+    try:
+        db = get_firestore_client(request)
+
+        # Trouver le guide featured
+        guides_ref = db.collection('guides')
+        current_ids = []
+        for g in guides_ref.stream():
+            gdata = g.to_dict()
+            if gdata.get('isFeatured') is True:
+                current_ids = gdata.get('restaurantIds', [])
+                break
+
+        rows = []
+        for rid in current_ids:
+            rdoc = db.collection('restaurants').document(rid).get()
+            if rdoc.exists:
+                rdata = rdoc.to_dict()
+                rows.append({
+                    'Nom': rdata.get('name', rid),
+                    'Cuisine': rdata.get('cuisine', ''),
+                    'Arrondissement': rdata.get('arrondissement', ''),
+                    'Prix': rdata.get('prix', ''),
+                })
+
+        if fmt == 'xlsx':
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Recommandés'
+            headers = ['Nom', 'Cuisine', 'Arrondissement', 'Prix']
+            ws.append(headers)
+            for row in rows:
+                ws.append([row.get(h, '') for h in headers])
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            response = HttpResponse(buf.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="recommandes.xlsx"'
+            return response
+        else:
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="recommandes.csv"'
+            response.write('\ufeff')
+            writer = csv.DictWriter(response, fieldnames=['Nom', 'Cuisine', 'Arrondissement', 'Prix'])
+            writer.writeheader()
+            writer.writerows(rows)
+            return response
+
+    except Exception as e:
+        messages.error(request, f"Erreur lors de l'export : {str(e)}")
+        return redirect('scripts_manager:recommended_manage')

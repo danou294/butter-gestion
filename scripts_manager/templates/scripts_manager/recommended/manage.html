@@ -24,6 +24,16 @@
                         Ces restaurants apparaissent dans le carousel "Recommandés pour toi" sur la page d'accueil de l'app.
                     </p>
                 </div>
+                {% if selected_count > 0 %}
+                <div class="flex gap-2">
+                    <a href="{% url 'scripts_manager:recommended_export' %}?format=csv" class="btn btn-ghost btn-sm gap-1">
+                        📄 CSV
+                    </a>
+                    <a href="{% url 'scripts_manager:recommended_export' %}?format=xlsx" class="btn btn-ghost btn-sm gap-1">
+                        📊 Excel
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

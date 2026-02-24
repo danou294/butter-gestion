@@ -119,6 +119,7 @@ urlpatterns = [
     path('onboarding-restaurants/', onboarding_views.onboarding_list, name='onboarding_list'),
     path('onboarding-restaurants/import/', onboarding_views.onboarding_import, name='onboarding_import'),
     path('onboarding-restaurants/import/confirm/', onboarding_views.onboarding_import_confirm, name='onboarding_import_confirm'),
+    path('onboarding-restaurants/export/', onboarding_views.onboarding_export, name='onboarding_export'),
     path('onboarding-restaurants/<str:restaurant_id>/', onboarding_views.onboarding_detail, name='onboarding_detail'),
     path('onboarding-restaurants/<str:restaurant_id>/delete/', onboarding_views.onboarding_delete, name='onboarding_delete'),
 
@@ -135,10 +136,12 @@ urlpatterns = [
     # Coups de coeur de la semaine
     path('coups-de-coeur/', coups_de_coeur_views.coups_de_coeur_manage, name='coups_de_coeur_manage'),
     path('coups-de-coeur/save/', coups_de_coeur_views.coups_de_coeur_save, name='coups_de_coeur_save'),
+    path('coups-de-coeur/export/', coups_de_coeur_views.coups_de_coeur_export, name='coups_de_coeur_export'),
 
     # Recommandés pour toi
     path('recommandes/', recommended_views.recommended_manage, name='recommended_manage'),
     path('recommandes/save/', recommended_views.recommended_save, name='recommended_save'),
+    path('recommandes/export/', recommended_views.recommended_export, name='recommended_export'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
