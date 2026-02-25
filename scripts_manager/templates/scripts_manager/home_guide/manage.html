@@ -1,0 +1,93 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Guide de la Home — Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h1 class="text-3xl font-serif font-bold text-base-content mb-2">🏠 Guide de la page d'accueil</h1>
+            <p class="text-secondary">
+                Sélectionnez le guide qui s'affiche dans la section horizontale de la page d'accueil.
+            </p>
+            {% if updated_at %}
+                <p class="text-xs text-gray-400 mt-1">
+                    Dernière mise à jour : {{ updated_at|date:"d/m/Y H:i" }}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulaire de sélection -->
+    <form method="post" action="{% url 'scripts_manager:home_guide_save' %}">
+        {% csrf_token %}
+
+        <div class="card bg-base-100 shadow-sm border border-base-300 mb-6">
+            <div class="card-body">
+                <h2 class="card-title text-lg mb-4">📖 Choisir un guide</h2>
+
+                {% if all_guides %}
+                <div class="space-y-3">
+                    {% for guide in all_guides %}
+                    <label class="flex items-center gap-4 p-4 rounded-lg border border-base-300 cursor-pointer hover:bg-base-200 transition-colors {% if guide.id == selected_guide_id %}bg-primary/10 border-primary{% endif %}">
+                        <input type="radio" name="guide_id" value="{{ guide.id }}"
+                               class="radio radio-primary"
+                               {% if guide.id == selected_guide_id %}checked{% endif %} />
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">{{ guide.name }}</span>
+                                {% if guide.isPremium %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Premium</span>
+                                {% endif %}
+                            </div>
+                            {% if guide.description %}
+                            <p class="text-sm text-gray-400 mt-1">{{ guide.description|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="text-right">
+                            <span class="badge badge-success">{{ guide.restaurant_count }} resto(s)</span>
+                            <p class="text-xs text-gray-400 mt-1">
+                                <code>{{ guide.id }}</code>
+                            </p>
+                        </div>
+                    </label>
+                    {% endfor %}
+
+                    <!-- Option aucun guide (aléatoire) -->
+                    <label class="flex items-center gap-4 p-4 rounded-lg border border-base-300 cursor-pointer hover:bg-base-200 transition-colors {% if not selected_guide_id %}bg-primary/10 border-primary{% endif %}">
+                        <input type="radio" name="guide_id" value=""
+                               class="radio radio-primary"
+                               {% if not selected_guide_id %}checked{% endif %} />
+                        <div class="flex-1">
+                            <span class="font-medium">🎲 Aléatoire</span>
+                            <p class="text-sm text-gray-400 mt-1">Un guide différent sera affiché à chaque visite.</p>
+                        </div>
+                    </label>
+                </div>
+                {% else %}
+                <p class="text-gray-400">Aucun guide disponible. Créez d'abord un guide.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bouton sauvegarder -->
+        <div class="flex justify-end">
+            <button type="submit" class="btn btn-primary btn-lg gap-2">
+                💾 Sauvegarder
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

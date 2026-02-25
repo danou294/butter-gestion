@@ -15,6 +15,7 @@ from . import quick_filters_views
 from . import signups_views
 from . import coups_de_coeur_views
 from . import recommended_views
+from . import home_guide_views
 
 app_name = 'scripts_manager'
 
@@ -143,6 +144,10 @@ urlpatterns = [
     path('recommandes/', recommended_views.recommended_manage, name='recommended_manage'),
     path('recommandes/save/', recommended_views.recommended_save, name='recommended_save'),
     path('recommandes/export/', recommended_views.recommended_export, name='recommended_export'),
+
+    # Guide de la page d'accueil
+    path('home-guide/', home_guide_views.home_guide_manage, name='home_guide_manage'),
+    path('home-guide/save/', home_guide_views.home_guide_save, name='home_guide_save'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
