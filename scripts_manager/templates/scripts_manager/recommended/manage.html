@@ -41,9 +41,6 @@
     <!-- Formulaire principal -->
     <form method="post" action="{% url 'scripts_manager:recommended_save' %}">
         {% csrf_token %}
-        {% if featured_guide_id %}
-            <input type="hidden" name="featured_guide_id" value="{{ featured_guide_id }}" />
-        {% endif %}
 
         <!-- Importer depuis CSV/Excel -->
         <div class="card bg-base-100 shadow-sm border border-primary/30 mb-6">
