@@ -10,90 +10,64 @@ Interface d'administration Django pour gérer les restaurants, guides, photos, u
 - **Tailwind CSS** pour le frontend
 - **Firebase Storage** pour les photos/logos
 
-## Architecture
+## Structure du projet
 
 ```
 butter_web_interface/
+├── manage.py                          # Django CLI
+├── README.md
+├── requirements.txt                   # Dependances Python 3.9+
+├── requirements-py37.txt              # Dependances Python 3.7 (OVH legacy)
+├── package.json / tailwind.config.js  # Frontend (Tailwind CSS)
+│
+├── deploy/                            # Scripts de deploiement
+│   ├── connect_aws.sh                 # Connexion SSH au serveur AWS
+│   ├── restart_django_aws.sh          # Redemarrer Django sur AWS (pull + restart)
+│   └── start.sh                       # Lancer le serveur en local
+│
+├── docs/                              # Documentation technique
+│   ├── INSTALLATION.md                # Guide d'installation
+│   ├── DEPLOIEMENT_OVH.md            # Deploiement sur OVH
+│   ├── CONFIGURATION_NGINX_OVH.md    # Config Nginx reverse proxy
+│   └── EMPLACEMENT_SERVICE_ACCOUNT.md # Emplacement des service accounts
+│
+├── data/                              # Fichiers de donnees (gitignored)
+│   └── (Excel, CSV, images transmis)
+│
 ├── butter_web_interface/              # Config Django
-│   ├── settings.py                    # Parametres projet
-│   ├── urls.py                        # URLs racine
-│   └── wsgi.py                        # WSGI
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
 │
 ├── scripts_manager/                   # App principale
 │   ├── views.py                       # Orchestrateur (export, import, taches async)
 │   ├── restaurants_views.py           # CRUD restaurants
 │   ├── photos_views.py               # Gestion photos/logos Firebase Storage
-│   ├── users_views.py                # Gestion utilisateurs Firebase Auth + Firestore
+│   ├── users_views.py                # Gestion utilisateurs
 │   ├── announcements_views.py        # Annonces et evenements
 │   ├── guides_views.py               # Gestion guides thematiques
-│   ├── home_guide_views.py           # Guides de la page d'accueil
+│   ├── home_guide_views.py           # Guides page d'accueil
 │   ├── coups_de_coeur_views.py       # Restaurants mis en avant
 │   ├── quick_filters_views.py        # Filtres rapides dynamiques
 │   ├── recommended_views.py          # Restaurants recommandes
 │   ├── notifications_views.py        # Notifications push FCM
-│   ├── notifications_services.py     # Services de notification
-│   ├── signups_views.py              # Stats inscriptions
-│   ├── search_restaurants_views.py   # Recherche restaurants (web)
-│   ├── search_restaurants_script.py  # Logique recherche
 │   ├── revenuecat_views.py           # Dashboard RevenueCat
-│   ├── revenuecat_service.py         # Service RevenueCat API
 │   ├── onboarding_views.py           # Gestion onboarding restaurants
 │   ├── marrakech_views.py            # Import restaurants Marrakech
-│   ├── firebase_env_views.py         # Switch d'environnement (dev/prod)
+│   ├── firebase_env_views.py         # Switch environnement (dev/prod)
 │   ├── auth_views.py                 # Auth Django (login/register)
-│   │
 │   ├── import_restaurants.py         # Pipeline import Excel → Firestore
-│   ├── import_onboarding.py          # Import onboarding restaurants
-│   ├── restore_backup.py             # Restauration backup Firestore
-│   │
-│   ├── config.py                     # Configuration centralisee (chemins, buckets, env)
-│   ├── firebase_utils.py             # Switching environnement Firebase via session Django
-│   ├── context_processors.py         # Context processors (env label dans templates)
-│   ├── models.py                     # Modeles Django (RevenueCat tracking)
-│   ├── urls.py                       # URLs de l'app
-│   │
+│   ├── config.py                     # Configuration centralisee
+│   ├── firebase_utils.py             # Switching environnement Firebase
+│   ├── scripts/                      # Scripts standalone (exports, audits, etc.)
 │   ├── templates/scripts_manager/    # Templates HTML (Tailwind)
-│   │   ├── base.html                 # Layout de base
-│   │   ├── index.html                # Page d'accueil
-│   │   ├── auth/                     # Login, register
-│   │   ├── restaurants/              # Liste, form, detail
-│   │   ├── photos/                   # Gestion photos
-│   │   ├── users/                    # Liste utilisateurs
-│   │   ├── notifications/            # Envoi notifications
-│   │   ├── guides/                   # Gestion guides
-│   │   ├── announcements/            # Gestion annonces
-│   │   └── marrakech/                # Import Marrakech
-│   │
-│   ├── scripts/                      # Scripts standalone
-│   │   ├── export_to_excel.py        # Export collections → Excel
-│   │   ├── export_premium_users.py   # Export utilisateurs premium
-│   │   ├── export_user_phones.py     # Export telephones
-│   │   ├── export_users_top_favoris.py  # Export top favoris
-│   │   ├── signups_by_date.py        # Stats inscriptions par date
-│   │   ├── sync_revenuecat_attributes.py  # Sync attributs RevenueCat
-│   │   ├── check_missing_photos.py   # Audit photos manquantes
-│   │   ├── check_missing_logos.py    # Audit logos manquants
-│   │   ├── optimize_firebase_images.py  # Optimisation images Storage
-│   │   ├── convert_local_images.py   # Conversion images locales
-│   │   ├── update_photo_count.py     # MAJ compteur photos
-│   │   ├── add_city_field.py         # Ajout champ city aux restaurants
-│   │   └── export-bdd-butter.py      # Export complet BDD
-│   │
-│   └── data/
-│       └── metro_lines.json          # Donnees lignes de metro
+│   └── data/metro_lines.json         # Donnees lignes de metro
 │
-├── firebase_credentials/              # Service accounts Firebase (gitignore)
-│   ├── serviceAccountKey.dev.json
-│   └── serviceAccountKey.prod.json
-│
-├── media/                             # Fichiers generes
-│   ├── exports/                       # Exports Excel
-│   └── input/                         # Fichiers uploades (Excel import)
-│
-├── .env                               # Variables d'env (REVENUECAT_API_KEY)
-├── requirements.txt                   # Dependances Python
-├── manage.py                          # Django CLI
-└── start.sh                           # Script demarrage
+├── templates/                         # Templates erreur (404, 500)
+├── firebase_credentials/              # Service accounts Firebase (gitignored)
+├── media/                             # Uploads et exports (gitignored)
+├── exports/                           # Exports generes
+└── venv/                              # Python virtual env (gitignored)
 ```
 
 ## Environnements Firebase
@@ -144,14 +118,30 @@ python manage.py createsuperuser
    REVENUECAT_API_KEY=sk_...
    ```
 
+Voir `docs/INSTALLATION.md` pour le guide complet.
+
 ## Lancement
 
 ```bash
+# Avec le script
+bash deploy/start.sh
+
+# Manuellement
 source venv/bin/activate
 python manage.py runserver
 ```
 
 Interface accessible sur `http://127.0.0.1:8000/`
+
+## Deploiement AWS
+
+```bash
+# Deployer sur le serveur AWS (git pull + restart)
+bash deploy/restart_django_aws.sh
+
+# Se connecter en SSH au serveur
+bash deploy/connect_aws.sh
+```
 
 ## Import restaurants
 
@@ -160,9 +150,10 @@ Interface accessible sur `http://127.0.0.1:8000/`
 3. Uploader le fichier Excel
 4. L'import cree/met a jour les documents Firestore + uploade les photos dans Storage
 
-## Docs de deploiement
+## Documentation
 
+Voir le dossier `docs/` :
 - `INSTALLATION.md` — Guide d'installation complet
-- `CONFIGURATION_NGINX_OVH.md` — Config Nginx sur OVH
 - `DEPLOIEMENT_OVH.md` — Deploiement sur serveur OVH
-- `EMPLACEMENT_SERVICE_ACCOUNT.md` — Ou placer les service accounts
+- `CONFIGURATION_NGINX_OVH.md` — Config Nginx reverse proxy
+- `EMPLACEMENT_SERVICE_ACCOUNT.md` — Emplacement des service accounts

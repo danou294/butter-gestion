@@ -41,5 +41,13 @@ media/exports/*.xls
 scripts_manager/scripts/exports/*.xlsx
 /*.xlsx
 
+# Data files (fichiers transmis par l'utilisateur)
+data/
+*.HEIC
+*.png
+
+# Exports générés
+exports/
+
 # Node
 node_modules/

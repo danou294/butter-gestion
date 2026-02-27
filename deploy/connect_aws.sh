@@ -3,7 +3,7 @@
 
 # Configuration
 PEM_FILE="Daniel.pem"
-PEM_PATH="$(cd "$(dirname "$0")" && pwd)/$PEM_FILE"
+PEM_PATH="$(cd "$(dirname "$0")/.." && pwd)/$PEM_FILE"
 
 # Vérifier que le fichier .pem existe
 if [ ! -f "$PEM_PATH" ]; then

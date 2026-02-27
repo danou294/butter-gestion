@@ -4,7 +4,7 @@
 # Configuration
 SERVER_IP="16.171.225.193"
 USER="ec2-user"
-PEM_FILE="$(cd "$(dirname "$0")" && pwd)/Daniel.pem"
+PEM_FILE="$(cd "$(dirname "$0")/.." && pwd)/Daniel.pem"
 REMOTE_DIR="/home/ec2-user/butter-gestion"  # Nom du repo sur AWS
 
 # Couleurs
