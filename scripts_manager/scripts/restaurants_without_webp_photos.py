@@ -34,28 +34,16 @@ from google.cloud import storage
 from google.cloud import firestore
 from google.oauth2 import service_account
 
-try:
-    from config import (
-        SERVICE_ACCOUNT_PATH,
-        FIREBASE_BUCKET,
-        STORAGE_FOLDERS,
-        FIREBASE_ENV_LABEL,
-        SERVICE_ACCOUNT_PATH_DEV,
-        SERVICE_ACCOUNT_PATH_PROD,
-        FIREBASE_BUCKET_DEV,
-        FIREBASE_BUCKET_PROD,
-    )
-except ImportError:
-    from config.config import (
-        SERVICE_ACCOUNT_PATH,
-        FIREBASE_BUCKET,
-        STORAGE_FOLDERS,
-        SERVICE_ACCOUNT_PATH_DEV,
-        SERVICE_ACCOUNT_PATH_PROD,
-        FIREBASE_BUCKET_DEV,
-        FIREBASE_BUCKET_PROD,
-    )
-    FIREBASE_ENV_LABEL = ""
+from config import (
+    SERVICE_ACCOUNT_PATH,
+    FIREBASE_BUCKET,
+    STORAGE_FOLDERS,
+    FIREBASE_ENV_LABEL,
+    SERVICE_ACCOUNT_PATH_DEV,
+    SERVICE_ACCOUNT_PATH_PROD,
+    FIREBASE_BUCKET_DEV,
+    FIREBASE_BUCKET_PROD,
+)
 
 PHOTOS_PREFIX = STORAGE_FOLDERS.get("photos", "Photos restaurants/")
 

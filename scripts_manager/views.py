@@ -431,7 +431,7 @@ def run_delete(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-def run_script_task(task_id, cmd, exports_dir):
+def run_script_task(task_id, cmd, exports_dir, request=None):
     """Exécute un script en arrière-plan et capture la sortie"""
     try:
         # Définir les variables d'environnement
@@ -573,6 +573,7 @@ def run_import_restaurants(request):
         
         excel_file = request.FILES['excel_file']
         sheet_name = request.POST.get('sheet_name', 'Feuil1')
+        import_city = request.POST.get('city', '') or None  # None = import global (legacy)
 
         # Vérifier l'extension (Excel ou CSV)
         if not excel_file.name.endswith(('.xlsx', '.xls', '.csv')):
@@ -595,7 +596,8 @@ def run_import_restaurants(request):
         ts_dir = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         # Convertir BACKUP_DIR en Path si c'est une chaîne
         backup_base = Path(BACKUP_DIR) if isinstance(BACKUP_DIR, str) else BACKUP_DIR
-        backup_dir = backup_base / f"{FIRESTORE_COLLECTION}_{ts_dir}"
+        city_suffix = f"_{import_city.lower()}" if import_city else ""
+        backup_dir = backup_base / f"{FIRESTORE_COLLECTION}{city_suffix}_{ts_dir}"
         backup_dir.mkdir(parents=True, exist_ok=True)
         log_file = backup_dir / "import_run.log"
         
@@ -609,7 +611,7 @@ def run_import_restaurants(request):
         def run_import():
             try:
                 from import_restaurants import import_restaurants_from_excel
-                result = import_restaurants_from_excel(str(file_path), sheet_name, request=request, log_file_path=str(log_file))
+                result = import_restaurants_from_excel(str(file_path), sheet_name, request=request, log_file_path=str(log_file), city=import_city)
                 import_result['result'] = result
                 import_result['done'] = True
             except Exception as e:
@@ -1178,6 +1180,7 @@ def download_example_csv(request, variant):
         'liste': 'exemple_liste_restaurants.csv',
         'onboarding': 'exemple_onboarding.csv',
         'guides': 'exemple_guides.csv',
+        'marrakech': 'exemple_import_marrakech.csv',
     }
 
     filename = filename_map.get(variant)

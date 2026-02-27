@@ -123,9 +123,24 @@ def guide_create(request):
     """
     Formulaire de création d'un guide
     """
+    # Helper : charger tous les restaurants pour le sélecteur
+    def _load_all_restaurants(db_client):
+        restaurants = []
+        for rdoc in db_client.collection('restaurants').order_by('name').stream():
+            rdata = rdoc.to_dict()
+            restaurants.append({
+                'id': rdoc.id,
+                'name': rdata.get('name', rdoc.id),
+                'cuisine': rdata.get('cuisine', ''),
+                'arrondissement': rdata.get('arrondissement', ''),
+                'city': rdata.get('city', 'Paris'),
+            })
+        return restaurants
+
     if request.method == 'POST':
         try:
             db = get_firestore_client(request)
+            all_restaurants = _load_all_restaurants(db)
 
             # Récupérer les données du formulaire
             guide_id = request.POST.get('id', '').strip().upper()
@@ -133,6 +148,7 @@ def guide_create(request):
             description = request.POST.get('description', '').strip()
             cover_image_ref = request.POST.get('coverImageRef', '').strip()
             restaurant_ids_raw = request.POST.get('restaurantIds', '').strip()
+            city = request.POST.get('city', 'Paris').strip()
             order = int(request.POST.get('order', 0))
             is_premium = request.POST.get('isPremium') == 'on'
             is_featured = request.POST.get('isFeatured') == 'on'
@@ -144,6 +160,7 @@ def guide_create(request):
                     'form_data': request.POST,
                     'mode': 'create',
                     'firebase_bucket': FIREBASE_BUCKET_PROD,
+                    'all_restaurants': all_restaurants,
                 })
 
             if not name:
@@ -152,6 +169,7 @@ def guide_create(request):
                     'form_data': request.POST,
                     'mode': 'create',
                     'firebase_bucket': FIREBASE_BUCKET_PROD,
+                    'all_restaurants': all_restaurants,
                 })
 
             # Vérifier que l'ID n'existe pas déjà
@@ -162,6 +180,7 @@ def guide_create(request):
                     'form_data': request.POST,
                     'mode': 'create',
                     'firebase_bucket': FIREBASE_BUCKET_PROD,
+                    'all_restaurants': all_restaurants,
                 })
 
             # Parser les IDs de restaurants (séparés par virgule ou espace)
@@ -180,6 +199,7 @@ def guide_create(request):
                 'description': description,
                 'coverImageRef': cover_image_ref,
                 'restaurantIds': restaurant_ids,
+                'city': city,
                 'order': order,
                 'isPremium': is_premium,
                 'isFeatured': is_featured,
@@ -200,6 +220,7 @@ def guide_create(request):
                 'form_data': request.POST,
                 'mode': 'create',
                 'firebase_bucket': FIREBASE_BUCKET_PROD,
+                'all_restaurants': all_restaurants,
             })
         except Exception as e:
             messages.error(request, f"Erreur lors de la création du guide : {str(e)}")
@@ -207,12 +228,20 @@ def guide_create(request):
                 'form_data': request.POST,
                 'mode': 'create',
                 'firebase_bucket': FIREBASE_BUCKET_PROD,
+                'all_restaurants': [],
             })
 
     # GET request
+    try:
+        db = get_firestore_client(request)
+        all_restaurants = _load_all_restaurants(db)
+    except Exception:
+        all_restaurants = []
+
     return render(request, 'scripts_manager/guides/form.html', {
         'mode': 'create',
         'firebase_bucket': FIREBASE_BUCKET_PROD,
+        'all_restaurants': all_restaurants,
     })
 
 
@@ -225,6 +254,21 @@ def guide_edit(request, guide_id):
     """
     db = get_firestore_client(request)
     doc_ref = db.collection('guides').document(guide_id)
+
+    # Charger tous les restaurants pour le sélecteur
+    all_restaurants = []
+    try:
+        for rdoc in db.collection('restaurants').order_by('name').stream():
+            rdata = rdoc.to_dict()
+            all_restaurants.append({
+                'id': rdoc.id,
+                'name': rdata.get('name', rdoc.id),
+                'cuisine': rdata.get('cuisine', ''),
+                'arrondissement': rdata.get('arrondissement', ''),
+                'city': rdata.get('city', 'Paris'),
+            })
+    except Exception:
+        pass
 
     if request.method == 'POST':
         try:
@@ -239,6 +283,7 @@ def guide_edit(request, guide_id):
             description = request.POST.get('description', '').strip()
             cover_image_ref = request.POST.get('coverImageRef', '').strip()
             restaurant_ids_raw = request.POST.get('restaurantIds', '').strip()
+            city = request.POST.get('city', 'Paris').strip()
             order = int(request.POST.get('order', 0))
             is_premium = request.POST.get('isPremium') == 'on'
             is_featured = request.POST.get('isFeatured') == 'on'
@@ -251,6 +296,7 @@ def guide_edit(request, guide_id):
                     'guide_id': guide_id,
                     'mode': 'edit',
                     'firebase_bucket': FIREBASE_BUCKET_PROD,
+                    'all_restaurants': all_restaurants,
                 })
 
             # Parser les IDs de restaurants
@@ -268,6 +314,7 @@ def guide_edit(request, guide_id):
                 'description': description,
                 'coverImageRef': cover_image_ref,
                 'restaurantIds': restaurant_ids,
+                'city': city,
                 'order': order,
                 'isPremium': is_premium,
                 'isFeatured': is_featured,
@@ -290,6 +337,7 @@ def guide_edit(request, guide_id):
                 'guide_id': guide_id,
                 'mode': 'edit',
                 'firebase_bucket': FIREBASE_BUCKET_PROD,
+                'all_restaurants': all_restaurants,
             })
         except Exception as e:
             messages.error(request, f"Erreur lors de la mise à jour : {str(e)}")
@@ -300,6 +348,7 @@ def guide_edit(request, guide_id):
                 'guide_id': guide_id,
                 'mode': 'edit',
                 'firebase_bucket': FIREBASE_BUCKET_PROD,
+                'all_restaurants': all_restaurants,
             })
 
     # GET request
@@ -321,6 +370,7 @@ def guide_edit(request, guide_id):
             'guide_id': guide_id,
             'mode': 'edit',
             'firebase_bucket': FIREBASE_BUCKET_PROD,
+            'all_restaurants': all_restaurants,
         }
 
         return render(request, 'scripts_manager/guides/form.html', context)

@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="guideFormManager()">
     <!-- Header / Fil d'Ariane -->
     <div class="card bg-base-100 shadow-sm border border-base-300">
         <div class="card-body">
@@ -60,6 +60,16 @@
                         {% endif %}
 
                         <div class="mb-4">
+                            <label for="city" class="block text-sm font-medium text-secondary mb-1">Ville <span class="text-error">*</span></label>
+                            <select id="city" name="city" x-model="selectedCity" @change="onCityChanged()"
+                                    class="select select-bordered w-full max-w-xs bg-base-200">
+                                <option value="Paris">Paris</option>
+                                <option value="Marrakech">Marrakech</option>
+                            </select>
+                            <p class="mt-1 text-xs text-secondary">La liste des restaurants sera filtrée par ville.</p>
+                        </div>
+
+                        <div class="mb-4">
                             <label for="name" class="block text-sm font-medium text-secondary mb-1">Nom du guide <span class="text-error">*</span></label>
                             <input type="text" id="name" name="name" value="{% if mode == 'edit' %}{{ guide.name }}{% elif form_data %}{{ form_data.name }}{% endif %}" required maxlength="100" placeholder="Best mousse au chocolat"
                                    class="input input-bordered w-full bg-base-200">
@@ -78,11 +88,64 @@
                             <p class="mt-1 text-xs text-secondary">Référence image (ex: CHEJ3). Doit exister dans Firebase Storage.</p>
                         </div>
 
+                        <!-- Restaurants : recherche + sélection -->
                         <div class="mb-4">
-                            <label for="restaurantIds" class="block text-sm font-medium text-secondary mb-1">Restaurants <span class="text-error">*</span></label>
-                            <textarea id="restaurantIds" name="restaurantIds" rows="3" required placeholder="CHEJ, DUR, SHAN, OSTB"
-                                      class="textarea textarea-bordered w-full bg-base-200 font-mono text-sm">{% if mode == 'edit' %}{{ guide.restaurantIds_display }}{% elif form_data %}{{ form_data.restaurantIds }}{% endif %}</textarea>
-                            <p class="mt-1 text-xs text-secondary">IDs séparés par virgules ou espaces. L'ordre sera respecté.</p>
+                            <label class="block text-sm font-medium text-secondary mb-1">
+                                Restaurants <span class="text-error">*</span>
+                                <span class="badge badge-sm ml-2" x-text="selectedIds.length + ' sélectionné(s)'"></span>
+                            </label>
+
+                            <!-- Recherche -->
+                            <input type="text"
+                                   x-model="searchQuery"
+                                   @input="filterRestaurants()"
+                                   placeholder="Rechercher un restaurant par nom..."
+                                   class="input input-bordered w-full bg-base-200 mb-2">
+
+                            <!-- Résultats de recherche -->
+                            <div x-show="searchQuery.length > 0 && filteredRestaurants.length > 0"
+                                 class="max-h-48 overflow-y-auto border border-base-300 rounded-lg bg-white mb-3">
+                                <template x-for="r in filteredRestaurants" :key="r.id">
+                                    <button type="button"
+                                            @click="addRestaurant(r)"
+                                            class="flex items-center justify-between w-full px-4 py-2 hover:bg-base-200 transition-colors text-left border-b border-base-200 last:border-b-0"
+                                            :class="{ 'opacity-40 cursor-not-allowed': selectedIds.includes(r.id) }">
+                                        <div>
+                                            <span class="font-medium text-sm" x-text="r.name"></span>
+                                            <span class="text-xs text-gray-400 ml-2" x-text="r.id"></span>
+                                            <span class="text-xs text-gray-400 ml-1" x-text="r.cuisine"></span>
+                                        </div>
+                                        <span x-show="selectedIds.includes(r.id)" class="text-xs text-success">deja ajoute</span>
+                                        <span x-show="!selectedIds.includes(r.id)" class="text-xs text-primary">+ ajouter</span>
+                                    </button>
+                                </template>
+                            </div>
+                            <div x-show="searchQuery.length > 0 && filteredRestaurants.length === 0"
+                                 class="p-3 text-sm text-gray-400 border border-base-300 rounded-lg mb-3">
+                                Aucun restaurant trouve pour cette ville.
+                            </div>
+
+                            <!-- Restaurants sélectionnés -->
+                            <div class="space-y-1" x-show="selectedIds.length > 0">
+                                <template x-for="(id, index) in selectedIds" :key="id">
+                                    <div class="flex items-center gap-2 p-2 bg-base-200 rounded-lg">
+                                        <span class="text-xs font-bold text-gray-400 w-5 text-center" x-text="index + 1"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <span class="font-medium text-sm" x-text="restaurantNames[id] || id"></span>
+                                            <span class="text-xs text-gray-400 ml-1" x-text="id"></span>
+                                        </div>
+                                        <button type="button" @click="moveUp(index)"
+                                                class="btn btn-ghost btn-xs" :disabled="index === 0">↑</button>
+                                        <button type="button" @click="moveDown(index)"
+                                                class="btn btn-ghost btn-xs" :disabled="index === selectedIds.length - 1">↓</button>
+                                        <button type="button" @click="removeRestaurant(index)"
+                                                class="btn btn-ghost btn-xs text-error">✕</button>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Hidden input pour le formulaire (IDs comma-separated) -->
+                            <input type="hidden" name="restaurantIds" :value="selectedIds.join(', ')">
                         </div>
 
                         <div class="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50">
@@ -104,7 +167,7 @@
                                        class="checkbox checkbox-secondary">
                                 <div>
                                     <span class="text-sm font-medium text-base-content">Coup de coeur de la semaine</span>
-                                    <p class="text-xs text-secondary">Les restaurants de ce guide apparaîtront dans le carousel "Coups de coeur" en haut de la page Guides.</p>
+                                    <p class="text-xs text-secondary">Les restaurants de ce guide apparaitront dans le carousel "Coups de coeur" en haut de la page Guides.</p>
                                 </div>
                             </label>
                         </div>
@@ -129,12 +192,13 @@
             <div class="card bg-base-200 border border-base-300">
                 <div class="card-body">
                     <h3 class="font-serif font-bold text-base-content mb-3">Aide</h3>
-                    <p class="text-sm text-secondary mb-3">Structure d'un guide : ID unique, nom, description, photo, liste ordonnée de restaurants.</p>
+                    <p class="text-sm text-secondary mb-3">Structure d'un guide : ID unique, nom, description, photo, liste ordonnee de restaurants.</p>
                     <p class="text-sm text-secondary mb-3">Format photo : <code class="bg-base-100 px-1 rounded">TAG + NUMERO</code> (ex: CHEJ3).</p>
+                    <p class="text-sm text-secondary mb-3">Selectionnez une ville pour filtrer les restaurants disponibles.</p>
                     {% if mode == 'edit' %}
                     <hr class="border-base-300 my-3">
-                    <p class="text-xs text-secondary">Créé : {{ guide.createdAt|date:"d/m/Y H:i" }}</p>
-                    <p class="text-xs text-secondary">Modifié : {{ guide.updatedAt|date:"d/m/Y H:i" }}</p>
+                    <p class="text-xs text-secondary">Cree : {{ guide.createdAt|date:"d/m/Y H:i" }}</p>
+                    <p class="text-xs text-secondary">Modifie : {{ guide.updatedAt|date:"d/m/Y H:i" }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -143,6 +207,80 @@
 </div>
 
 <script>
+function guideFormManager() {
+    const allRestaurants = {{ all_restaurants|safe }};
+
+    // IDs initiaux (edit mode)
+    {% if mode == 'edit' and guide.restaurantIds %}
+    const initialIds = {{ guide.restaurantIds|safe }};
+    const initialCity = '{{ guide.city|default:"Paris"|escapejs }}';
+    {% elif form_data %}
+    const initialIdsRaw = '{{ form_data.restaurantIds|default:""|escapejs }}';
+    const initialIds = initialIdsRaw ? initialIdsRaw.split(/[,\s]+/).map(s => s.trim()).filter(Boolean) : [];
+    const initialCity = '{{ form_data.city|default:"Paris"|escapejs }}';
+    {% else %}
+    const initialIds = [];
+    const initialCity = 'Paris';
+    {% endif %}
+
+    // Construire un map nom par ID
+    const nameMap = {};
+    for (const r of allRestaurants) {
+        nameMap[r.id] = r.name;
+    }
+
+    return {
+        selectedCity: initialCity,
+        selectedIds: [...initialIds],
+        restaurantNames: nameMap,
+        allRestaurants: allRestaurants,
+        searchQuery: '',
+        filteredRestaurants: [],
+
+        onCityChanged() {
+            this.searchQuery = '';
+            this.filteredRestaurants = [];
+        },
+
+        filterRestaurants() {
+            const q = this.searchQuery.toLowerCase().trim();
+            if (q.length === 0) {
+                this.filteredRestaurants = [];
+                return;
+            }
+            this.filteredRestaurants = this.allRestaurants
+                .filter(r => r.city === this.selectedCity)
+                .filter(r => r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q))
+                .slice(0, 15);
+        },
+
+        addRestaurant(r) {
+            if (this.selectedIds.includes(r.id)) return;
+            this.selectedIds.push(r.id);
+            this.searchQuery = '';
+            this.filteredRestaurants = [];
+        },
+
+        removeRestaurant(index) {
+            this.selectedIds.splice(index, 1);
+        },
+
+        moveUp(index) {
+            if (index === 0) return;
+            const temp = this.selectedIds[index];
+            this.selectedIds[index] = this.selectedIds[index - 1];
+            this.selectedIds[index - 1] = temp;
+        },
+
+        moveDown(index) {
+            if (index >= this.selectedIds.length - 1) return;
+            const temp = this.selectedIds[index];
+            this.selectedIds[index] = this.selectedIds[index + 1];
+            this.selectedIds[index + 1] = temp;
+        },
+    };
+}
+
 document.getElementById('id')?.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
 </script>
 {% endblock %}

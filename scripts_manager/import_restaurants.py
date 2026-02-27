@@ -39,6 +39,54 @@ COLLECTION_IMPORT_LOGS = "import logs"
 BATCH_SIZE = 400
 DEDUPE_IDS = False
 
+# -------------------- Marrakech Column Mappings --------------------
+# Mapping colonnes Excel Marrakech → colonnes attendues par le script (format Paris)
+MARRAKECH_COLUMN_MAPPINGS = {
+    "Restaurants": {
+        "Restaurant": "Vrai Nom",
+        "Spécialité précise": "Spécialité_TAG",
+        "Quartier": "Arrondissement",
+        "Instagram": "Lien de votre compte instagram",
+        "Menu": "Lien Menu",
+        "Moments": "Moment_TAG",
+        "Horaires d'ouverture": "Horaires",
+        "Tranche de prix": "Prix_TAG",
+        "Commentaire": "Infos",
+    },
+    "Hôtels": {
+        "Hôtel / Établissement": "Vrai Nom",
+        "Prix moyen": "Prix par nuit",
+        "Quartier": "Arrondissement",
+        "Catégorie": "Catégorie hôtel",
+        "Instagram": "Lien de votre compte instagram",
+        "Description": "Infos",
+    },
+    "Daypass": {
+        "Nom": "Vrai Nom",
+        "Tag": "Ref",
+        "Quartier": "Arrondissement",
+        "Instagram": "Lien de votre compte instagram",
+        "Tranche de prix ": "Prix_TAG",  # Note: espace final dans le nom Excel
+        "Lien réservation": "Lien de réservation",
+        "Notes": "Infos",
+    },
+}
+
+# Venue type automatique par nom d'onglet Excel
+SHEET_VENUE_TYPE = {
+    "Restaurants": "restaurant",
+    "Hôtels": "hotel",
+    "Daypass": "daypass",
+}
+
+# Mapping prix $ → € (Marrakech utilise $ dans l'Excel)
+DOLLAR_TO_EURO_PRICE = {
+    "$": "€",
+    "$$": "€€",
+    "$$$": "€€€",
+    "$$$$": "€€€€",
+}
+
 # -------------------- Utilities --------------------
 def ensure_dir(p: str):
     pathlib.Path(p).mkdir(parents=True, exist_ok=True)
@@ -65,34 +113,48 @@ def log(msg: str, log_file: str):
 
 def init_firestore(log_file: str, request=None):
     """
-    Initialise Firestore avec le bon environnement
-    
+    Initialise Firestore avec le bon environnement.
+    Gère le changement d'environnement en recréant l'app si nécessaire.
+
     Args:
         log_file: Chemin du fichier de log
         request: Objet request Django (optionnel) pour déterminer l'environnement
     """
-    # Utiliser firebase_utils pour obtenir le bon chemin selon l'environnement
+    # Déterminer l'environnement cible et le chemin du service account
     try:
-        from scripts_manager.firebase_utils import get_service_account_path
+        from scripts_manager.firebase_utils import get_service_account_path, get_firebase_env_from_session
         sa = get_service_account_path(request)
+        target_env = get_firebase_env_from_session(request)
     except ImportError:
         # Fallback si firebase_utils n'est pas disponible
         from config import SERVICE_ACCOUNT_PATH_DEV, SERVICE_ACCOUNT_PATH_PROD
-        # Ne pas redéclarer 'os' ici, utiliser le module importé au début du fichier
-        env = os.getenv('FIREBASE_ENV', 'prod').lower()
-        if env == 'dev':
+        target_env = os.getenv('FIREBASE_ENV', 'prod').lower()
+        if target_env == 'dev':
             sa = SERVICE_ACCOUNT_PATH_DEV
         else:
             sa = SERVICE_ACCOUNT_PATH_PROD
-    
+
     if not os.path.exists(sa):
         log(f"❌ Service account introuvable: {sa}", log_file)
         raise FileNotFoundError(f"Service account introuvable: {sa}")
-    
-    log(f"🔑 Utilisation du service account: {sa}", log_file)
-    cred = credentials.Certificate(sa)
-    if not firebase_admin._apps:
+
+    log(f"🔑 Environnement: {target_env.upper()} — Service account: {sa}", log_file)
+
+    # Si une app existe déjà pour un autre environnement, la supprimer
+    if firebase_admin._apps:
+        existing_app = firebase_admin.get_app()
+        existing_project = existing_app.project_id
+        cred = credentials.Certificate(sa)
+        target_project = cred.project_id
+        if existing_project != target_project:
+            log(f"🔄 Changement d'environnement détecté: {existing_project} -> {target_project}. Réinitialisation.", log_file)
+            firebase_admin.delete_app(existing_app)
+            firebase_admin.initialize_app(cred)
+        # Sinon, l'app existante est déjà pour le bon projet
+    else:
+        cred = credentials.Certificate(sa)
         firebase_admin.initialize_app(cred)
+
     return firestore.client()
 
 def clean_text(s):
@@ -108,23 +170,25 @@ def clean_text(s):
              .replace("—", "-")
              .strip())
 
-def geocode_address(address: str, log_file: str = None, max_retries: int = 3, restaurant_name: str = None) -> Optional[Tuple[float, float]]:
+def geocode_address(address: str, log_file: str = None, max_retries: int = 3, restaurant_name: str = None, city: str = "Paris") -> Optional[Tuple[float, float]]:
     """Géocode une adresse en utilisant Nominatim (OpenStreetMap) avec système de retry."""
     if not address or not address.strip():
         if log_file:
             log(f"⚠️  Géocodage: adresse vide ou None", log_file)
         return None
-    
+
     address_clean = clean_text(address)
     if not address_clean:
         if log_file:
             log(f"⚠️  Géocodage: adresse nettoyée vide", log_file)
         return None
-    
-    # Ajouter Paris si nécessaire
+
+    # Ajouter la ville si nécessaire
     original_address = address_clean
-    if "paris" not in address_clean.lower():
-        address_clean = f"{address_clean}, Paris, France"
+    city_lower = city.lower() if city else "paris"
+    if city_lower not in address_clean.lower():
+        country = "Maroc" if city_lower == "marrakech" else "France"
+        address_clean = f"{address_clean}, {city}, {country}"
         if log_file:
             log(f"🌍 [{restaurant_name or 'Restaurant'}] Adresse enrichie: '{original_address}' → '{address_clean}'", log_file)
     
@@ -199,14 +263,18 @@ def geocode_address(address: str, log_file: str = None, max_retries: int = 3, re
     return None
 
 # -------------------- Backup --------------------
-def export_collection(db, collection_name: str, out_dir: str, log_file: str) -> Dict[str, Any]:
+def export_collection(db, collection_name: str, out_dir: str, log_file: str, city: str = None) -> Dict[str, Any]:
     ensure_dir(out_dir)
-    json_path = os.path.join(out_dir, f"{collection_name}.json")
-    ndjson_path = os.path.join(out_dir, f"{collection_name}.ndjson")
-    csv_path = os.path.join(out_dir, f"{collection_name}.csv")
+    suffix = f"_{city.lower()}" if city else ""
+    json_path = os.path.join(out_dir, f"{collection_name}{suffix}.json")
+    ndjson_path = os.path.join(out_dir, f"{collection_name}{suffix}.ndjson")
+    csv_path = os.path.join(out_dir, f"{collection_name}{suffix}.csv")
     meta_path = os.path.join(out_dir, "backup_meta.json")
 
-    docs = list(db.collection(collection_name).stream())
+    query = db.collection(collection_name)
+    if city:
+        query = query.where("city", "==", city)
+    docs = list(query.stream())
     count = len(docs)
     data_array = []
 
@@ -409,20 +477,35 @@ def normalize_id_from_tag(tag):
     rid = re.sub(r"[^a-zA-Z0-9_-]+", "-", tag).strip("-").upper()
     return rid
 
+def _generate_ref_from_name(name):
+    """Génère un Ref/tag depuis le nom du restaurant quand pas de colonne Ref.
+    Exemple: 'Dardar Rooftop' → 'dardar-rooftop'
+    normalize_id_from_tag() convertira ensuite en 'DARDAR-ROOFTOP' pour l'ID Firestore.
+    """
+    import unicodedata
+    if not name or (isinstance(name, float) and pd.isna(name)):
+        return ""
+    s = clean_text(str(name)).lower()
+    s = unicodedata.normalize('NFD', s)
+    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+    s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')
+    return s
+
 TAG_GROUPS = {
     "type_tags": ['Restaurant', 'Restaurant haut de gamme', 'Restaurant gastronomique', 'Restaurant étoilé',
                          'Brasserie', 'Cave à manger', 'Fast',
                          'Boulangerie/pâtisserie', 'Concept brunch', 'Concept goûter',
                          'Coffee shop/salon de thé', 'Bar'],
-    "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Apéro', 'Dîner', 'Sans réservation'],
+    "moment": ['Petit-déjeuner', 'Brunch', 'Déjeuner', 'Goûter', 'Apéro', 'Dîner', 'Drinks', 'Sans réservation'],
     "location_type": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop', 'Salle privatisable', 'Terrasse'],
     "location_name": [],
-    "lieu_tags": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Étoilé', 'Coffee Shop', 'Salle privatisable', 'Terrasse'],
+    "lieu_tags": ['Rue', 'Bar', 'Brasserie', 'Cave à manger', 'Restaurant', 'Fast', 'Hotel', 'Hôtel', 'Étoilé', 'Coffee Shop', 'Salle privatisable', 'Terrasse', 'Rooftop'],
     "ambiance": ['Entre amis', 'En famille', 'Date', 'Festif'],
     "price_range": ['€', '€€', '€€€', '€€€€'],
-    "cuisine": ['Africain', 'Américain', 'Chinois', 'Coréen', 'Colombien', 'Français', 'Grec', 'Indien',
-                 'Israélien', 'Italien', 'Japonais', 'Libanais', 'Mexicain', 'Oriental', 'Péruvien',
-                 'Sud-Américain', 'Thaï', 'Vietnamien'],
+    "cuisine": ['Africain', 'Américain', 'Asiatique', 'Chinois', 'Coréen', 'Colombien', 'Français', 'Fusion',
+                 'Grec', 'Healthy', 'Indien', 'International', 'Israélien', 'Italien', 'Japonais',
+                 'Libanais', 'Marocain', 'Mexicain', 'Méditerranéen', 'Oriental', 'Péruvien',
+                 'Sud-Américain', 'Thaï', 'Végétarien', 'Vietnamien'],
     "preferences": ['Casher', '100% végétarien', 'Healthy'],
     "terrace": ['Terrasse', 'Terrasse classique', 'Cour', 'Rooftop'],
     "recommended_by": []  # Pas de valeurs prédéfinies, ce sont des tags libres
@@ -575,7 +658,192 @@ def collect_specialite_affichage(row):
             return value
     return ""
 
-def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: str, out_csv: str, log_file: str):
+# -------------------- Normalisation Marrakech --------------------
+
+def _synthesize_restaurant_tags(df, rows, log_file):
+    """Synthétise les colonnes TAG depuis les champs booléens de l'onglet Restaurants Marrakech."""
+    # Rooftop ? / Dans un hôtel ? → Lieu_TAG
+    if "Rooftop ?" in rows.columns or "Dans un hôtel ?" in rows.columns:
+        def _build_lieu_tag(row):
+            parts = []
+            rooftop = str(row.get("Rooftop ?", "")).strip().lower()
+            if rooftop == "oui":
+                parts.append("Rooftop")
+            hotel = str(row.get("Dans un hôtel ?", "")).strip().lower()
+            if hotel == "oui":
+                parts.append("Hôtel")
+            return ", ".join(parts)
+        rows["Lieu_TAG"] = rows.apply(_build_lieu_tag, axis=1)
+        log(f"   Lieu_TAG synthétisé depuis Rooftop/Hôtel", log_file)
+
+    # Festif ? → Ambiance_TAG
+    if "Festif ?" in rows.columns:
+        def _build_ambiance_tag(row):
+            festif = str(row.get("Festif ?", "")).strip().lower()
+            return "Festif" if festif == "oui" else ""
+        rows["Ambiance_TAG"] = rows.apply(_build_ambiance_tag, axis=1)
+        log(f"   Ambiance_TAG synthétisé depuis Festif", log_file)
+
+    # Prix $ → €
+    if "Prix_TAG" in rows.columns:
+        rows["Prix_TAG"] = rows["Prix_TAG"].apply(
+            lambda x: DOLLAR_TO_EURO_PRICE.get(str(x).strip(), str(x).strip()) if pd.notna(x) else ""
+        )
+
+
+def _synthesize_hotel_fields(df, rows, log_file):
+    """Synthétise les champs pour l'onglet Hôtels Marrakech."""
+    # Combiner colonnes booléennes d'équipements → Équipements
+    equipment_cols = {"Piscine": "Piscine", "Spa": "Spa", "Restaurant": "Restaurant", "Salle de sport": "Salle de sport"}
+    available = [c for c in equipment_cols if c in rows.columns]
+    if available:
+        def _build_equipements(row):
+            equips = []
+            for col, label in equipment_cols.items():
+                if str(row.get(col, "")).strip().lower() == "oui":
+                    equips.append(label)
+            return ", ".join(equips)
+        rows["Équipements"] = rows.apply(_build_equipements, axis=1)
+        log(f"   Équipements synthétisés depuis: {available}", log_file)
+
+    # Fourchette + Note Google → Infos
+    extras = []
+    if "Fourchette (Basse / Haute saison)" in rows.columns:
+        extras.append(("Fourchette (Basse / Haute saison)", "Fourchette"))
+    if "Note Google" in rows.columns:
+        extras.append(("Note Google", "Note Google"))
+    if extras:
+        def _enrich_infos(row):
+            parts = []
+            existing = str(row.get("Infos", "")).strip()
+            if existing and existing.lower() not in ["", "nan"]:
+                parts.append(existing)
+            for col, label in extras:
+                val = str(row.get(col, "")).strip()
+                if val and val.lower() not in ["", "nan"]:
+                    parts.append(f"{label}: {val}")
+            return " | ".join(parts)
+        rows["Infos"] = rows.apply(_enrich_infos, axis=1)
+
+
+def _synthesize_daypass_fields(df, rows, log_file):
+    """Synthétise les champs pour l'onglet Daypass Marrakech."""
+    # Formules et prix → Infos
+    if "Formules et prix" in rows.columns:
+        def _enrich_infos(row):
+            parts = []
+            existing = str(row.get("Infos", "")).strip()
+            if existing and existing.lower() not in ["", "nan"]:
+                parts.append(existing)
+            formules = str(row.get("Formules et prix", "")).strip()
+            if formules and formules.lower() not in ["", "nan"]:
+                parts.append(f"Formules: {formules}")
+            return " | ".join(parts)
+        rows["Infos"] = rows.apply(_enrich_infos, axis=1)
+        log(f"   Formules et prix intégrés dans Infos", log_file)
+
+    # Prix numérique MAD → tranche €
+    if "Prix_TAG" in rows.columns:
+        def _normalize_daypass_price(val):
+            s = str(val).strip() if pd.notna(val) else ""
+            if not s or s.lower() == "nan":
+                return ""
+            if "€" in s or "$" in s:
+                return DOLLAR_TO_EURO_PRICE.get(s, s)
+            try:
+                amount = float(s.replace(",", ".").replace(" ", ""))
+                if amount < 300:
+                    return "€"
+                elif amount < 600:
+                    return "€€"
+                elif amount < 1000:
+                    return "€€€"
+                else:
+                    return "€€€€"
+            except (ValueError, TypeError):
+                return s
+        rows["Prix_TAG"] = rows["Prix_TAG"].apply(_normalize_daypass_price)
+        log(f"   Prix Daypass normalisés (MAD → tranches €)", log_file)
+
+
+def _normalize_marrakech_columns(df, rows, sheet_name, import_city, log_file):
+    """
+    Normalise les colonnes d'un Excel non-Paris (Marrakech) pour matcher le format attendu.
+    Appelée AVANT row_to_flat_doc() pour que le traitement existant fonctionne tel quel.
+    """
+    log(f"🏙️  Normalisation colonnes {import_city} (feuille: {sheet_name})...", log_file)
+
+    mapping = MARRAKECH_COLUMN_MAPPINGS.get(sheet_name, {})
+    if not mapping:
+        log(f"   ⚠️  Pas de mapping pour la feuille '{sheet_name}', tentative avec Restaurants", log_file)
+        mapping = MARRAKECH_COLUMN_MAPPINGS.get("Restaurants", {})
+
+    # 1) Renommer les colonnes
+    rename_dict = {}
+    for src_col, dst_col in mapping.items():
+        if src_col in df.columns and src_col != dst_col:
+            rename_dict[src_col] = dst_col
+    if rename_dict:
+        df = df.rename(columns=rename_dict)
+        rows = rows.rename(columns=rename_dict)
+        log(f"   Colonnes renommées: {list(rename_dict.keys())} → {list(rename_dict.values())}", log_file)
+
+    # 2) Copier TAG → AFFICHAGE pour les champs qui n'ont pas de colonne _AFFICHAGE
+    for tag_col, aff_col in [("Spécialité_TAG", "Spécialité_AFFICHAGE"), ("Moment_TAG", "Moment_AFFICHAGE")]:
+        if tag_col in df.columns and aff_col not in df.columns:
+            df[aff_col] = df[tag_col]
+            rows[aff_col] = rows[tag_col]
+
+    # 3) Auto-set venue_type depuis le nom d'onglet
+    venue_type = SHEET_VENUE_TYPE.get(sheet_name, "restaurant")
+    df["Type de lieu"] = venue_type
+    rows["Type de lieu"] = venue_type
+    log(f"   venue_type auto: '{venue_type}'", log_file)
+
+    # 4) Auto-set ville
+    df["Ville"] = import_city
+    rows["Ville"] = import_city
+
+    # 5) Auto-générer Ref depuis le nom quand absent
+    if "Ref" not in df.columns and "tag" not in df.columns:
+        name_col = "Vrai Nom" if "Vrai Nom" in df.columns else None
+        if name_col:
+            df["Ref"] = df[name_col].apply(lambda x: _generate_ref_from_name(x) if pd.notna(x) else "")
+            rows["Ref"] = rows[name_col].apply(lambda x: _generate_ref_from_name(x) if pd.notna(x) else "")
+            log(f"   Ref auto-généré depuis '{name_col}' pour {len(rows)} lignes", log_file)
+
+    # 6) Aussi copier Vrai Nom → Nom de base si absent
+    if "Vrai Nom" in df.columns and "Nom de base" not in df.columns:
+        df["Nom de base"] = df["Vrai Nom"]
+        rows["Nom de base"] = rows["Vrai Nom"]
+
+    # 7) Synthèse spécifique par onglet
+    if sheet_name == "Restaurants":
+        _synthesize_restaurant_tags(df, rows, log_file)
+    elif sheet_name == "Hôtels":
+        _synthesize_hotel_fields(df, rows, log_file)
+    elif sheet_name == "Daypass":
+        _synthesize_daypass_fields(df, rows, log_file)
+
+    # 8) Synchroniser df.columns avec rows.columns (row_to_flat_doc itère sur df.columns)
+    for col in rows.columns:
+        if col not in df.columns:
+            df[col] = ""
+
+    # 9) Supprimer les lignes vides (Hôtels a 918 rows mais ~31 avec données)
+    if "Vrai Nom" in rows.columns:
+        before = len(rows)
+        rows = rows.dropna(subset=["Vrai Nom"])
+        rows = rows[rows["Vrai Nom"].astype(str).str.strip() != ""]
+        after = len(rows)
+        if before != after:
+            log(f"   Lignes vides supprimées: {before} → {after}", log_file)
+
+    log(f"   Colonnes finales: {list(df.columns)}", log_file)
+    return df, rows
+
+
+def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: str, out_csv: str, log_file: str, import_city: str = "Paris"):
     if not os.path.exists(excel_path):
         raise FileNotFoundError(f"Fichier introuvable: {excel_path}")
 
@@ -600,7 +868,6 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
 
         rows = df.copy()
     else:
-        # Excel : double en-tête (row 0 = catégories, row 1 = vrais en-têtes)
         xls = pd.ExcelFile(excel_path)
         log(f"📋 Feuilles disponibles: {xls.sheet_names}", log_file)
 
@@ -617,9 +884,22 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         if len(df) == 0:
             raise ValueError("Le fichier Excel ne contient aucune donnée")
 
-        # Utiliser la première ligne comme en-têtes
-        df.columns = df.iloc[0]
-        rows = df.iloc[1:].copy()
+        # Détection du format header selon la ville
+        is_single_header = (import_city.lower() != "paris")
+
+        if is_single_header:
+            # Single header : row 0 = vrais headers (Marrakech, etc.)
+            rows = df.copy()
+            log(f"📋 Format single-header détecté (ville: {import_city})", log_file)
+        else:
+            # Double header : row 0 = catégories, row 1 = vrais headers (Paris)
+            df.columns = df.iloc[0]
+            rows = df.iloc[1:].copy()
+            log(f"📋 Format double-header détecté (ville: {import_city})", log_file)
+
+    # Normalisation des colonnes pour les villes non-Paris
+    if import_city.lower() != "paris":
+        df, rows = _normalize_marrakech_columns(df, rows, sheet_name, import_city, log_file)
 
     log(f"📝 Données à traiter: {len(rows)} lignes", log_file)
     
@@ -668,6 +948,24 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         all_arrondissements = parse_arrondissements(entry.get("Arrondissement"))
         arrondissement = all_arrondissements[0]  # Premier élément = rétrocompat
 
+        # --- Champs multi-ville / multi-type ---
+        doc_city = clean_text(entry.get("Ville") or "")
+        if not doc_city:
+            doc_city = import_city  # fallback sur la ville du contexte d'import
+        venue_type = clean_text(entry.get("Type de lieu") or "").lower()
+        if venue_type not in ("restaurant", "hotel", "daypass"):
+            venue_type = "restaurant"
+        hotel_category = clean_text(entry.get("Catégorie hôtel") or entry.get("Categorie hotel") or "")
+        price_per_night_raw = clean_text(entry.get("Prix par nuit") or "")
+        price_per_night = None
+        if price_per_night_raw:
+            try:
+                price_per_night = int(float(price_per_night_raw))
+            except (ValueError, TypeError):
+                pass
+        equipements = to_list(entry.get("Équipements") or entry.get("Equipements") or "")
+        star_rating = clean_text(entry.get("Étoiles") or entry.get("Etoiles") or entry.get("star_rating") or "")
+
         phone = clean_text(entry.get("Téléphone") or "")
         website = clean_text(entry.get("Site web") or "")
         reservation_link = clean_text(entry.get("Lien de réservation") or "")
@@ -678,7 +976,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         hours_raw = clean_text(entry.get("Horaires") or "")
         hours_structured = process_hours(hours_raw) if hours_raw else {}
         commentaire = clean_text(entry.get("Infos") or "")
-        
+
         lat_str = clean_text(entry.get("Latitude") or entry.get("latitude") or "")
         lon_str = clean_text(entry.get("Longitude") or entry.get("longitude") or "")
 
@@ -709,7 +1007,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
                     missing.append("longitude")
                 log(f"🌍 [{restaurant_name}] [{geocoding_counter[0]}/{geocoding_stats['needs_geocoding']}] Démarrage géocodage - Adresse: '{address}' - Manque: {', '.join(missing)}", log_file)
 
-            coords = geocode_address(address, log_file, restaurant_name=restaurant_name)
+            coords = geocode_address(address, log_file, restaurant_name=restaurant_name, city=doc_city)
             if coords:
                 if latitude is None:
                     latitude = coords[0]
@@ -874,7 +1172,19 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             # Multi-adresses
             "addresses": addresses_array,
             "arrondissements": all_arrondissements,
+            # Multi-ville / multi-type
+            "city": doc_city,
+            "venue_type": venue_type,
         }
+        # Champs hôtel / daypass (ajoutés uniquement si pertinents)
+        if hotel_category:
+            doc["hotel_category"] = hotel_category
+        if price_per_night is not None:
+            doc["price_per_night"] = price_per_night
+        if equipements:
+            doc["equipements"] = equipements
+        if star_rating:
+            doc["star_rating"] = star_rating
         return rid, doc
 
     # Première passe : compter les restaurants nécessitant un géocodage
@@ -1012,10 +1322,17 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
     return records, {"duplicates": duplicates, "missing_tag_rows": missing_tag_rows}
 
 # -------------------- Clean & Import --------------------
-def delete_collection(db, collection_name: str, batch_size: int, log_file: str) -> int:
+def delete_collection(db, collection_name: str, batch_size: int, log_file: str, city: str = None, venue_type: str = None) -> int:
+    """Supprime les documents d'une collection. Si city est fourni, supprime uniquement les docs de cette ville.
+    Si venue_type est fourni, supprime uniquement les docs de ce type (restaurant, hotel, daypass)."""
     total_deleted = 0
     while True:
-        docs = list(db.collection(collection_name).limit(batch_size).stream())
+        query = db.collection(collection_name)
+        if city:
+            query = query.where("city", "==", city)
+        if venue_type:
+            query = query.where("venue_type", "==", venue_type)
+        docs = list(query.limit(batch_size).stream())
         if not docs:
             break
         batch = db.batch()
@@ -1023,7 +1340,13 @@ def delete_collection(db, collection_name: str, batch_size: int, log_file: str) 
             batch.delete(d.reference)
         batch.commit()
         total_deleted += len(docs)
-        log(f"🗑️  Supprimés cumulés: {total_deleted}", log_file)
+        scope_parts = []
+        if city:
+            scope_parts.append(city)
+        if venue_type:
+            scope_parts.append(venue_type)
+        scope = f" ({', '.join(scope_parts)})" if scope_parts else ""
+        log(f"🗑️  Supprimés cumulés{scope}: {total_deleted}", log_file)
     return total_deleted
 
 def import_records(db, collection_name: str, records: List[Dict[str, Any]], batch_size: int, log_file: str) -> int:
@@ -1156,16 +1479,20 @@ def update_favorite_counts(db, log_file: str) -> Dict[str, Any]:
     return stats
 
 # -------------------- Main --------------------
-def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None, log_file_path=None):
+def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", request=None, log_file_path=None, city: str = None):
     """
-    Fonction principale d'import adaptée pour Django
-    Fonctionne en DEV et en PROD - seule la base de données Firebase change selon l'environnement
-    
+    Fonction principale d'import adaptée pour Django.
+    Fonctionne en DEV et en PROD - seule la base de données Firebase change selon l'environnement.
+
+    Import par ville : si city est fourni, seuls les documents de cette ville sont backupés,
+    supprimés et remplacés. Les restaurants des autres villes restent intacts.
+
     Args:
         excel_path: Chemin vers le fichier Excel
         sheet_name: Nom de la feuille Excel (défaut: "Feuil1")
         request: Objet request Django (optionnel) pour déterminer l'environnement Firebase
         log_file_path: Chemin du fichier de log (optionnel, sinon créé automatiquement)
+        city: Ville cible de l'import (ex: "Paris", "Marrakech"). Si None, import global (legacy).
     """
     # Détecter l'environnement Firebase (dev ou prod)
     try:
@@ -1174,20 +1501,24 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
     except ImportError:
         # Fallback si firebase_utils n'est pas disponible
         current_env = os.getenv('FIREBASE_ENV', 'prod').lower()
-    
+
     if log_file_path:
         log_file = log_file_path
         backup_dir = os.path.dirname(log_file)
     else:
         ts_dir = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}_{ts_dir}")
+        city_suffix = f"_{city.lower()}" if city else ""
+        backup_dir = os.path.join(BACKUP_DIR, f"{COLLECTION_SOURCE}{city_suffix}_{ts_dir}")
         ensure_dir(backup_dir)
         log_file = os.path.join(backup_dir, "import_run.log")
-    
+
+    import_city = city or "Paris"
+
     file_type = "CSV" if excel_path.lower().endswith('.csv') else "Excel"
     log("🚀 Démarrage import end-to-end", log_file)
     log(f"→ Fichier ({file_type}): {excel_path}", log_file)
     log(f"→ Environnement: {current_env.upper()}", log_file)
+    log(f"→ Ville: {import_city}" + (" (import global)" if not city else " (import par ville)"), log_file)
 
     try:
         db = init_firestore(log_file, request)
@@ -1195,11 +1526,12 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         log(f"❌ Init Firestore échouée: {e}\n{traceback.format_exc()}", log_file)
         raise
 
-    # 1) Backup
+    # 1) Backup — uniquement les documents de la ville cible si city-scoped
     backup_meta = {}
     try:
-        log(f"🗄️  Backup de '{COLLECTION_SOURCE}' ...", log_file)
-        backup_meta = export_collection(db, COLLECTION_SOURCE, backup_dir, log_file)
+        scope_label = f"'{COLLECTION_SOURCE}' (ville: {import_city})" if city else f"'{COLLECTION_SOURCE}'"
+        log(f"🗄️  Backup de {scope_label} ...", log_file)
+        backup_meta = export_collection(db, COLLECTION_SOURCE, backup_dir, log_file, city=city)
     except Exception as e:
         log(f"❌ Backup échoué: {e}\n{traceback.format_exc()}", log_file)
         raise
@@ -1210,19 +1542,30 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         out_ndjson = os.path.join(backup_dir, "restaurants_from_excel_by_tag.ndjson")
         out_csv = os.path.join(backup_dir, "restaurants_from_excel_by_tag.csv")
         log(f"🔁 Conversion {file_type} → JSON/NDJSON/CSV ...", log_file)
-        records, conv_report = convert_excel(excel_path, sheet_name, out_json, out_ndjson, out_csv, log_file)
+        records, conv_report = convert_excel(excel_path, sheet_name, out_json, out_ndjson, out_csv, log_file, import_city=import_city)
         if not records:
             log("❌ Conversion a produit 0 enregistrements. Abandon.", log_file)
             raise ValueError("Conversion a produit 0 enregistrements")
+        # Vérifier cohérence des villes dans l'Excel
+        cities_in_records = set(r.get("city", "") for r in records)
+        if city and len(cities_in_records) > 1:
+            log(f"⚠️  Attention : l'Excel contient des restaurants de plusieurs villes : {cities_in_records}", log_file)
         log(f"✅ Conversion OK ({len(records)} docs). Duplicates: {len(conv_report['duplicates'])}, Missing tags rows: {len(conv_report['missing_tag_rows'])}", log_file)
     except Exception as e:
         log(f"❌ Conversion échouée: {e}\n{traceback.format_exc()}", log_file)
         raise
 
-    # 3) Clean collection
+    # 3) Clean collection — scopé par ville ET venue_type pour ne pas écraser les autres types
+    import_venue_type = SHEET_VENUE_TYPE.get(sheet_name)
     try:
-        log(f"🧹 Suppression de la collection '{COLLECTION_SOURCE}' ...", log_file)
-        deleted = delete_collection(db, COLLECTION_SOURCE, BATCH_SIZE, log_file)
+        scope_parts = []
+        if city:
+            scope_parts.append(f"ville: {import_city}")
+        if import_venue_type:
+            scope_parts.append(f"type: {import_venue_type}")
+        scope_label = f"'{COLLECTION_SOURCE}' ({', '.join(scope_parts)})" if scope_parts else f"'{COLLECTION_SOURCE}'"
+        log(f"🧹 Suppression de {scope_label} ...", log_file)
+        deleted = delete_collection(db, COLLECTION_SOURCE, BATCH_SIZE, log_file, city=city, venue_type=import_venue_type)
         log(f"✅ Suppression terminée: {deleted} documents supprimés.", log_file)
     except Exception as e:
         log(f"❌ Suppression échouée: {e}\n{traceback.format_exc()}", log_file)
@@ -1242,6 +1585,8 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         payload = {
             "collection": COLLECTION_SOURCE,
             "imported_count": imported,
+            "city": import_city,
+            "city_scoped": bool(city),
             "source": os.path.basename(out_csv),
             "timestamp": now_paris_str(),
             "backup_dir": backup_dir,

@@ -1,0 +1,130 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Marrakech — Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content mb-2">Marrakech</h1>
+                    <p class="text-secondary">
+                        {{ all_count }} lieu(x) au total
+                        — {{ counts.restaurant }} restaurants, {{ counts.hotel }} hotels, {{ counts.daypass }} day passes
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{% url 'scripts_manager:marrakech_export' %}?format=csv" class="btn btn-ghost btn-sm gap-1">CSV</a>
+                    <a href="{% url 'scripts_manager:marrakech_export' %}?format=xlsx" class="btn btn-ghost btn-sm gap-1">Excel</a>
+                    <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="btn btn-primary btn-sm gap-1">Importer</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglets par type -->
+    <div class="tabs tabs-boxed bg-base-200 p-1">
+        {% for vtype, label in venue_type_labels.items %}
+        <a href="?type={{ vtype }}"
+           class="tab {% if active_tab == vtype %}tab-active{% endif %}">
+            {{ label }}
+            <span class="badge badge-sm ml-2">
+                {% if vtype == 'restaurant' %}{{ counts.restaurant }}{% endif %}
+                {% if vtype == 'hotel' %}{{ counts.hotel }}{% endif %}
+                {% if vtype == 'daypass' %}{{ counts.daypass }}{% endif %}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Tableau -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body p-0">
+            {% if restaurants %}
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th class="w-12"></th>
+                            <th>Nom</th>
+                            <th>Quartier</th>
+                            {% if active_tab == 'hotel' %}
+                            <th>Categorie</th>
+                            <th>Prix/nuit</th>
+                            <th>Etoiles</th>
+                            {% elif active_tab == 'daypass' %}
+                            <th>Equipements</th>
+                            <th>Prix</th>
+                            {% else %}
+                            <th>Cuisine</th>
+                            <th>Prix</th>
+                            {% endif %}
+                            <th class="w-20">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in restaurants %}
+                        <tr class="hover">
+                            <td>
+                                <div class="w-10 h-10 rounded-lg overflow-hidden bg-base-300">
+                                    {% if r.logoUrl %}
+                                    <img src="{{ r.logoUrl }}" class="w-full h-full object-cover" onerror="this.style.display='none'" loading="lazy" />
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="font-medium">{{ r.name }}</div>
+                                <div class="text-xs text-gray-400">{{ r.tag }}</div>
+                            </td>
+                            <td>{{ r.arrondissement }}</td>
+                            {% if active_tab == 'hotel' %}
+                            <td>{{ r.hotel_category|default:"-" }}</td>
+                            <td>{% if r.price_per_night %}{{ r.price_per_night }}{% else %}-{% endif %}</td>
+                            <td>{{ r.star_rating|default:"-" }}</td>
+                            {% elif active_tab == 'daypass' %}
+                            <td>
+                                {% for eq in r.equipements %}
+                                <span class="badge badge-sm badge-ghost">{{ eq }}</span>
+                                {% empty %}-{% endfor %}
+                            </td>
+                            <td>
+                                {% for p in r.price_range %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+                            </td>
+                            {% else %}
+                            <td>
+                                {% for c in r.cuisine_tag %}{{ c }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+                            </td>
+                            <td>
+                                {% for p in r.price_range %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+                            </td>
+                            {% endif %}
+                            <td>
+                                <div class="flex gap-1">
+                                    <a href="{% url 'scripts_manager:restaurant_detail' r.id %}" class="btn btn-ghost btn-xs">Voir</a>
+                                    <a href="{% url 'scripts_manager:restaurant_edit' r.id %}" class="btn btn-ghost btn-xs">Modifier</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-gray-400">
+                <p class="text-lg">Aucun {{ venue_type_labels|dictsort:active_tab }} pour Marrakech</p>
+                <p class="text-sm mt-2">
+                    Importez des restaurants via
+                    <a href="{% url 'scripts_manager:import_restaurants_index' %}" class="text-primary underline">la page d'import</a>
+                    en selectionnant la ville "Marrakech".
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

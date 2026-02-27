@@ -116,6 +116,21 @@
                     </label>
                 </div>
 
+                <!-- City selector -->
+                <div class="form-control mt-5">
+                    <label for="import_city" class="label">
+                        <span class="label-text font-medium">Ville (import par ville) :</span>
+                    </label>
+                    <select id="import_city" name="city" class="select select-bordered w-full">
+                        <option value="">Global (toutes les villes — legacy)</option>
+                        <option value="Paris" selected>Paris</option>
+                        <option value="Marrakech">Marrakech</option>
+                    </select>
+                    <label class="label">
+                        <span class="label-text-alt text-secondary">Seuls les restaurants de cette ville seront supprimes et remplaces. Les autres villes restent intactes.</span>
+                    </label>
+                </div>
+
                 <!-- Progress container -->
                 <div class="mt-5 hidden" id="progressContainer">
                     <!-- Laura.gif -->

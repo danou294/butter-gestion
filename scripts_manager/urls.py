@@ -16,6 +16,7 @@ from . import signups_views
 from . import coups_de_coeur_views
 from . import recommended_views
 from . import home_guide_views
+from . import marrakech_views
 
 app_name = 'scripts_manager'
 
@@ -156,5 +157,11 @@ urlpatterns = [
     path('search/logs/', search_restaurants_views.get_search_logs, name='get_search_logs'),
     path('search/download/', search_restaurants_views.download_search_result, name='download_search_result'),
     path('search/download-logs/', search_restaurants_views.download_search_logs, name='download_search_logs'),
+
+    # Marrakech
+    path('marrakech/', marrakech_views.marrakech_list, name='marrakech_list'),
+    path('marrakech/export/', marrakech_views.marrakech_export, name='marrakech_export'),
+    path('marrakech/stats/', marrakech_views.marrakech_stats, name='marrakech_stats'),
+    path('marrakech/<str:doc_id>/', marrakech_views.marrakech_detail, name='marrakech_detail'),
 ]
 

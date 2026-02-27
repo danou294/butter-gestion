@@ -1,486 +1,168 @@
-# 🧈 Butter - Interface de Gestion Firebase
+# Butter Web Interface — Backend Admin
 
-Interface web moderne et complète pour gérer votre application Firebase, incluant la gestion des utilisateurs, restaurants, photos, notifications push et exports de données.
+Interface d'administration Django pour gérer les restaurants, guides, photos, utilisateurs et abonnements de l'app Butter.
 
-## 📋 Table des matières
+## Stack technique
 
-- [Fonctionnalités](#-fonctionnalités)
-- [Technologies utilisées](#-technologies-utilisées)
-- [Prérequis](#-prérequis)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Utilisation](#-utilisation)
-- [Structure du projet](#-structure-du-projet)
-- [Authentification](#-authentification)
-- [Dépannage](#-dépannage)
+- **Django 4.2** + Firebase Admin SDK
+- **Firestore** pour les données metier (pas d'ORM Django)
+- **SQLite** uniquement pour le tracking RevenueCat et l'auth Django
+- **Tailwind CSS** pour le frontend
+- **Firebase Storage** pour les photos/logos
 
-## ✨ Fonctionnalités
-
-### 🔐 Authentification
-- **Inscription** : Création de compte utilisateur
-- **Connexion/Déconnexion** : Gestion de session sécurisée
-- **Protection des pages** : Toutes les fonctionnalités nécessitent une authentification
-
-### 👥 Gestion des Utilisateurs
-- **Liste complète** : Affichage de tous les utilisateurs Firebase Auth et Firestore
-- **Recherche** : Recherche par nom, email ou téléphone
-- **Filtres** : Filtrage par statut (Premium, Trial, Grace period, Expiré, Gratuit)
-- **Intégration RevenueCat** : Affichage du statut d'abonnement en temps réel
-- **Indicateur de connexion** : Visualisation des utilisateurs en ligne
-- **Tokens FCM** : Affichage des tokens de notification push
-- **Pagination** : Navigation efficace pour de grandes listes
-
-### 🍽️ Gestion des Restaurants
-- **CRUD complet** : Création, lecture, mise à jour et suppression
-- **Recherche avancée** : Recherche approximative (fuzzy search) par nom
-- **Filtres intelligents** : Filtrage par photos/logos manquants
-- **Informations média** : Affichage du nombre de photos et logos par restaurant
-- **Import batch** : Import en masse depuis un fichier Excel
-- **Pagination** : Gestion efficace de grandes listes
-
-### 📸 Gestion des Photos
-- **Gestion des logos** : Upload, suppression, renommage dans le dossier `Logos/`
-- **Gestion des photos** : Upload, suppression, renommage dans `Photos restaurants/`
-- **Optimisation automatique** : Conversion PNG → WebP avec compression
-- **Actions groupées** : Suppression en masse de photos sélectionnées
-- **Recherche** : Recherche par nom de fichier
-- **Lazy loading** : Chargement à la demande des URLs signées
-
-### 📱 Notifications Push
-- **Envoi à tous** : Notification globale à tous les utilisateurs
-- **Notifications personnalisées** : Personnalisation avec le prénom de l'utilisateur
-- **Envoi par groupe** : Sélection d'utilisateurs spécifiques
-- **Intégration FCM** : Utilisation de Firebase Cloud Messaging
-
-### 📤 Exports
-- **Export Firestore** : Export des collections (users, restaurants, recommandations, feedbacks)
-- **Export Firebase Auth** : Export des utilisateurs d'authentification
-- **Format Excel** : Téléchargement direct des fichiers `.xlsx`
-- **Collections supportées** : users, restaurants, recommandations, feedbacks
-
-## 🛠️ Technologies utilisées
-
-### Backend
-- **Django 4.x** : Framework web Python
-- **Firebase Admin SDK** : Gestion Firebase (Auth, Firestore, Storage)
-- **Google Cloud Storage** : Gestion des fichiers
-- **RevenueCat API** : Intégration des abonnements
-- **Pillow (PIL)** : Traitement d'images
-- **pandas** : Manipulation de données Excel
-
-### Frontend
-- **Tailwind CSS** : Framework CSS utility-first
-- **JavaScript (Vanilla)** : Interactivité côté client
-- **Google Fonts (Inria)** : Typographie moderne
-
-### Infrastructure
-- **Firebase Firestore** : Base de données NoSQL
-- **Firebase Authentication** : Authentification utilisateurs
-- **Firebase Storage** : Stockage de fichiers
-- **Firebase Cloud Messaging** : Notifications push
-
-## 📦 Prérequis
-
-- Python 3.9 ou supérieur
-- pip (gestionnaire de paquets Python)
-- Compte Firebase avec projet configuré
-- Fichier `serviceAccountKey.json` de Firebase
-- (Optionnel) Clé API RevenueCat pour les fonctionnalités premium
-
-## 🚀 Installation
-
-### Installation sur une nouvelle machine
-
-#### 1. Cloner le projet depuis GitHub
-
-```bash
-git clone https://github.com/danou294/butter-gestion.git
-cd butter-gestion
-```
-
-#### 2. Créer un environnement virtuel
-
-**Sur macOS/Linux :**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**Sur Windows :**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-#### 3. Installer les dépendances
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-#### 4. Configurer la base de données
-
-```bash
-python manage.py migrate
-```
-
-#### 5. Créer le premier utilisateur
-
-```bash
-python manage.py createsuperuser
-```
-
-Suivez les instructions pour créer votre compte administrateur.
-
-#### 6. Configurer les fichiers nécessaires
-
-**a) Fichier serviceAccountKey.json**
-
-Placez votre fichier `serviceAccountKey.json` de Firebase dans le dossier `input/` :
-
-```bash
-# Créer le dossier input s'il n'existe pas
-mkdir -p input
-
-# Copier votre fichier serviceAccountKey.json
-cp /chemin/vers/votre/serviceAccountKey.json input/serviceAccountKey.json
-```
-
-**b) Fichier .env (optionnel pour RevenueCat)**
-
-Créez un fichier `.env` à la racine du projet :
-
-```bash
-echo "REVENUECAT_API_KEY=votre_cle_api_revenuecat" > .env
-```
-
-#### 7. Vérifier la configuration
-
-Vérifiez que le fichier `serviceAccountKey.json` est bien présent :
-
-```bash
-ls -la input/serviceAccountKey.json
-```
-
-#### 8. Démarrer le serveur
-
-```bash
-python manage.py runserver
-```
-
-Le serveur démarre sur `http://127.0.0.1:8000/`
-
-#### 9. Accéder à l'interface
-
-1. Ouvrez votre navigateur : `http://127.0.0.1:8000/`
-2. Vous serez redirigé vers la page de connexion
-3. Connectez-vous avec le compte créé à l'étape 5, ou créez un nouveau compte via `/register/`
-
-### Installation rapide (résumé)
-
-```bash
-# 1. Cloner
-git clone https://github.com/danou294/butter-gestion.git
-cd butter-gestion
-
-# 2. Environnement virtuel
-python3 -m venv venv
-source venv/bin/activate  # macOS/Linux
-# ou venv\Scripts\activate  # Windows
-
-# 3. Dépendances
-pip install -r requirements.txt
-
-# 4. Base de données
-python manage.py migrate
-
-# 5. Créer un utilisateur
-python manage.py createsuperuser
-
-# 6. Placer serviceAccountKey.json
-mkdir -p input
-# Copier votre serviceAccountKey.json dans input/
-
-# 7. Démarrer
-python manage.py runserver
-```
-
-## ⚙️ Configuration
-
-### 1. Fichier serviceAccountKey.json
-
-Placez votre fichier `serviceAccountKey.json` de Firebase dans le dossier `input/` :
-
-```bash
-cp /chemin/vers/votre/serviceAccountKey.json input/serviceAccountKey.json
-```
-
-### 2. Variables d'environnement (optionnel)
-
-Créez un fichier `.env` à la racine du projet pour la clé API RevenueCat :
-
-```env
-REVENUECAT_API_KEY=votre_cle_api_revenuecat
-```
-
-### 3. Configuration Django
-
-Les paramètres principaux sont dans `butter_web_interface/settings.py`. Les chemins par défaut sont :
-
-- **Service Account** : `input/serviceAccountKey.json`
-- **Exports** : `media/exports/`
-- **Input** : `media/input/`
-
-## 🎯 Utilisation
-
-### Démarrer le serveur de développement
-
-**Sur la machine locale :**
-```bash
-python manage.py runserver
-```
-
-L'interface sera accessible à l'adresse : `http://127.0.0.1:8000/`
-
-**Pour rendre accessible depuis d'autres machines sur le réseau :**
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-L'interface sera accessible à l'adresse : `http://VOTRE_IP:8000/`
-
-**Pour changer le port :**
-```bash
-python manage.py runserver 0.0.0.0:8080
-```
-
-### Première connexion
-
-1. Accédez à `http://127.0.0.1:8000/register/`
-2. Créez un compte avec un nom d'utilisateur et un mot de passe
-3. Vous serez automatiquement connecté et redirigé vers la page d'accueil
-
-### Utilisation des fonctionnalités
-
-#### 👥 Gestion des Utilisateurs
-- Accédez à **"👥 Utilisateurs"** dans le menu
-- Utilisez la barre de recherche pour trouver un utilisateur
-- Filtrez par statut RevenueCat (Premium, Trial, etc.)
-- Cliquez sur **"🔄 Actualiser"** pour mettre à jour le statut d'un utilisateur
-
-#### 🍽️ Gestion des Restaurants
-- Accédez à **"Restaurants"** dans le menu
-- Cliquez sur **"➕ Nouveau Restaurant"** pour créer un restaurant
-- Utilisez les filtres **"📸 Photos manquantes"** ou **"🖼️ Logos manquants"**
-- Recherchez par nom avec la recherche approximative
-- Importez en masse via **"📥 Import"**
-
-#### 📸 Gestion des Photos
-- Accédez à **"📸 Photos"** dans le menu
-- Sélectionnez le dossier (**Logos** ou **Photos restaurants**)
-- Cliquez sur **"➕ Upload Photo"** pour téléverser une image
-- Utilisez **"🔄 Convertir PNG → WebP"** pour optimiser les photos (Photos restaurants uniquement)
-- Sélectionnez plusieurs photos pour des actions groupées
-
-#### 📱 Notifications Push
-- Accédez à **"📱 Notifications"** dans le menu
-- Choisissez le type d'envoi :
-  - **📢 À tous** : Notification globale
-  - **👤 Personnalisées** : Avec le prénom (utilisez `{prenom}` dans le texte)
-  - **👥 Groupe** : Sélection d'utilisateurs spécifiques
-- Remplissez le titre et le message
-- Envoyez la notification
-
-#### 📤 Exports
-- Accédez à **"Export"** dans le menu
-- Sélectionnez le type d'export :
-  - **Collection Firestore** : Choisissez la collection (users, restaurants, etc.)
-  - **Utilisateurs Firebase Auth** : Export des utilisateurs d'authentification
-- Cliquez sur **"🚀 Exporter"**
-- Le fichier Excel sera téléchargé automatiquement
-
-## 📁 Structure du projet
+## Architecture
 
 ```
 butter_web_interface/
-├── butter_web_interface/          # Configuration Django
-│   ├── settings.py               # Paramètres du projet
-│   ├── urls.py                   # URLs principales
-│   └── wsgi.py                   # Configuration WSGI
+├── butter_web_interface/              # Config Django
+│   ├── settings.py                    # Parametres projet
+│   ├── urls.py                        # URLs racine
+│   └── wsgi.py                        # WSGI
 │
-├── scripts_manager/               # Application principale
-│   ├── auth_views.py             # Vues d'authentification
-│   ├── views.py                  # Vues principales (export, import)
-│   ├── restaurants_views.py      # CRUD restaurants
-│   ├── photos_views.py           # CRUD photos
-│   ├── users_views.py            # Gestion utilisateurs
-│   ├── notifications_views.py    # Notifications push
-│   ├── notifications_services.py # Services de notification
-│   ├── import_restaurants.py    # Script d'import batch
-│   ├── config.py                 # Configuration des chemins
+├── scripts_manager/                   # App principale
+│   ├── views.py                       # Orchestrateur (export, import, taches async)
+│   ├── restaurants_views.py           # CRUD restaurants
+│   ├── photos_views.py               # Gestion photos/logos Firebase Storage
+│   ├── users_views.py                # Gestion utilisateurs Firebase Auth + Firestore
+│   ├── announcements_views.py        # Annonces et evenements
+│   ├── guides_views.py               # Gestion guides thematiques
+│   ├── home_guide_views.py           # Guides de la page d'accueil
+│   ├── coups_de_coeur_views.py       # Restaurants mis en avant
+│   ├── quick_filters_views.py        # Filtres rapides dynamiques
+│   ├── recommended_views.py          # Restaurants recommandes
+│   ├── notifications_views.py        # Notifications push FCM
+│   ├── notifications_services.py     # Services de notification
+│   ├── signups_views.py              # Stats inscriptions
+│   ├── search_restaurants_views.py   # Recherche restaurants (web)
+│   ├── search_restaurants_script.py  # Logique recherche
+│   ├── revenuecat_views.py           # Dashboard RevenueCat
+│   ├── revenuecat_service.py         # Service RevenueCat API
+│   ├── onboarding_views.py           # Gestion onboarding restaurants
+│   ├── marrakech_views.py            # Import restaurants Marrakech
+│   ├── firebase_env_views.py         # Switch d'environnement (dev/prod)
+│   ├── auth_views.py                 # Auth Django (login/register)
 │   │
-│   ├── templates/                # Templates HTML
-│   │   └── scripts_manager/
-│   │       ├── base.html         # Template de base
-│   │       ├── index.html        # Page d'accueil
-│   │       ├── export.html       # Page d'export
-│   │       ├── auth/             # Pages d'authentification
-│   │       ├── restaurants/      # Pages restaurants
-│   │       ├── photos/           # Pages photos
-│   │       ├── users/            # Pages utilisateurs
-│   │       └── notifications/    # Pages notifications
+│   ├── import_restaurants.py         # Pipeline import Excel → Firestore
+│   ├── import_onboarding.py          # Import onboarding restaurants
+│   ├── restore_backup.py             # Restauration backup Firestore
 │   │
-│   └── scripts/                  # Scripts Python
-│       └── export_to_excel.py   # Script d'export Excel
+│   ├── config.py                     # Configuration centralisee (chemins, buckets, env)
+│   ├── firebase_utils.py             # Switching environnement Firebase via session Django
+│   ├── context_processors.py         # Context processors (env label dans templates)
+│   ├── models.py                     # Modeles Django (RevenueCat tracking)
+│   ├── urls.py                       # URLs de l'app
+│   │
+│   ├── templates/scripts_manager/    # Templates HTML (Tailwind)
+│   │   ├── base.html                 # Layout de base
+│   │   ├── index.html                # Page d'accueil
+│   │   ├── auth/                     # Login, register
+│   │   ├── restaurants/              # Liste, form, detail
+│   │   ├── photos/                   # Gestion photos
+│   │   ├── users/                    # Liste utilisateurs
+│   │   ├── notifications/            # Envoi notifications
+│   │   ├── guides/                   # Gestion guides
+│   │   ├── announcements/            # Gestion annonces
+│   │   └── marrakech/                # Import Marrakech
+│   │
+│   ├── scripts/                      # Scripts standalone
+│   │   ├── export_to_excel.py        # Export collections → Excel
+│   │   ├── export_premium_users.py   # Export utilisateurs premium
+│   │   ├── export_user_phones.py     # Export telephones
+│   │   ├── export_users_top_favoris.py  # Export top favoris
+│   │   ├── signups_by_date.py        # Stats inscriptions par date
+│   │   ├── sync_revenuecat_attributes.py  # Sync attributs RevenueCat
+│   │   ├── check_missing_photos.py   # Audit photos manquantes
+│   │   ├── check_missing_logos.py    # Audit logos manquants
+│   │   ├── optimize_firebase_images.py  # Optimisation images Storage
+│   │   ├── convert_local_images.py   # Conversion images locales
+│   │   ├── update_photo_count.py     # MAJ compteur photos
+│   │   ├── add_city_field.py         # Ajout champ city aux restaurants
+│   │   └── export-bdd-butter.py      # Export complet BDD
+│   │
+│   └── data/
+│       └── metro_lines.json          # Donnees lignes de metro
 │
-├── input/                        # Fichiers d'entrée
-│   └── serviceAccountKey.json   # Clés Firebase (à ajouter)
+├── firebase_credentials/              # Service accounts Firebase (gitignore)
+│   ├── serviceAccountKey.dev.json
+│   └── serviceAccountKey.prod.json
 │
-├── media/                        # Fichiers média (générés)
-│   ├── exports/                 # Fichiers Excel exportés
-│   └── input/                   # Fichiers uploadés
+├── media/                             # Fichiers generes
+│   ├── exports/                       # Exports Excel
+│   └── input/                         # Fichiers uploades (Excel import)
 │
-├── venv/                         # Environnement virtuel (ignoré)
-├── .env                          # Variables d'environnement (optionnel)
-├── requirements.txt              # Dépendances Python
-└── README.md                     # Ce fichier
+├── .env                               # Variables d'env (REVENUECAT_API_KEY)
+├── requirements.txt                   # Dependances Python
+├── manage.py                          # Django CLI
+└── start.sh                           # Script demarrage
 ```
 
-## 🔐 Authentification
+## Environnements Firebase
 
-### Création de compte
+Le switching d'environnement se fait via la **session Django** :
 
-1. Accédez à `/register/`
-2. Remplissez le formulaire :
-   - **Nom d'utilisateur** : 150 caractères max, lettres, chiffres et @/./+/-/_ uniquement
-   - **Mot de passe** : Minimum 8 caractères, ne peut pas être entièrement numérique
-   - **Confirmation** : Doit correspondre au mot de passe
-3. Cliquez sur **"✨ Créer mon compte"**
-4. Vous serez automatiquement connecté
+| Env | Project ID | Bucket Storage |
+|-----|------------|----------------|
+| Dev | `butter-def` | `butter-def.firebasestorage.app` |
+| Prod | `butter-vdef` | `butter-vdef.firebasestorage.app` |
 
-### Connexion
+- `firebase_utils.py` → `get_firebase_env_from_session(request)` retourne `'dev'` ou `'prod'`
+- Le toggle est accessible dans l'interface web (header)
+- Les photos Storage utilisent toujours le bucket prod dans l'app Flutter
 
-1. Accédez à `/login/`
-2. Entrez votre nom d'utilisateur et mot de passe
-3. Cliquez sur **"🔓 Se connecter"**
-4. Vous serez redirigé vers la page d'accueil
+## Collections Firestore gerees
 
-### Déconnexion
+| Collection | Operations |
+|------------|------------|
+| `restaurants` | CRUD complet, import Excel, recherche |
+| `guides` | CRUD, association restaurants |
+| `announcements` | CRUD evenements/sondages |
+| `users` | Lecture, recherche, stats |
+| `favorites` | Lecture (stats) |
+| `user_preferences` | Lecture (onboarding) |
+| `quick_filters` | CRUD filtres dynamiques |
+| `onboarding_restaurants` | Import, gestion |
+| `coups_de_coeur` | CRUD restaurants mis en avant |
 
-Cliquez sur **"🚪 Déconnexion"** dans le menu de navigation.
+## Installation
 
-## 🎨 Design
-
-L'interface utilise un design moderne avec :
-
-- **Palette de couleurs** :
-  - `#111111` - Texte principal
-  - `#535353` - Texte secondaire
-  - `#FFFFFF` - Fond blanc
-  - `#F1EFEB` - Fond beige clair
-  - `#C9C1B1` - Beige foncé
-  - `#60BC81` - Vert (actions positives)
-  - `#D3695E` - Rouge (actions de suppression)
-
-- **Typographie** :
-  - **Inria Sans** : Texte principal
-  - **Inria Serif** : Titres
-
-- **Boutons** :
-  - Border-radius : 14px minimum
-  - Padding : 14px 28px
-  - Texte blanc sur boutons colorés
-
-## 🔧 Dépannage
-
-### Erreur : "Fichier service account manquant"
-
-**Solution** : Placez votre fichier `serviceAccountKey.json` dans le dossier `input/`
-
-### Erreur : "ModuleNotFoundError"
-
-**Solution** : 
 ```bash
-pip install -r requirements.txt
-```
-
-### Erreur : "No module named 'config'"
-
-**Solution** : Vérifiez que le fichier `scripts_manager/config.py` existe et contient les bonnes configurations.
-
-### Erreur : "ExpiredToken" pour les photos
-
-**Solution** : Les URLs signées sont générées à la demande. Si l'erreur persiste, rechargez la page.
-
-### Les utilisateurs RevenueCat ne s'affichent pas
-
-**Solution** : 
-1. Vérifiez que la clé API RevenueCat est dans le fichier `.env`
-2. Vérifiez que les numéros de téléphone dans Firebase correspondent aux `appUserID` dans RevenueCat (hash SHA256)
-
-### Le serveur ne démarre pas
-
-**Solution** :
-```bash
-# Vérifiez que vous êtes dans l'environnement virtuel
+python3 -m venv venv
 source venv/bin/activate
-
-# Vérifiez les migrations
+pip install -r requirements.txt
 python manage.py migrate
+python manage.py createsuperuser
+```
 
-# Redémarrez le serveur
+### Fichiers requis
+
+1. **Service accounts Firebase** dans `firebase_credentials/` :
+   - `serviceAccountKey.dev.json` (projet `butter-def`)
+   - `serviceAccountKey.prod.json` (projet `butter-vdef`)
+
+2. **Variables d'environnement** (`.env`) :
+   ```
+   REVENUECAT_API_KEY=sk_...
+   ```
+
+## Lancement
+
+```bash
+source venv/bin/activate
 python manage.py runserver
 ```
 
-## 📝 Notes importantes
+Interface accessible sur `http://127.0.0.1:8000/`
 
-### Sécurité
+## Import restaurants
 
-- **En production** : 
-  - Changez le `SECRET_KEY` dans `settings.py`
-  - Activez `DEBUG = False`
-  - Configurez `ALLOWED_HOSTS` avec votre domaine
-  - Utilisez HTTPS avec un reverse proxy (Nginx, Apache)
-  
-- **Fichiers sensibles** : 
-  - Ne commitez jamais `serviceAccountKey.json` ou `.env` dans Git
-  - Ces fichiers sont déjà dans `.gitignore`
+1. Preparer un fichier Excel avec les colonnes requises (voir `import_restaurants.py`)
+2. Acceder a la page Import dans l'interface
+3. Uploader le fichier Excel
+4. L'import cree/met a jour les documents Firestore + uploade les photos dans Storage
 
-### Base de données
+## Docs de deploiement
 
-- Le projet utilise **SQLite** par défaut (fichier `db.sqlite3`)
-- Pour la production, configurez **PostgreSQL** ou **MySQL** dans `settings.py`
-
-### Performance
-
-- Le système utilise le cache Django (cache en mémoire) pour optimiser les performances
-- Les requêtes Firestore sont mises en cache pour réduire les appels API
-
-### Déploiement en production
-
-Pour déployer en production, considérez :
-
-1. **Serveur web** : Gunicorn ou uWSGI
-2. **Reverse proxy** : Nginx ou Apache
-3. **Base de données** : PostgreSQL (recommandé)
-4. **Variables d'environnement** : Utilisez des variables d'environnement système plutôt que `.env`
-5. **Static files** : Collectez les fichiers statiques avec `python manage.py collectstatic`
-
-**Exemple avec Gunicorn :**
-```bash
-pip install gunicorn
-gunicorn butter_web_interface.wsgi:application --bind 0.0.0.0:8000
-```
-
-## 🤝 Contribution
-
-Ce projet est un outil interne de gestion. Pour toute question ou problème, contactez l'équipe de développement.
-
-## 📄 Licence
-
-Propriétaire - Tous droits réservés
-
----
-
-**Développé avec ❤️ pour Butter**
+- `INSTALLATION.md` — Guide d'installation complet
+- `CONFIGURATION_NGINX_OVH.md` — Config Nginx sur OVH
+- `DEPLOIEMENT_OVH.md` — Deploiement sur serveur OVH
+- `EMPLACEMENT_SERVICE_ACCOUNT.md` — Ou placer les service accounts
