@@ -3,6 +3,7 @@ Vues CRUD pour la gestion des photos dans Firebase Storage
 """
 import os
 import io
+import gc
 import logging
 from datetime import datetime, timedelta
 from django.core.cache import cache
@@ -466,13 +467,15 @@ def photo_convert_png_to_webp(request):
         
         bucket = client.bucket(get_firebase_bucket(request))
         
-        # Lister tous les PNG
+        # Lister tous les PNG (via générateur pour éviter de charger tout en RAM)
         logger.info(f"🔍 Recherche des images PNG dans {folder_path}...")
-        blobs = list(bucket.list_blobs(prefix=folder_path))
-        png_images = [blob for blob in blobs if not blob.name.endswith('/') and blob.name.lower().endswith('.png')]
-        
+        png_images = [
+            blob for blob in bucket.list_blobs(prefix=folder_path)
+            if not blob.name.endswith('/') and blob.name.lower().endswith('.png')
+        ]
+
         logger.info(f"📊 {len(png_images)} images PNG trouvées")
-        
+
         if not png_images:
             return JsonResponse({
                 'success': True,
@@ -487,7 +490,9 @@ def photo_convert_png_to_webp(request):
                     'overall_reduction_percent': 0
                 }
             })
-        
+
+        BATCH_SIZE = 50  # Traiter par petits lots pour limiter l'usage RAM
+
         stats = {
             'total': len(png_images),
             'converted': 0,
@@ -497,46 +502,54 @@ def photo_convert_png_to_webp(request):
             'space_saved': 0,
             'details': []
         }
-        
+
         for i, png_blob in enumerate(png_images, 1):
             try:
                 logger.info(f"🔄 [{i}/{len(png_images)}] Conversion: {png_blob.name}")
-                
+
                 png_data = png_blob.download_as_bytes()
-                stats['total_original_size'] += len(png_data)
-                
+                original_size = len(png_data)
+                stats['total_original_size'] += original_size
+
                 webp_data, conversion_stats = convert_to_webp(png_data, max_width, max_height, quality)
-                stats['total_webp_size'] += len(webp_data)
-                stats['space_saved'] += (len(png_data) - len(webp_data))
-                
+                webp_size = len(webp_data)
+                stats['total_webp_size'] += webp_size
+                stats['space_saved'] += (original_size - webp_size)
+
                 webp_name = png_blob.name.replace('.png', '.webp').replace('.PNG', '.webp')
                 webp_blob = bucket.blob(webp_name)
                 webp_blob.upload_from_string(webp_data, content_type='image/webp')
-                
+
+                # Libérer la mémoire immédiatement après upload
+                del png_data, webp_data
+
                 # Supprimer le PNG original
                 png_blob.delete()
-                
-                png_mb = len(png_data) / (1024 * 1024)
-                webp_mb = len(webp_data) / (1024 * 1024)
+
+                png_mb = original_size / (1024 * 1024)
+                webp_mb = webp_size / (1024 * 1024)
                 reduction = conversion_stats['reduction_percent']
-                
-                stats['details'].append({
-                    'name': png_blob.name.replace(folder_path, ''),
-                    'original_size_mb': round(png_mb, 2),
-                    'webp_size_mb': round(webp_mb, 2),
-                    'reduction_percent': round(reduction, 1)
-                })
-                
+
+                # Garder seulement les 10 derniers détails en mémoire
+                if len(stats['details']) < 10:
+                    stats['details'].append({
+                        'name': png_blob.name.replace(folder_path, ''),
+                        'original_size_mb': round(png_mb, 2),
+                        'webp_size_mb': round(webp_mb, 2),
+                        'reduction_percent': round(reduction, 1)
+                    })
+
                 logger.info(f"   ✅ Converti: {png_mb:.2f} MB → {webp_mb:.2f} MB (-{reduction:.1f}%)")
                 stats['converted'] += 1
-                
+
+                # Forcer le garbage collector tous les 50 fichiers
+                if i % BATCH_SIZE == 0:
+                    gc.collect()
+                    logger.info(f"   🧹 Nettoyage mémoire après {i} fichiers")
+
             except Exception as e:
                 logger.error(f"   ❌ Erreur PNG {png_blob.name}: {e}")
                 stats['errors'] += 1
-                stats['details'].append({
-                    'name': png_blob.name.replace(folder_path, ''),
-                    'error': str(e)
-                })
         
         total_mb = stats['total_original_size'] / (1024 * 1024)
         webp_total_mb = stats['total_webp_size'] / (1024 * 1024)
