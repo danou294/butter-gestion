@@ -21,7 +21,10 @@
                         {% endif %}
                     </p>
                 </div>
-                <a href="{% url 'scripts_manager:video_upload' %}" class="btn btn-primary">🎥 Uploader une vidéo</a>
+                <div class="flex gap-2">
+                    <a href="{% url 'scripts_manager:video_bulk_upload' %}" class="btn btn-outline">🎬 Upload multiple</a>
+                    <a href="{% url 'scripts_manager:video_upload' %}" class="btn btn-primary">🎥 Uploader une vidéo</a>
+                </div>
             </div>
         </div>
     </div>

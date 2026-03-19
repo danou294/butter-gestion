@@ -1,0 +1,305 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Upload multiple de vidéos - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .video-card { transition: all 0.2s ease; }
+    .video-card.uploading { opacity: 0.6; pointer-events: none; }
+    .video-card.done { border-color: #60BC81 !important; }
+    .video-card.error { border-color: #C62828 !important; }
+    .progress-ring { transition: stroke-dashoffset 0.3s ease; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="bulkUpload()">
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-ghost btn-sm">← Retour</a>
+                    <div>
+                        <h1 class="text-2xl font-serif font-bold text-base-content">🎬 Upload multiple</h1>
+                        <p class="text-sm text-secondary">Sélectionne tes vidéos, remplis les infos, et upload tout d'un coup</p>
+                    </div>
+                </div>
+                <div x-show="files.length > 0" x-cloak class="flex items-center gap-3">
+                    <span class="text-sm text-secondary" x-text="files.length + ' vidéo(s)'"></span>
+                    <button @click="uploadAll()" :disabled="uploading" class="btn btn-primary"
+                            :class="uploading && 'loading'">
+                        <span x-show="!uploading">🚀 Uploader tout (<span x-text="files.length"></span>)</span>
+                        <span x-show="uploading" x-cloak x-text="'Upload ' + uploadedCount + '/' + files.length + '...'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résultats après upload -->
+    <template x-if="results.length > 0">
+        <div class="alert" :class="errors > 0 ? 'alert-warning' : 'alert-success'">
+            <span x-text="(results.length - errors) + '/' + results.length + ' vidéo(s) uploadée(s) avec succès' + (errors > 0 ? ' — ' + errors + ' erreur(s)' : '')"></span>
+            <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-sm btn-ghost">Voir la liste</a>
+        </div>
+    </template>
+
+    <!-- Zone de sélection (quand pas de fichiers) -->
+    <div x-show="files.length === 0" class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="border-2 border-dashed border-base-300 rounded-xl p-12 text-center hover:border-primary transition-colors"
+                 @dragover.prevent="dragOver = true" @dragleave="dragOver = false"
+                 @drop.prevent="dragOver = false; addFiles($event.dataTransfer.files)"
+                 :class="dragOver && 'border-primary bg-primary/5'">
+                <input type="file" accept=".mp4,.mov,.m4v" multiple
+                       x-ref="fileInput" @change="addFiles($refs.fileInput.files)"
+                       class="hidden" id="bulk_file_input">
+                <p class="text-5xl mb-3">🎥</p>
+                <p class="text-lg font-medium text-base-content">Glisse-dépose tes vidéos ici</p>
+                <p class="text-secondary mt-1">ou</p>
+                <label for="bulk_file_input" class="btn btn-primary btn-sm mt-3 cursor-pointer">Sélectionner des fichiers</label>
+                <p class="text-xs text-secondary mt-3">MP4, MOV — max 100 MB par fichier — Format TikTok 9:16 recommandé</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paramètres communs -->
+    <div x-show="files.length > 0" x-cloak class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <h2 class="text-lg font-serif font-bold text-base-content mb-3">Paramètres communs</h2>
+            <div class="flex flex-wrap items-end gap-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Ville</span></label>
+                    <select x-model="commonCity" @change="applyCommonCity()" class="select select-bordered select-sm">
+                        <option value="paris">Paris</option>
+                        <option value="marrakech">Marrakech</option>
+                        <option value="londres">Londres</option>
+                        <option value="mykonos">Mykonos</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="cursor-pointer label justify-start gap-2">
+                        <input type="checkbox" x-model="commonActive" @change="applyCommonActive()" class="checkbox checkbox-primary checkbox-sm" checked>
+                        <span class="label-text">Toutes actives</span>
+                    </label>
+                </div>
+                <label for="bulk_file_input_add" class="btn btn-outline btn-sm cursor-pointer">+ Ajouter des vidéos</label>
+                <input type="file" accept=".mp4,.mov,.m4v" multiple id="bulk_file_input_add"
+                       @change="addFiles($event.target.files)" class="hidden">
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des vidéos à uploader -->
+    <div x-show="files.length > 0" x-cloak class="space-y-4">
+        <template x-for="(item, index) in files" :key="index">
+            <div class="card bg-base-100 shadow-sm border border-base-300 video-card"
+                 :class="{ 'uploading': item.status === 'uploading', 'done': item.status === 'done', 'error': item.status === 'error' }">
+                <div class="card-body py-4">
+                    <div class="flex items-start gap-4">
+                        <!-- Numéro + status -->
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                             :class="{
+                                 'bg-base-200 text-base-content': item.status === 'pending',
+                                 'bg-primary/20 text-primary': item.status === 'uploading',
+                                 'bg-success/20 text-success': item.status === 'done',
+                                 'bg-error/20 text-error': item.status === 'error'
+                             }">
+                            <span x-show="item.status === 'pending'" x-text="index + 1"></span>
+                            <span x-show="item.status === 'uploading'" class="loading loading-spinner loading-sm"></span>
+                            <span x-show="item.status === 'done'">✓</span>
+                            <span x-show="item.status === 'error'">✕</span>
+                        </div>
+
+                        <!-- Formulaire -->
+                        <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3">
+                            <!-- Titre (4 cols) -->
+                            <div class="md:col-span-4">
+                                <input type="text" x-model="item.title" placeholder="Titre *" required
+                                       class="input input-bordered input-sm w-full">
+                            </div>
+                            <!-- Description (3 cols) -->
+                            <div class="md:col-span-3">
+                                <input type="text" x-model="item.description" placeholder="Description"
+                                       class="input input-bordered input-sm w-full">
+                            </div>
+                            <!-- Ville (2 cols) -->
+                            <div class="md:col-span-1">
+                                <select x-model="item.city" class="select select-bordered select-sm w-full">
+                                    <option value="paris">Paris</option>
+                                    <option value="marrakech">Marrakech</option>
+                                    <option value="londres">Londres</option>
+                                    <option value="mykonos">Mykonos</option>
+                                </select>
+                            </div>
+                            <!-- Restaurant ID (2 cols) -->
+                            <div class="md:col-span-2">
+                                <input type="text" x-model="item.restaurantId" placeholder="Restaurant ID"
+                                       class="input input-bordered input-sm w-full">
+                            </div>
+                            <!-- Ordre (1 col) -->
+                            <div class="md:col-span-1">
+                                <input type="number" x-model="item.order" min="0" max="999" placeholder="Ordre"
+                                       class="input input-bordered input-sm w-full">
+                            </div>
+                            <!-- Fichier info + supprimer (1 col) -->
+                            <div class="md:col-span-1 flex items-center justify-end gap-2">
+                                <span class="text-xs text-secondary" x-text="(item.file.size / (1024*1024)).toFixed(1) + ' MB'"></span>
+                                <button @click="removeFile(index)" class="btn btn-ghost btn-xs text-error" title="Retirer">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Message d'erreur -->
+                    <template x-if="item.status === 'error'">
+                        <p class="text-sm text-error mt-2 ml-14" x-text="item.errorMsg"></p>
+                    </template>
+                    <!-- ID créé -->
+                    <template x-if="item.status === 'done'">
+                        <p class="text-sm text-success mt-2 ml-14">
+                            ✓ Uploadée — <code x-text="item.videoId" class="bg-base-200 px-1 rounded"></code>
+                        </p>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Actions bottom -->
+    <div x-show="files.length > 0" x-cloak class="flex justify-between items-center">
+        <button @click="clearAll()" class="btn btn-ghost btn-sm text-error" :disabled="uploading">Tout retirer</button>
+        <button @click="uploadAll()" :disabled="uploading || files.every(f => f.status === 'done')" class="btn btn-primary"
+                :class="uploading && 'loading'">
+            <span x-show="!uploading">🚀 Uploader tout (<span x-text="files.filter(f => f.status === 'pending').length"></span> restantes)</span>
+            <span x-show="uploading" x-cloak x-text="'Upload ' + uploadedCount + '/' + files.length + '...'"></span>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function bulkUpload() {
+    return {
+        files: [],
+        dragOver: false,
+        uploading: false,
+        uploadedCount: 0,
+        results: [],
+        errors: 0,
+        commonCity: 'paris',
+        commonActive: true,
+
+        addFiles(fileList) {
+            for (const file of fileList) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['mp4', 'mov', 'm4v'].includes(ext)) {
+                    alert(file.name + ' : format non supporté');
+                    continue;
+                }
+                if (file.size > 100 * 1024 * 1024) {
+                    alert(file.name + ' : trop lourd (' + (file.size / (1024*1024)).toFixed(1) + ' MB)');
+                    continue;
+                }
+                // Titre = nom du fichier sans extension
+                const title = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+                this.files.push({
+                    file: file,
+                    title: title,
+                    description: '',
+                    city: this.commonCity,
+                    restaurantId: '',
+                    order: this.files.length,
+                    isActive: this.commonActive,
+                    status: 'pending', // pending, uploading, done, error
+                    errorMsg: '',
+                    videoId: '',
+                });
+            }
+        },
+
+        removeFile(index) {
+            this.files.splice(index, 1);
+        },
+
+        clearAll() {
+            if (confirm('Retirer toutes les vidéos ?')) {
+                this.files = [];
+                this.results = [];
+                this.errors = 0;
+            }
+        },
+
+        applyCommonCity() {
+            this.files.forEach(f => { if (f.status === 'pending') f.city = this.commonCity; });
+        },
+
+        applyCommonActive() {
+            this.files.forEach(f => { if (f.status === 'pending') f.isActive = this.commonActive; });
+        },
+
+        async uploadAll() {
+            this.uploading = true;
+            this.uploadedCount = 0;
+            this.results = [];
+            this.errors = 0;
+
+            for (let i = 0; i < this.files.length; i++) {
+                const item = this.files[i];
+                if (item.status === 'done') {
+                    this.uploadedCount++;
+                    continue;
+                }
+
+                if (!item.title.trim()) {
+                    item.status = 'error';
+                    item.errorMsg = 'Le titre est requis';
+                    this.errors++;
+                    this.uploadedCount++;
+                    continue;
+                }
+
+                item.status = 'uploading';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('video_file', item.file);
+                    formData.append('title', item.title.trim());
+                    formData.append('description', item.description.trim());
+                    formData.append('city', item.city);
+                    formData.append('restaurantId', item.restaurantId.trim());
+                    formData.append('order', item.order);
+                    if (item.isActive) formData.append('isActive', 'on');
+
+                    const resp = await fetch('{% url "scripts_manager:video_bulk_upload_api" %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                        body: formData,
+                    });
+
+                    const data = await resp.json();
+                    if (data.success) {
+                        item.status = 'done';
+                        item.videoId = data.video_id;
+                    } else {
+                        item.status = 'error';
+                        item.errorMsg = data.error || 'Erreur inconnue';
+                        this.errors++;
+                    }
+                } catch (e) {
+                    item.status = 'error';
+                    item.errorMsg = 'Erreur réseau : ' + e.message;
+                    this.errors++;
+                }
+
+                this.uploadedCount++;
+                this.results.push({ id: item.videoId, title: item.title, status: item.status });
+            }
+
+            this.uploading = false;
+        }
+    }
+}
+</script>
+{% endblock %}

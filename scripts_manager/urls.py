@@ -162,6 +162,8 @@ urlpatterns = [
     # Vidéos (Butter Reels)
     path('videos/', videos_views.videos_list, name='videos_list'),
     path('videos/upload/', videos_views.video_upload, name='video_upload'),
+    path('videos/bulk-upload/', videos_views.video_bulk_upload, name='video_bulk_upload'),
+    path('videos/bulk-upload/api/', videos_views.video_bulk_upload_api, name='video_bulk_upload_api'),
     path('videos/<str:video_id>/', videos_views.video_detail, name='video_detail'),
     path('videos/<str:video_id>/edit/', videos_views.video_edit, name='video_edit'),
     path('videos/<str:video_id>/delete/', videos_views.video_delete, name='video_delete'),

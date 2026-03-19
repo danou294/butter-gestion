@@ -259,6 +259,107 @@ def video_upload(request):
     return render(request, 'scripts_manager/videos/upload.html', {'mode': 'create'})
 
 
+# ==================== UPLOAD MULTIPLE ====================
+
+@login_required
+def video_bulk_upload(request):
+    """Page d'upload multiple de vidéos."""
+    return render(request, 'scripts_manager/videos/bulk_upload.html')
+
+
+@require_http_methods(["POST"])
+@login_required
+def video_bulk_upload_api(request):
+    """API JSON pour uploader une seule vidéo (appelé N fois par le front bulk)."""
+    try:
+        db = get_firestore_client(request)
+
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        city = request.POST.get('city', 'paris').strip().lower()
+        restaurant_id = request.POST.get('restaurantId', '').strip()
+        is_active = request.POST.get('isActive') == 'on'
+        order = int(request.POST.get('order', 0) or 0)
+
+        if not title:
+            return JsonResponse({'success': False, 'error': 'Le titre est requis'}, status=400)
+
+        if 'video_file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'Fichier vidéo requis'}, status=400)
+
+        video_file = request.FILES['video_file']
+        ext = os.path.splitext(video_file.name or '')[1].lower()
+
+        if ext not in ALLOWED_VIDEO_EXTENSIONS:
+            return JsonResponse({'success': False, 'error': f'Format non supporté ({ext})'}, status=400)
+
+        if video_file.size > MAX_VIDEO_SIZE:
+            return JsonResponse({'success': False, 'error': f'Trop lourd ({video_file.size // (1024*1024)} MB)'}, status=400)
+
+        # Générer l'ID
+        video_id = _get_next_video_id(db)
+
+        # Upload vers Storage
+        client = get_storage_client(request)
+        if not client:
+            return JsonResponse({'success': False, 'error': 'Erreur connexion Storage'}, status=500)
+
+        bucket = client.bucket(get_firebase_bucket(request))
+
+        video_storage_path = f"{VIDEOS_STORAGE_PREFIX}{video_id}{ext}"
+        blob = bucket.blob(video_storage_path)
+        content_type = 'video/mp4' if ext == '.mp4' else 'video/quicktime'
+        video_file.seek(0)
+        blob.upload_from_file(video_file, content_type=content_type)
+        video_url = _build_storage_url(FIREBASE_BUCKET_PROD, video_storage_path)
+
+        logger.info(f"[bulk] Video uploaded: {video_storage_path} ({video_file.size // 1024} KB)")
+
+        # Vérifier restaurant
+        restaurant_name = None
+        if restaurant_id:
+            rest_doc = db.collection('restaurants').document(restaurant_id).get()
+            if rest_doc.exists:
+                restaurant_name = rest_doc.to_dict().get('vraiNom', rest_doc.to_dict().get('name', restaurant_id))
+            else:
+                restaurant_id = ''
+
+        # Créer doc Firestore
+        video_data = {
+            'id': video_id,
+            'title': title,
+            'description': description,
+            'city': city,
+            'restaurantId': restaurant_id if restaurant_id else None,
+            'restaurantName': restaurant_name,
+            'videoUrl': video_url,
+            'thumbnailUrl': None,
+            'storagePath': video_storage_path,
+            'likesCount': 0,
+            'commentsCount': 0,
+            'viewsCount': 0,
+            'duration': None,
+            'isActive': is_active,
+            'order': order,
+            'uploadedBy': request.user.username if request.user.is_authenticated else 'admin',
+            'createdAt': datetime.utcnow(),
+            'updatedAt': datetime.utcnow(),
+        }
+
+        db.collection(VIDEOS_COLLECTION).document(video_id).set(video_data)
+
+        return JsonResponse({
+            'success': True,
+            'video_id': video_id,
+            'title': title,
+            'message': f'Vidéo {video_id} uploadée',
+        })
+
+    except Exception as e:
+        logger.exception("[bulk] Erreur video_bulk_upload_api: %s", e)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # ==================== DÉTAIL VIDÉO ====================
 
 @login_required
