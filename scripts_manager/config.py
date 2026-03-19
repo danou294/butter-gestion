@@ -74,7 +74,8 @@ FIREBASE_ENV_ACTIVE = FIREBASE_ENV
 STORAGE_FOLDERS = {
     "logos": "Logos/",
     "photos": "Photos restaurants/",
-    "menus": "Menus/"
+    "menus": "Menus/",
+    "videos": "Videos/"
 }
 
 # Dossiers locaux (adaptés pour Django)

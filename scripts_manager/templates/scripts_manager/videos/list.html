@@ -1,0 +1,158 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Vidéos (Butter Reels) - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ deleteOpen: false, deleteId: '', deleteTitle: '' }">
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-base-content mb-2">🎬 Vidéos (Reels)</h1>
+                    <p class="text-secondary">
+                        {{ total_count }} vidéo(s)
+                        <span class="badge badge-success ml-2">{{ active_count }} active(s)</span>
+                        {% if cities %}
+                        <span class="text-xs ml-2">
+                            Villes : {% for c in cities %}<span class="badge badge-ghost badge-sm">{{ c }}</span> {% endfor %}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'scripts_manager:video_upload' %}" class="btn btn-primary">🎥 Uploader une vidéo</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body py-3">
+            <form method="get" class="flex flex-wrap items-center gap-3">
+                <select name="city" class="select select-sm select-bordered">
+                    <option value="">Toutes les villes</option>
+                    {% for c in cities %}
+                    <option value="{{ c }}" {% if filter_city == c %}selected{% endif %}>{{ c|title }}</option>
+                    {% endfor %}
+                </select>
+                <select name="active" class="select select-sm select-bordered">
+                    <option value="">Tous les statuts</option>
+                    <option value="1" {% if filter_active == '1' %}selected{% endif %}>Actives</option>
+                    <option value="0" {% if filter_active == '0' %}selected{% endif %}>Inactives</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline">Filtrer</button>
+                {% if filter_city or filter_active %}
+                <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-sm btn-ghost">Réinitialiser</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {% if videos %}
+    <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200 border-b border-base-300">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-20">Ordre</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">ID</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-16">Preview</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium">Titre</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">Ville</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-28">Restaurant</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-28">Stats</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-24">Statut</th>
+                        <th class="text-left py-3 px-4 text-secondary font-medium w-44">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in videos %}
+                    <tr class="border-b border-base-300 hover:bg-base-200">
+                        <td class="py-3 px-4">
+                            <span class="font-mono text-sm">{{ v.order }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <code class="text-sm bg-base-200 px-2 py-1 rounded">{{ v.id }}</code>
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if v.thumbnailUrl %}
+                            <img src="{{ v.thumbnailUrl }}" alt="thumb" class="w-12 h-16 object-cover rounded">
+                            {% else %}
+                            <div class="w-12 h-16 bg-base-300 rounded flex items-center justify-center text-lg">🎬</div>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <strong class="text-base-content">{{ v.title }}</strong>
+                            {% if v.description %}<br><span class="text-sm text-secondary">{{ v.description|truncatewords:10 }}</span>{% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="badge badge-ghost badge-sm">{{ v.city|title }}</span>
+                        </td>
+                        <td class="py-3 px-4 text-sm">
+                            {% if v.restaurantId %}
+                            <a href="{% url 'scripts_manager:restaurant_detail' v.restaurantId %}" class="text-primary hover:underline" title="{{ v.restaurantName }}">
+                                {{ v.restaurantName|default:v.restaurantId|truncatewords:3 }}
+                            </a>
+                            {% else %}
+                            <span class="text-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-sm text-secondary">
+                            ❤️ {{ v.likesCount|default:0 }}
+                            💬 {{ v.commentsCount|default:0 }}
+                            👁️ {{ v.viewsCount|default:0 }}
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if v.isActive %}
+                            <span class="badge badge-success">Actif</span>
+                            {% else %}
+                            <span class="badge badge-ghost">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{% url 'scripts_manager:video_detail' v.id %}" class="btn btn-outline btn-secondary btn-sm">Voir</a>
+                                <a href="{% url 'scripts_manager:video_edit' v.id %}" class="btn btn-outline btn-sm">Éditer</a>
+                                <button type="button" class="btn btn-outline btn-error btn-sm"
+                                    @click="deleteId = '{{ v.id }}'; deleteTitle = '{{ v.title|escapejs }}'; deleteOpen = true">
+                                    Suppr
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        Aucune vidéo trouvée.
+        <a href="{% url 'scripts_manager:video_upload' %}" class="font-medium hover:underline ml-1">Uploader la première</a>
+    </div>
+    {% endif %}
+
+    <!-- Modal suppression -->
+    <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-neutral bg-opacity-50 z-0" aria-hidden="true" @click="deleteOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="relative z-10 inline-block align-bottom bg-base-100 text-left overflow-hidden shadow-xl border border-base-300 sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" @click.stop>
+                <div class="px-6 py-4">
+                    <h3 class="text-lg font-serif font-bold text-base-content">Confirmer la suppression</h3>
+                    <p class="mt-2 text-secondary">Supprimer la vidéo <strong x-text="deleteTitle"></strong> ?</p>
+                    <p class="mt-2 text-sm text-error">Le fichier vidéo sera aussi supprimé du Storage. Cette action est irréversible.</p>
+                </div>
+                <div class="px-6 py-4 bg-base-200 flex justify-end gap-3">
+                    <button type="button" @click="deleteOpen = false" class="btn btn-ghost">Annuler</button>
+                    <form method="post" :action="'/videos/' + deleteId + '/delete/'" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error">Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

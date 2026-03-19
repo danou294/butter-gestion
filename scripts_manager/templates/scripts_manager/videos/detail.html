@@ -1,0 +1,216 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}{{ video.title }} - Vidéo {{ video.id }} - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="videoDetail()">
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-ghost btn-sm">← Retour</a>
+                    <div>
+                        <h1 class="text-2xl font-serif font-bold text-base-content">
+                            🎬 {{ video.title }}
+                        </h1>
+                        <p class="text-secondary">
+                            <code class="bg-base-200 px-2 py-0.5 rounded text-sm">{{ video.id }}</code>
+                            <span class="badge badge-ghost badge-sm ml-2">{{ video.city|title }}</span>
+                            {% if video.isActive %}
+                            <span class="badge badge-success badge-sm ml-1">Actif</span>
+                            {% else %}
+                            <span class="badge badge-ghost badge-sm ml-1">Inactif</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="toggleActive('{{ video.id }}')" class="btn btn-sm btn-outline"
+                            :class="isActive ? 'btn-warning' : 'btn-success'">
+                        <span x-text="isActive ? 'Désactiver' : 'Activer'"></span>
+                    </button>
+                    <a href="{% url 'scripts_manager:video_edit' video.id %}" class="btn btn-sm btn-outline">✏️ Éditer</a>
+                    <a href="{% url 'scripts_manager:video_get_json' video.id %}" class="btn btn-sm btn-outline btn-success" target="_blank">JSON</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Colonne gauche : Vidéo + infos -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Player -->
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h2 class="text-lg font-serif font-bold mb-3">Preview</h2>
+                    {% if video.videoUrl %}
+                    <div class="flex justify-center bg-black rounded-xl overflow-hidden">
+                        <video controls class="max-h-[500px]" style="aspect-ratio: 9/16;">
+                            <source src="{{ video.videoUrl }}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture vidéo.
+                        </video>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">URL vidéo manquante</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Détails -->
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h2 class="text-lg font-serif font-bold mb-3">Détails</h2>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div><span class="text-secondary">Description</span><br><span class="font-medium">{{ video.description|default:"-" }}</span></div>
+                        <div><span class="text-secondary">Ordre</span><br><span class="font-medium">{{ video.order|default:0 }}</span></div>
+                        <div>
+                            <span class="text-secondary">Restaurant lié</span><br>
+                            {% if video.restaurantId %}
+                            <a href="{% url 'scripts_manager:restaurant_detail' video.restaurantId %}" class="text-primary hover:underline font-medium">
+                                {{ video.restaurantName|default:video.restaurantId }}
+                            </a>
+                            {% else %}
+                            <span class="text-secondary">Aucun</span>
+                            {% endif %}
+                        </div>
+                        <div><span class="text-secondary">Uploadé par</span><br><span class="font-medium">{{ video.uploadedBy|default:"-" }}</span></div>
+                        <div><span class="text-secondary">Créé le</span><br><span class="font-medium">{{ video.createdAt|date:"d/m/Y H:i"|default:"-" }}</span></div>
+                        <div><span class="text-secondary">Modifié le</span><br><span class="font-medium">{{ video.updatedAt|date:"d/m/Y H:i"|default:"-" }}</span></div>
+                        <div><span class="text-secondary">Storage path</span><br><code class="text-xs bg-base-200 px-1 rounded">{{ video.storagePath|default:"-" }}</code></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : Stats + Commentaires -->
+        <div class="space-y-6">
+            <!-- Stats -->
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h2 class="text-lg font-serif font-bold mb-3">Statistiques</h2>
+                    <div class="stats stats-vertical shadow w-full">
+                        <div class="stat">
+                            <div class="stat-title">Likes</div>
+                            <div class="stat-value text-primary">{{ actual_likes }}</div>
+                            {% if actual_likes != video.likesCount %}
+                            <div class="stat-desc text-warning">Compteur Firestore : {{ video.likesCount|default:0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Commentaires</div>
+                            <div class="stat-value text-secondary">{{ comments_count }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Vues</div>
+                            <div class="stat-value">{{ video.viewsCount|default:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thumbnail -->
+            {% if video.thumbnailUrl %}
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h2 class="text-lg font-serif font-bold mb-3">Thumbnail</h2>
+                    <img src="{{ video.thumbnailUrl }}" alt="thumbnail" class="w-full rounded-lg border border-base-300" style="aspect-ratio: 9/16; object-fit: cover;">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Commentaires (modération) -->
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+                <div class="card-body">
+                    <h2 class="text-lg font-serif font-bold mb-3">
+                        💬 Commentaires ({{ comments_count }})
+                    </h2>
+
+                    {% if comments %}
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        {% for c in comments %}
+                        <div class="bg-base-200 rounded-lg p-3" id="comment-{{ c.id }}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-medium text-sm">{{ c.userName|default:"Anonyme" }}</span>
+                                    <span class="text-xs text-secondary ml-2">{{ c.createdAt|date:"d/m/Y H:i"|default:"" }}</span>
+                                </div>
+                                <button @click="deleteComment('{{ video.id }}', '{{ c.id }}')"
+                                        class="btn btn-ghost btn-xs text-error" title="Supprimer ce commentaire">
+                                    🗑️
+                                </button>
+                            </div>
+                            <p class="text-sm mt-1">{{ c.text }}</p>
+                            <p class="text-xs text-secondary mt-1">UID: {{ c.userId|default:"-" }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-secondary">Aucun commentaire pour le moment.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone de suppression -->
+    <div class="card bg-error/5 border border-error/20">
+        <div class="card-body">
+            <h2 class="text-lg font-serif font-bold text-error mb-2">Zone dangereuse</h2>
+            <p class="text-sm text-secondary mb-3">Supprimer cette vidéo, ses commentaires, likes, et le fichier du Storage.</p>
+            <form method="post" action="{% url 'scripts_manager:video_delete' video.id %}"
+                  onsubmit="return confirm('Supprimer définitivement la vidéo {{ video.title|escapejs }} ?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-error btn-sm">🗑️ Supprimer la vidéo</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function videoDetail() {
+    return {
+        isActive: {{ video.isActive|yesno:"true,false" }},
+
+        async toggleActive(videoId) {
+            try {
+                const resp = await fetch('/videos/' + videoId + '/toggle-active/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.isActive = data.isActive;
+                } else {
+                    alert('Erreur : ' + (data.error || 'Inconnue'));
+                }
+            } catch (e) {
+                alert('Erreur réseau');
+            }
+        },
+
+        async deleteComment(videoId, commentId) {
+            if (!confirm('Supprimer ce commentaire ?')) return;
+            try {
+                const resp = await fetch('/videos/' + videoId + '/comments/' + commentId + '/delete/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const el = document.getElementById('comment-' + commentId);
+                    if (el) el.remove();
+                } else {
+                    alert('Erreur : ' + (data.error || 'Inconnue'));
+                }
+            } catch (e) {
+                alert('Erreur réseau');
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

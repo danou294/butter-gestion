@@ -1,0 +1,194 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}{% if mode == 'edit' %}Éditer {{ video.title }}{% else %}Uploader une vidéo{% endif %} - Butter Backoffice{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="videoUpload()">
+    <!-- Header -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-ghost btn-sm">← Retour</a>
+                <h1 class="text-2xl font-serif font-bold text-base-content">
+                    {% if mode == 'edit' %}✏️ Éditer « {{ video.title }} »{% else %}🎥 Uploader une vidéo{% endif %}
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6"
+          {% if mode == 'edit' %}action="{% url 'scripts_manager:video_edit' video_id %}"{% else %}action="{% url 'scripts_manager:video_upload' %}"{% endif %}>
+        {% csrf_token %}
+
+        <!-- Infos principales -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body space-y-4">
+                <h2 class="text-lg font-serif font-bold text-base-content">Informations</h2>
+
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-medium">Titre *</span></label>
+                    <input type="text" name="title" required maxlength="200"
+                           value="{% if mode == 'edit' %}{{ video.title }}{% endif %}"
+                           class="input input-bordered w-full" placeholder="Le meilleur croissant de Paris">
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-medium">Description</span></label>
+                    <textarea name="description" rows="3" maxlength="500"
+                              class="textarea textarea-bordered w-full" placeholder="Description courte pour le reel...">{% if mode == 'edit' %}{{ video.description }}{% endif %}</textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-medium">Ville *</span></label>
+                        <select name="city" class="select select-bordered w-full">
+                            {% if mode == 'edit' %}
+                            <option value="paris" {% if video.city == "paris" %}selected{% endif %}>Paris</option>
+                            <option value="marrakech" {% if video.city == "marrakech" %}selected{% endif %}>Marrakech</option>
+                            <option value="londres" {% if video.city == "londres" %}selected{% endif %}>Londres</option>
+                            <option value="mykonos" {% if video.city == "mykonos" %}selected{% endif %}>Mykonos</option>
+                            {% else %}
+                            <option value="paris" selected>Paris</option>
+                            <option value="marrakech">Marrakech</option>
+                            <option value="londres">Londres</option>
+                            <option value="mykonos">Mykonos</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-medium">Ordre d'affichage</span></label>
+                        <input type="number" name="order" min="0" max="999"
+                               value="{% if mode == 'edit' %}{{ video.order|default:0 }}{% else %}0{% endif %}"
+                               class="input input-bordered w-full">
+                        <label class="label"><span class="label-text-alt text-secondary">Plus petit = affiché en premier</span></label>
+                    </div>
+
+                    <div class="form_control">
+                        <label class="label"><span class="label-text font-medium">Restaurant lié (ID)</span></label>
+                        <input type="text" name="restaurantId"
+                               value="{% if mode == 'edit' %}{{ video.restaurantId|default:'' }}{% endif %}"
+                               class="input input-bordered w-full" placeholder="Ex: CHEJ3">
+                        <label class="label"><span class="label-text-alt text-secondary">Optionnel - ID Firestore du restaurant</span></label>
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="cursor-pointer label justify-start gap-3">
+                        <input type="checkbox" name="isActive" class="checkbox checkbox-primary"
+                               {% if mode == 'edit' and video.isActive %}checked{% elif mode != 'edit' %}checked{% endif %}>
+                        <span class="label-text font-medium">Vidéo active (visible dans l'app)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload fichiers -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body space-y-4">
+                <h2 class="text-lg font-serif font-bold text-base-content">Fichiers</h2>
+
+                {% if mode != 'edit' %}
+                <!-- Upload vidéo -->
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-medium">Fichier vidéo * <span class="text-secondary font-normal">(MP4, MOV - max 100 MB)</span></span></label>
+                    <div class="border-2 border-dashed border-base-300 rounded-xl p-6 text-center hover:border-primary transition-colors"
+                         @dragover.prevent="dragOver = true" @dragleave="dragOver = false"
+                         @drop.prevent="dragOver = false; $refs.videoInput.files = $event.dataTransfer.files; handleVideoSelect($refs.videoInput)"
+                         :class="dragOver && 'border-primary bg-primary/5'">
+                        <input type="file" name="video_file" accept=".mp4,.mov,.m4v" required
+                               x-ref="videoInput" @change="handleVideoSelect($refs.videoInput)"
+                               class="hidden" id="video_file_input">
+                        <div x-show="!videoPreview">
+                            <p class="text-4xl mb-2">🎥</p>
+                            <p class="text-secondary">Glissez-déposez votre vidéo ou</p>
+                            <label for="video_file_input" class="btn btn-outline btn-sm mt-2 cursor-pointer">Choisir un fichier</label>
+                            <p class="text-xs text-secondary mt-2">Format TikTok recommandé : 9:16 vertical, max 1min30</p>
+                        </div>
+                        <div x-show="videoPreview" x-cloak>
+                            <p class="text-sm font-medium text-success mb-1">Vidéo sélectionnée</p>
+                            <p class="text-sm text-secondary" x-text="videoFileName"></p>
+                            <p class="text-xs text-secondary" x-text="videoFileSize"></p>
+                            <label for="video_file_input" class="btn btn-ghost btn-xs mt-2 cursor-pointer">Changer</label>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Mode édition : afficher la vidéo actuelle -->
+                {% if video.videoUrl %}
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Vidéo actuelle</span></label>
+                    <div class="bg-base-200 rounded-xl p-4">
+                        <video controls class="w-full max-w-xs mx-auto rounded-lg" style="max-height: 300px;">
+                            <source src="{{ video.videoUrl }}" type="video/mp4">
+                        </video>
+                        <p class="text-xs text-secondary text-center mt-2">{{ video.storagePath }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <!-- Upload thumbnail -->
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text font-medium">
+                            Thumbnail
+                            {% if mode != 'edit' %}<span class="text-secondary font-normal">(optionnel - JPG, PNG, WebP)</span>{% endif %}
+                        </span>
+                    </label>
+                    <div class="flex items-start gap-4">
+                        {% if mode == 'edit' and video.thumbnailUrl %}
+                        <img src="{{ video.thumbnailUrl }}" alt="thumbnail actuelle" class="w-20 h-28 object-cover rounded-lg border border-base-300">
+                        {% endif %}
+                        <div class="flex-1">
+                            <input type="file" name="thumbnail_file" accept=".jpg,.jpeg,.png,.webp"
+                                   class="file-input file-input-bordered file-input-sm w-full max-w-xs">
+                            <p class="text-xs text-secondary mt-1">
+                                {% if mode == 'edit' %}Laisser vide pour garder la thumbnail actuelle{% else %}Si non fourni, l'app utilisera la première frame{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'scripts_manager:videos_list' %}" class="btn btn-ghost">Annuler</a>
+            <button type="submit" class="btn btn-primary">
+                {% if mode == 'edit' %}💾 Sauvegarder{% else %}🚀 Uploader{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function videoUpload() {
+    return {
+        dragOver: false,
+        videoPreview: false,
+        videoFileName: '',
+        videoFileSize: '',
+
+        handleVideoSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                this.videoFileName = file.name;
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                this.videoFileSize = sizeMB + ' MB';
+                this.videoPreview = true;
+
+                if (file.size > 100 * 1024 * 1024) {
+                    alert('Fichier trop lourd (' + sizeMB + ' MB). Maximum : 100 MB');
+                    input.value = '';
+                    this.videoPreview = false;
+                }
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

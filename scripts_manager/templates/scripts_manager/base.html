@@ -73,7 +73,7 @@
                     <!-- Dropdown Contenu -->
                     <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
                         <button @click="open = !open"
-                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'restaurant' in request.resolver_match.url_name or 'photo' in request.resolver_match.url_name or 'guide' in request.resolver_match.url_name or 'announcement' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'restaurant' in request.resolver_match.url_name or 'photo' in request.resolver_match.url_name or 'guide' in request.resolver_match.url_name or 'announcement' in request.resolver_match.url_name or 'video' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
                             📋 Contenu
                             <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -89,6 +89,7 @@
                             <a href="{% url 'scripts_manager:guides_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'guide' in request.resolver_match.url_name and 'home_guide' not in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📖 Guides</a>
                             <a href="{% url 'scripts_manager:announcements_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'announcement' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🎪 Annonces</a>
                             <a href="{% url 'scripts_manager:photos_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'photo' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📸 Photos</a>
+                            <a href="{% url 'scripts_manager:videos_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'video' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🎬 Vidéos</a>
                             <div class="my-1 mx-3 border-t border-base-300"></div>
                             <a href="{% url 'scripts_manager:marrakech_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'marrakech' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">🏙️ Marrakech</a>
                         </div>
@@ -211,6 +212,7 @@
                 <a href="{% url 'scripts_manager:guides_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'guide' in request.resolver_match.url_name and 'home_guide' not in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📖 Guides</a>
                 <a href="{% url 'scripts_manager:announcements_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'announcement' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🎪 Annonces</a>
                 <a href="{% url 'scripts_manager:photos_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'photo' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">📸 Photos</a>
+                <a href="{% url 'scripts_manager:videos_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'video' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🎬 Vidéos</a>
                 <a href="{% url 'scripts_manager:marrakech_list' %}" class="block px-3 py-2.5 rounded-lg text-sm {% if 'marrakech' in request.resolver_match.url_name %}bg-primary text-primary-content font-medium{% else %}text-base-content hover:bg-base-200{% endif %}">🏙️ Marrakech</a>
 
                 <div class="pt-2 pb-1 px-3 text-xs font-bold text-secondary uppercase tracking-wider">App</div>
