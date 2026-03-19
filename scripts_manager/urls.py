@@ -18,6 +18,7 @@ from . import recommended_views
 from . import home_guide_views
 from . import marrakech_views
 from . import videos_views
+from . import home_sections_views
 
 app_name = 'scripts_manager'
 
@@ -150,6 +151,11 @@ urlpatterns = [
     # Guide de la page d'accueil
     path('home-guide/', home_guide_views.home_guide_manage, name='home_guide_manage'),
     path('home-guide/save/', home_guide_views.home_guide_save, name='home_guide_save'),
+
+    # Sections dynamiques de la Home
+    path('home-sections/', home_sections_views.home_sections_manage, name='home_sections_manage'),
+    path('home-sections/save/', home_sections_views.home_sections_save, name='home_sections_save'),
+    path('home-sections/<str:section_id>/delete/', home_sections_views.home_sections_delete, name='home_sections_delete'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),

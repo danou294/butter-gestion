@@ -1,0 +1,347 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Sections Home - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Butter App Design System */
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; overflow: hidden; }
+    .butter-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-beige { background: #F1EFEB; color: #535353; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-yellow { background: rgba(254,225,137,0.3); color: #8B6914; }
+    .butter-pill-grey { background: #E0E0E0; color: #888; }
+    .butter-input { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 14px; background: #FEFFFE; transition: border-color 0.2s; }
+    .butter-input:focus { border-color: #60BC81; outline: none; box-shadow: 0 0 0 3px rgba(96,188,129,0.1); }
+    .butter-select { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 12px; background: #FEFFFE; }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-btn-danger { background: transparent; color: #D3695E; }
+    .butter-btn-danger:hover { background: rgba(211,105,94,0.08); }
+    .butter-section { border-left: 3px solid transparent; transition: all 0.25s ease; }
+    .butter-section.is-active { border-left-color: #60BC81; }
+    .butter-section.is-inactive { border-left-color: #D9D9D9; opacity: 0.6; }
+    .butter-section.is-open { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .butter-divider { height: 1px; background: #F1EFEB; }
+    .butter-guide-row { padding: 10px 14px; transition: background 0.15s; display: flex; align-items: center; gap: 10px; }
+    .butter-guide-row:hover { background: #FAFAF8; }
+    .butter-guide-row + .butter-guide-row { border-top: 1px solid #F1EFEB; }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .butter-toast { position: fixed; top: 90px; right: 20px; z-index: 9999; }
+    .butter-toast-item { background: #fff; border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); font-family: 'Inter', sans-serif; font-size: 13px; animation: butterToast 0.3s ease; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .butter-toast-item.success { border-left: 3px solid #60BC81; }
+    .butter-toast-item.warning { border-left: 3px solid #FEE189; }
+    .butter-toast-item.info { border-left: 3px solid #6D6D6D; }
+    .butter-toast-item.error { border-left: 3px solid #D3695E; }
+    @keyframes butterToast { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
+    .butter-sticky-bar { background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .butter-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 200px; overflow-y: auto; z-index: 50; }
+    .butter-dropdown-item { padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; transition: background 0.1s; }
+    .butter-dropdown-item:hover { background: #F1EFEB; }
+    .butter-dropdown-item + .butter-dropdown-item { border-top: 1px solid #F8F7F5; }
+    .butter-chevron { display: inline-block; font-size: 10px; color: #C9C1B1; transition: transform 0.2s; }
+    .butter-chevron.open { transform: rotate(90deg); }
+    .butter-order-btn { background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 11px; padding: 2px 4px; line-height: 1; }
+    .butter-order-btn:hover { color: #111; }
+    .butter-order-btn:disabled { opacity: 0.2; cursor: default; }
+    .unsaved-dot { width: 6px; height: 6px; border-radius: 50%; background: #FEE189; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="homeSections()">
+
+    <!-- Toasts -->
+    <div class="butter-toast">
+        <template x-for="(toast, ti) in toasts" :key="toast._id">
+            <div class="butter-toast-item" :class="toast.type"
+                 x-init="setTimeout(() => removeToast(ti), 2500)">
+                <span x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
+
+    <div class="max-w-5xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;">
+                        Sections de la Home
+                    </h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span style="font-family: 'Inter'; font-size: 13px; color: #888;" x-text="sections.length + ' sections'"></span>
+                        <span class="butter-pill butter-pill-green" x-text="sections.filter(s => s.isActive).length + ' actives'"></span>
+                        <template x-if="hasChanges">
+                            <span class="butter-pill butter-pill-yellow" style="gap: 4px;">
+                                <span class="unsaved-dot"></span> Non sauvegardé
+                            </span>
+                        </template>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="filterCity" class="butter-select">
+                        <option value="">Toutes villes</option>
+                        <option value="Paris">Paris</option>
+                        <option value="Marrakech">Marrakech</option>
+                        <option value="Londres">Londres</option>
+                        <option value="Mykonos">Mykonos</option>
+                    </select>
+                    <button @click="addSection()" class="butter-btn butter-btn-primary">+ Nouvelle section</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections -->
+        <div class="space-y-3">
+            <template x-for="section in filteredSections()" :key="section._uid">
+                <div class="butter-card butter-section"
+                     :class="{
+                         'is-active': section.isActive,
+                         'is-inactive': !section.isActive,
+                         'is-open': section._expanded,
+                     }">
+
+                    <!-- Header row -->
+                    <div style="padding: 14px 20px; cursor: pointer; user-select: none;"
+                         class="flex items-center gap-3" @click="section._expanded = !section._expanded">
+
+                        <span class="butter-chevron" :class="section._expanded && 'open'">&#9654;</span>
+
+                        <!-- Order -->
+                        <div class="flex items-center gap-0.5" @click.stop>
+                            <button @click="moveSection(section, -1)" class="butter-order-btn" :disabled="section.order <= 0">&uarr;</button>
+                            <span style="font-family: 'Inter'; font-size: 11px; font-weight: 600; color: #C9C1B1; background: #F1EFEB; padding: 2px 8px; border-radius: 6px;" x-text="section.order"></span>
+                            <button @click="moveSection(section, 1)" class="butter-order-btn">&darr;</button>
+                        </div>
+
+                        <!-- Title -->
+                        <span style="font-family: 'Inter'; font-weight: 600; font-size: 15px; color: #111; flex: 1;"
+                              :style="!section.title && 'color: #C9C1B1; font-style: italic;'"
+                              x-text="section.title || 'Sans titre'"></span>
+
+                        <!-- Pills -->
+                        <span class="butter-pill butter-pill-beige" x-text="section.city"></span>
+                        <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
+                              x-text="section.displaySize === 'large' ? 'Grand' : 'Petit'"></span>
+                        <span class="butter-pill" :class="section.isActive ? 'butter-pill-green' : 'butter-pill-grey'"
+                              x-text="section.isActive ? 'Actif' : 'Off'"></span>
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.guideIds.length + ' guides'"></span>
+                    </div>
+
+                    <!-- Expanded content -->
+                    <template x-if="section._expanded">
+                        <div>
+                            <div class="butter-divider"></div>
+                            <div style="padding: 20px;">
+
+                                <!-- Fields -->
+                                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                    <div class="md:col-span-4">
+                                        <span class="butter-label">Titre</span>
+                                        <input type="text" x-model="section.title" @input="markChanged()"
+                                               placeholder="Ex: Brunch spots" class="butter-input w-full">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <span class="butter-label">Ville</span>
+                                        <select x-model="section.city" @change="markChanged()" class="butter-select w-full">
+                                            <option value="Paris">Paris</option>
+                                            <option value="Marrakech">Marrakech</option>
+                                            <option value="Londres">Londres</option>
+                                            <option value="Mykonos">Mykonos</option>
+                                        </select>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <span class="butter-label">Taille</span>
+                                        <select x-model="section.displaySize" @change="markChanged()" class="butter-select w-full">
+                                            <option value="small">Petit (160px)</option>
+                                            <option value="large">Grand (220px)</option>
+                                        </select>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; padding-bottom: 2px;">
+                                            <input type="checkbox" x-model="section.isActive" @change="markChanged()" class="toggle toggle-sm toggle-success">
+                                            <span style="font-family: 'Inter'; font-size: 13px;" x-text="section.isActive ? 'Visible' : 'Masqué'"></span>
+                                        </label>
+                                    </div>
+                                    <div class="md:col-span-2 flex justify-end">
+                                        <button @click="removeSection(section)" class="butter-btn butter-btn-danger">Supprimer</button>
+                                    </div>
+                                </div>
+
+                                <div class="butter-divider" style="margin: 20px 0;"></div>
+
+                                <!-- Guides -->
+                                <div>
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span style="font-family: 'Inter'; font-size: 13px; font-weight: 600; color: #111;">Guides</span>
+                                        <span style="font-family: 'Inter'; font-size: 11px; background: #F1EFEB; color: #888; padding: 1px 8px; border-radius: 10px;" x-text="section.guideIds.length"></span>
+                                    </div>
+
+                                    <!-- Guide list -->
+                                    <div x-show="section.guideIds.length > 0" style="border: 1.5px solid #F1EFEB; border-radius: 12px; overflow: hidden; margin-bottom: 14px;">
+                                        <template x-for="(gid, gi) in section.guideIds" :key="gid">
+                                            <div class="butter-guide-row">
+                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1; width: 16px; text-align: right;" x-text="gi + 1"></span>
+                                                <div class="flex gap-0" @click.stop>
+                                                    <button @click="moveGuide(section, gi, -1)" class="butter-order-btn" :disabled="gi === 0">&uarr;</button>
+                                                    <button @click="moveGuide(section, gi, 1)" class="butter-order-btn" :disabled="gi === section.guideIds.length - 1">&darr;</button>
+                                                </div>
+                                                <span style="font-family: 'Inter'; font-size: 13px; font-weight: 500; color: #111; flex: 1;" x-text="getGuideName(gid)"></span>
+                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1;" x-text="gid"></span>
+                                                <span class="butter-pill butter-pill-beige" style="font-size: 10px; padding: 2px 8px;" x-text="getGuideCity(gid)"></span>
+                                                <button @click="removeGuide(section, gi)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;" title="Retirer">&times;</button>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div x-show="section.guideIds.length === 0"
+                                         style="text-align: center; padding: 20px; background: #FAFAF8; border-radius: 12px; margin-bottom: 14px;">
+                                        <span style="font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucun guide. Commence a taper ci-dessous.</span>
+                                    </div>
+
+                                    <!-- Search -->
+                                    <div x-data="{ q: '', open: false }" style="position: relative; max-width: 400px;">
+                                        <input type="text" x-model="q" @focus="open = true" @click.away="setTimeout(() => open = false, 150)"
+                                               placeholder="Rechercher un guide..." class="butter-input w-full">
+                                        <div x-show="open && q.length > 0" x-cloak class="butter-dropdown">
+                                            <template x-for="g in filterGuides(q, section)" :key="g.id">
+                                                <div @click="addGuide(section, g.id); q = ''" class="butter-dropdown-item">
+                                                    <span style="color: #60BC81; font-weight: 700; font-size: 16px;">+</span>
+                                                    <span style="font-family: 'Inter'; font-weight: 500; flex: 1;" x-text="g.name"></span>
+                                                    <span class="butter-pill butter-pill-beige" style="font-size: 10px; padding: 2px 8px;" x-text="g.city"></span>
+                                                    <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1;" x-text="g.restaurant_count + ' restos'"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="filterGuides(q, section).length === 0">
+                                                <div style="padding: 14px; text-align: center; font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucun résultat</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Empty state -->
+        <template x-if="filteredSections().length === 0">
+            <div class="butter-card" style="text-align: center; padding: 60px 20px;">
+                <div style="font-size: 48px; opacity: 0.2; margin-bottom: 16px;">📱</div>
+                <p style="font-family: 'Inria Serif', serif; font-size: 20px; font-weight: 700; color: #111;"
+                   x-text="filterCity ? 'Aucune section pour ' + filterCity : 'Aucune section'"></p>
+                <p style="font-family: 'Inter'; font-size: 13px; color: #888; margin-top: 8px; max-width: 360px; margin-left: auto; margin-right: auto;">
+                    Chaque section apparait comme un carousel de guides sur la page d'accueil de l'app Butter.
+                </p>
+                <button @click="addSection()" class="butter-btn butter-btn-primary" style="margin-top: 20px;">Creer une section</button>
+            </div>
+        </template>
+
+        <!-- Sticky bar -->
+        <div x-show="sections.length > 0" x-cloak class="butter-sticky">
+            <div class="butter-sticky-bar">
+                <div class="flex items-center gap-3">
+                    <button @click="addSection()" class="butter-btn butter-btn-ghost" style="color: #60BC81;">+ Section</button>
+                    <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;"
+                          x-text="sections.length + ' sections · ' + sections.reduce((t, s) => t + s.guideIds.length, 0) + ' guides'"></span>
+                </div>
+                <form method="post" action="{% url 'scripts_manager:home_sections_save' %}" class="flex items-center gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="sections_data" :value="JSON.stringify(sections)">
+                    <template x-if="hasChanges">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #8B6914; display: flex; align-items: center; gap: 4px;">
+                            <span class="unsaved-dot"></span> En attente
+                        </span>
+                    </template>
+                    <button type="submit" class="butter-btn butter-btn-primary"
+                            :style="!hasChanges && 'opacity: 0.3; pointer-events: none;'">
+                        Sauvegarder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function homeSections() {
+    let uid = 0, tid = 0;
+    return {
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, _expanded: false, _uid: uid++ })),
+        allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
+        filterCity: '', hasChanges: false, toasts: [],
+
+        filteredSections() {
+            if (!this.filterCity) return this.sections;
+            return this.sections.filter(s => s.city === this.filterCity);
+        },
+        markChanged() { this.hasChanges = true; },
+        notify(msg, type = 'info') { this.toasts.push({ message: msg, type, _id: tid++ }); },
+        removeToast(i) { this.toasts.splice(i, 1); },
+
+        addSection() {
+            const city = this.filterCity || 'Paris';
+            const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
+            this.sections.push({ id: '', title: '', guideIds: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
+            this.markChanged();
+            this.notify('Section ajoutee — ' + city, 'success');
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
+        },
+        removeSection(s) {
+            const n = s.title || 'Sans titre';
+            if (!confirm('Supprimer « ' + n + ' » ?')) return;
+            const i = this.sections.indexOf(s);
+            if (i !== -1) this.sections.splice(i, 1);
+            this.markChanged();
+            this.notify('« ' + n + ' » supprimee', 'warning');
+        },
+        moveSection(s, d) {
+            const next = s.order + d;
+            if (next < 0) return;
+            const other = this.sections.find(x => x !== s && x.city === s.city && x.order === next);
+            if (other) other.order = s.order;
+            s.order = next;
+            this.sections.sort((a, b) => (a.city || '').localeCompare(b.city || '') || (a.order || 0) - (b.order || 0));
+            this.markChanged();
+        },
+        addGuide(s, id) {
+            if (s.guideIds.includes(id)) return;
+            s.guideIds.push(id);
+            this.markChanged();
+            this.notify('« ' + this.getGuideName(id) + ' » ajoute', 'success');
+        },
+        removeGuide(s, gi) {
+            const n = this.getGuideName(s.guideIds[gi]);
+            s.guideIds.splice(gi, 1);
+            this.markChanged();
+            this.notify('« ' + n + ' » retire', 'info');
+        },
+        moveGuide(s, i, d) {
+            const j = i + d;
+            if (j < 0 || j >= s.guideIds.length) return;
+            [s.guideIds[i], s.guideIds[j]] = [s.guideIds[j], s.guideIds[i]];
+            this.markChanged();
+        },
+        getGuideName(id) { const g = this.allGuides.find(x => x.id === id); return g ? g.name : id; },
+        getGuideCity(id) { const g = this.allGuides.find(x => x.id === id); return g ? g.city : ''; },
+        filterGuides(q, s) {
+            const l = q.toLowerCase();
+            return this.allGuides.filter(g => !s.guideIds.includes(g.id) && (g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l))).slice(0, 8);
+        },
+    }
+}
+</script>
+{% endblock %}
