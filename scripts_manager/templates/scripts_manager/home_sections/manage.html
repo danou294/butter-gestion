@@ -209,13 +209,27 @@
                                         <span style="font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucun guide. Commence a taper ci-dessous.</span>
                                     </div>
 
-                                    <!-- Search -->
-                                    <div x-data="{ q: '', open: false }" style="position: relative; max-width: 400px;">
-                                        <input type="text" x-model="q" @focus="open = true" @click.away="setTimeout(() => open = false, 150)"
-                                               placeholder="Rechercher un guide..." class="butter-input w-full">
-                                        <div x-show="open && q.length > 0" x-cloak class="butter-dropdown">
+                                    <!-- Select searchable -->
+                                    <div x-data="{ q: '', open: false }" style="position: relative; max-width: 500px;">
+                                        <div @click="open = true; $nextTick(() => $refs.searchInput.focus())"
+                                             class="butter-input" style="cursor: text; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; min-height: 42px;">
+                                            <template x-for="(gid, gi) in section.guideIds" :key="gid">
+                                                <span style="display: inline-flex; align-items: center; gap: 4px; background: #F1EFEB; border-radius: 8px; padding: 3px 8px 3px 10px; font-family: 'Inter'; font-size: 12px; font-weight: 500; color: #111; white-space: nowrap;">
+                                                    <span x-text="getGuideName(gid)" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis;"></span>
+                                                    <button @click.stop="removeGuide(section, gi)" type="button"
+                                                            style="background: none; border: none; cursor: pointer; color: #999; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 4px;"
+                                                            @mouseenter="$el.style.color='#D3695E'" @mouseleave="$el.style.color='#999'">&times;</button>
+                                                </span>
+                                            </template>
+                                            <input type="text" x-model="q" x-ref="searchInput"
+                                                   @focus="open = true" @click.stop
+                                                   @keydown.escape="open = false; q = ''"
+                                                   placeholder="Ajouter un guide..."
+                                                   style="border: none; outline: none; background: transparent; font-family: 'Inter'; font-size: 13px; flex: 1; min-width: 120px; padding: 2px 0;">
+                                        </div>
+                                        <div x-show="open" @click.away="open = false; q = ''" x-cloak class="butter-dropdown" style="max-height: 240px;">
                                             <template x-for="g in filterGuides(q, section)" :key="g.id">
-                                                <div @click="addGuide(section, g.id); q = ''" class="butter-dropdown-item">
+                                                <div @click="addGuide(section, g.id); q = ''; $nextTick(() => $refs.searchInput.focus())" class="butter-dropdown-item">
                                                     <span style="color: #60BC81; font-weight: 700; font-size: 16px;">+</span>
                                                     <span style="font-family: 'Inter'; font-weight: 500; flex: 1;" x-text="g.name"></span>
                                                     <span class="butter-pill butter-pill-beige" style="font-size: 10px; padding: 2px 8px;" x-text="g.city"></span>
@@ -338,8 +352,10 @@ function homeSections() {
         getGuideName(id) { const g = this.allGuides.find(x => x.id === id); return g ? g.name : id; },
         getGuideCity(id) { const g = this.allGuides.find(x => x.id === id); return g ? g.city : ''; },
         filterGuides(q, s) {
+            const available = this.allGuides.filter(g => !s.guideIds.includes(g.id));
+            if (!q) return available.slice(0, 12);
             const l = q.toLowerCase();
-            return this.allGuides.filter(g => !s.guideIds.includes(g.id) && (g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l))).slice(0, 8);
+            return available.filter(g => g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l)).slice(0, 12);
         },
     }
 }

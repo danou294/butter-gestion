@@ -17,6 +17,35 @@ import pandas as pd
 from .restaurants_views import get_firestore_client
 from .config import FIREBASE_BUCKET_PROD
 
+HOME_SECTIONS_COLLECTION = 'home_sections'
+
+
+def _load_home_sections(db):
+    """Charge les home_sections actives depuis Firestore."""
+    sections = []
+    for doc in db.collection(HOME_SECTIONS_COLLECTION).get():
+        data = doc.to_dict()
+        data['id'] = doc.id
+        sections.append(data)
+    sections.sort(key=lambda s: (s.get('city', ''), s.get('order', 999)))
+    return sections
+
+
+def _update_home_sections(db, guide_id, selected_section_ids):
+    """Ajoute/retire un guide des home_sections selon les sections cochées."""
+    all_sections = db.collection(HOME_SECTIONS_COLLECTION).get()
+    for doc in all_sections:
+        section_data = doc.to_dict()
+        guide_ids = section_data.get('guideIds', [])
+        if doc.id in selected_section_ids:
+            if guide_id not in guide_ids:
+                guide_ids.append(guide_id)
+                db.collection(HOME_SECTIONS_COLLECTION).document(doc.id).update({'guideIds': guide_ids})
+        else:
+            if guide_id in guide_ids:
+                guide_ids.remove(guide_id)
+                db.collection(HOME_SECTIONS_COLLECTION).document(doc.id).update({'guideIds': guide_ids})
+
 
 # ==================== LISTE DES GUIDES ====================
 
@@ -209,6 +238,10 @@ def guide_create(request):
 
             doc_ref.set(guide_data)
 
+            # Mettre à jour les home_sections
+            home_section_ids = request.POST.getlist('home_sections')
+            _update_home_sections(db, guide_id, home_section_ids)
+
             featured_label = " (Coup de coeur)" if is_featured else ""
             premium_label = " (Premium)" if is_premium else ""
             messages.success(request, f"Guide '{name}'{premium_label}{featured_label} créé avec succès !")
@@ -235,13 +268,17 @@ def guide_create(request):
     try:
         db = get_firestore_client(request)
         all_restaurants = _load_all_restaurants(db)
+        home_sections = _load_home_sections(db)
     except Exception:
         all_restaurants = []
+        home_sections = []
 
     return render(request, 'scripts_manager/guides/form.html', {
         'mode': 'create',
         'firebase_bucket': FIREBASE_BUCKET_PROD,
         'all_restaurants': all_restaurants,
+        'home_sections': home_sections,
+        'guide_section_ids': [],
     })
 
 
@@ -323,6 +360,10 @@ def guide_edit(request, guide_id):
 
             doc_ref.update(update_data)
 
+            # Mettre à jour les home_sections
+            home_section_ids = request.POST.getlist('home_sections')
+            _update_home_sections(db, guide_id, home_section_ids)
+
             featured_label = " (Coup de coeur)" if is_featured else ""
             premium_label = " (Premium)" if is_premium else ""
             messages.success(request, f"Guide '{name}'{premium_label}{featured_label} mis à jour avec succès !")
@@ -365,12 +406,18 @@ def guide_edit(request, guide_id):
         if 'restaurantIds' in guide_data and isinstance(guide_data['restaurantIds'], list):
             guide_data['restaurantIds_display'] = ', '.join(guide_data['restaurantIds'])
 
+        # Charger home_sections et identifier celles qui contiennent ce guide
+        home_sections = _load_home_sections(db)
+        guide_section_ids = [s['id'] for s in home_sections if guide_id in s.get('guideIds', [])]
+
         context = {
             'guide': guide_data,
             'guide_id': guide_id,
             'mode': 'edit',
             'firebase_bucket': FIREBASE_BUCKET_PROD,
             'all_restaurants': all_restaurants,
+            'home_sections': home_sections,
+            'guide_section_ids': guide_section_ids,
         }
 
         return render(request, 'scripts_manager/guides/form.html', context)

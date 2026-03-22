@@ -65,12 +65,45 @@
                         <label class="label"><span class="label-text-alt text-secondary">Plus petit = affiché en premier</span></label>
                     </div>
 
-                    <div class="form_control">
-                        <label class="label"><span class="label-text font-medium">Restaurant lié (ID)</span></label>
-                        <input type="text" name="restaurantId"
-                               value="{% if mode == 'edit' %}{{ video.restaurantId|default:'' }}{% endif %}"
-                               class="input input-bordered w-full" placeholder="Ex: CHEJ3">
-                        <label class="label"><span class="label-text-alt text-secondary">Optionnel - ID Firestore du restaurant</span></label>
+                    <div class="form-control" x-data="restoSelect()">
+                        <label class="label"><span class="label-text font-medium">Restaurant lié</span></label>
+                        <div style="position: relative;">
+                            <div @click="open = true; $nextTick(() => $refs.restoQ.focus())"
+                                 class="input input-bordered w-full flex items-center gap-2 cursor-text"
+                                 style="min-height: 42px; padding: 6px 12px;">
+                                <template x-if="selectedId">
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; background: #F1EFEB; border-radius: 8px; padding: 3px 8px 3px 10px; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                                        <span x-text="selectedName" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;"></span>
+                                        <button @click.stop="selectedId = ''; selectedName = ''" type="button"
+                                                style="background: none; border: none; cursor: pointer; color: #999; font-size: 14px; line-height: 1; padding: 0 2px;"
+                                                onmouseenter="this.style.color='#D3695E'" onmouseleave="this.style.color='#999'">&times;</button>
+                                    </span>
+                                </template>
+                                <input type="text" x-model="q" x-ref="restoQ"
+                                       @focus="open = true" @click.stop
+                                       @keydown.escape="open = false; q = ''"
+                                       x-show="!selectedId"
+                                       placeholder="Rechercher un restaurant..."
+                                       style="border: none; outline: none; background: transparent; font-size: 13px; flex: 1; min-width: 120px; padding: 2px 0;">
+                            </div>
+                            <div x-show="open" @click.away="open = false; q = ''" x-cloak
+                                 style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 240px; overflow-y: auto; z-index: 50;">
+                                <template x-for="r in filtered()" :key="r.id">
+                                    <div @click="selectedId = r.id; selectedName = r.name; open = false; q = ''"
+                                         style="padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; transition: background 0.1s;"
+                                         onmouseenter="this.style.background='#F1EFEB'" onmouseleave="this.style.background='none'">
+                                        <span style="font-weight: 500; flex: 1;" x-text="r.name"></span>
+                                        <span style="font-size: 11px; color: #888; background: #F1EFEB; padding: 2px 8px; border-radius: 10px;" x-text="r.cuisine || ''"></span>
+                                        <span style="font-size: 10px; color: #C9C1B1;" x-text="r.city"></span>
+                                    </div>
+                                </template>
+                                <template x-if="q.length > 0 && filtered().length === 0">
+                                    <div style="padding: 14px; text-align: center; font-size: 13px; color: #C9C1B1;">Aucun restaurant trouvé</div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="restaurantId" :value="selectedId">
+                        <label class="label"><span class="label-text-alt text-secondary">Optionnel — le restaurant sera affiché en overlay sur le reel</span></label>
                     </div>
                 </div>
 
@@ -188,6 +221,23 @@ function videoUpload() {
                 }
             }
         }
+    }
+}
+
+function restoSelect() {
+    const allRestos = JSON.parse('{{ all_restaurants_json|escapejs }}');
+    return {
+        allRestos,
+        q: '',
+        open: false,
+        selectedId: '{% if mode == "edit" %}{{ video.restaurantId|default:""|escapejs }}{% endif %}',
+        selectedName: '{% if mode == "edit" %}{{ video.restaurantName|default:""|escapejs }}{% endif %}',
+        filtered() {
+            const available = this.allRestos;
+            if (!this.q) return available.slice(0, 12);
+            const l = this.q.toLowerCase();
+            return available.filter(r => r.name.toLowerCase().includes(l) || r.id.toLowerCase().includes(l)).slice(0, 12);
+        },
     }
 }
 </script>

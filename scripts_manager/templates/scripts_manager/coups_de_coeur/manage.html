@@ -79,95 +79,98 @@
             </div>
         </div>
 
-        <!-- Ajouter un restaurant -->
-        <div class="card bg-base-100 shadow-sm border border-base-300 mb-6">
-            <div class="card-body">
-                <h2 class="card-title text-lg mb-3">➕ Ajouter un restaurant</h2>
-                <div class="flex flex-col md:flex-row gap-3">
-                    <div class="flex-1">
-                        <input type="text"
-                               x-model="searchQuery"
-                               @input="filterRestaurants()"
-                               placeholder="Rechercher par nom..."
-                               class="input input-bordered w-full"
-                        />
-                        <!-- Résultats de recherche -->
-                        <div x-show="searchQuery.length > 0 && filteredRestaurants.length > 0"
-                             class="mt-2 max-h-60 overflow-y-auto border border-base-300 rounded-lg bg-white">
-                            <template x-for="r in filteredRestaurants" :key="r.id">
-                                <button type="button"
-                                        @click="addRestaurant(r)"
-                                        class="flex items-center justify-between w-full px-4 py-2.5 hover:bg-base-200 transition-colors text-left border-b border-base-200 last:border-b-0"
-                                        :class="{ 'opacity-40 cursor-not-allowed': selectedIds.includes(r.id) }">
-                                    <div>
-                                        <span class="font-medium text-sm" x-text="r.name"></span>
-                                        <span class="text-xs text-gray-400 ml-2" x-text="r.cuisine"></span>
-                                        <span class="text-xs text-gray-400 ml-1" x-text="r.arrondissement"></span>
-                                    </div>
-                                    <span x-show="selectedIds.includes(r.id)" class="text-xs text-success">✓ déjà ajouté</span>
-                                    <span x-show="!selectedIds.includes(r.id)" class="text-xs text-primary">+ ajouter</span>
-                                </button>
-                            </template>
-                        </div>
-                        <div x-show="searchQuery.length > 0 && filteredRestaurants.length === 0"
-                             class="mt-2 p-3 text-sm text-gray-400 border border-base-300 rounded-lg">
-                            Aucun restaurant trouvé.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Restaurants sélectionnés -->
+        <!-- Select searchable + sélection -->
         <div class="card bg-base-100 shadow-sm border border-base-300 mb-6">
             <div class="card-body">
                 <h2 class="card-title text-lg mb-3">
-                    🏆 Sélection actuelle
+                    🏆 Restaurants sélectionnés
                     <span class="badge badge-primary" x-text="selectedIds.length"></span>
                 </h2>
 
-                <div x-show="selectedIds.length === 0" class="text-center py-8 text-gray-400">
-                    <p class="text-lg">Aucun restaurant sélectionné</p>
-                    <p class="text-sm mt-1">Utilisez la recherche ci-dessus pour ajouter des restaurants.</p>
+                <!-- Select searchable avec chips -->
+                <div style="position: relative; max-width: 600px;">
+                    <div @click="$refs.restoSearch.focus(); searchOpen = true"
+                         style="cursor: text; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; min-height: 46px; border: 1.5px solid #E0E0E0; border-radius: 12px; background: #fff; transition: border-color 0.2s;"
+                         :style="searchOpen && 'border-color: #60BC81; box-shadow: 0 0 0 3px rgba(96,188,129,0.1);'">
+                        <template x-for="(id, index) in selectedIds" :key="id">
+                            <span style="display: inline-flex; align-items: center; gap: 4px; background: #F1EFEB; border-radius: 8px; padding: 4px 8px 4px 10px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #111; white-space: nowrap;">
+                                <span x-text="(index + 1) + '. ' + (restaurantDetails[id]?.name || id)" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;"></span>
+                                <button @click.stop="removeRestaurant(index)" type="button"
+                                        style="background: none; border: none; cursor: pointer; color: #999; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 4px;"
+                                        onmouseenter="this.style.color='#D3695E'" onmouseleave="this.style.color='#999'">&times;</button>
+                            </span>
+                        </template>
+                        <input type="text" x-model="searchQuery" x-ref="restoSearch"
+                               @focus="searchOpen = true" @click.stop
+                               @input="filterRestaurants()"
+                               @keydown.escape="searchOpen = false; searchQuery = ''"
+                               placeholder="Rechercher un restaurant..."
+                               style="border: none; outline: none; background: transparent; font-family: 'Inter', sans-serif; font-size: 13px; flex: 1; min-width: 160px; padding: 2px 0;">
+                    </div>
+                    <div x-show="searchOpen" @click.away="searchOpen = false; searchQuery = ''" x-cloak
+                         style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 260px; overflow-y: auto; z-index: 50;">
+                        <template x-for="r in filteredRestaurants" :key="r.id">
+                            <button type="button"
+                                    @click="addRestaurant(r); $nextTick(() => $refs.restoSearch.focus())"
+                                    style="display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; cursor: pointer; font-size: 13px; transition: background 0.1s; border: none; background: none; text-align: left; font-family: 'Inter', sans-serif;"
+                                    onmouseenter="this.style.background='#F1EFEB'" onmouseleave="this.style.background='none'"
+                                    :style="selectedIds.includes(r.id) && 'opacity: 0.35; pointer-events: none;'">
+                                <span style="color: #60BC81; font-weight: 700; font-size: 16px;">+</span>
+                                <span style="font-weight: 500; flex: 1;" x-text="r.name"></span>
+                                <span style="font-size: 11px; color: #888; background: #F1EFEB; padding: 2px 8px; border-radius: 10px;" x-text="r.cuisine || ''"></span>
+                                <span style="font-size: 10px; color: #C9C1B1;" x-text="r.arrondissement || ''"></span>
+                            </button>
+                        </template>
+                        <template x-if="searchQuery.length > 0 && filteredRestaurants.length === 0">
+                            <div style="padding: 14px; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: #C9C1B1;">Aucun restaurant trouvé</div>
+                        </template>
+                        <template x-if="searchQuery.length === 0 && filteredRestaurants.length === 0">
+                            <div style="padding: 14px; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: #C9C1B1;">Tape pour rechercher...</div>
+                        </template>
+                    </div>
                 </div>
 
-                <div class="space-y-2">
+                <!-- Liste ordonnée des sélectionnés -->
+                <div x-show="selectedIds.length > 0" class="space-y-2 mt-4">
                     <template x-for="(id, index) in selectedIds" :key="id">
-                        <div class="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
-                            <span class="text-sm font-bold text-gray-400 w-6 text-center" x-text="index + 1"></span>
+                        <div class="flex items-center gap-3 p-3 rounded-lg" style="background: #FAFAF8; border: 1px solid #F1EFEB;">
+                            <span style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #C9C1B1; width: 20px; text-align: right;" x-text="index + 1"></span>
 
-                            <!-- Logo -->
-                            <div class="w-10 h-10 rounded-lg overflow-hidden bg-base-300 flex-shrink-0">
+                            <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0" style="background: #F1EFEB;">
                                 <img x-show="restaurantDetails[id]?.logoFullUrl"
                                      :src="restaurantDetails[id]?.logoFullUrl"
                                      class="w-full h-full object-cover"
                                      onerror="this.style.display='none'" />
                             </div>
 
-                            <!-- Info -->
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium text-sm truncate" x-text="restaurantDetails[id]?.name || id"></p>
-                                <p class="text-xs text-gray-400">
+                                <p style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;" class="truncate" x-text="restaurantDetails[id]?.name || id"></p>
+                                <p style="font-family: 'Inter', sans-serif; font-size: 11px; color: #888;">
                                     <span x-text="restaurantDetails[id]?.cuisine || ''"></span>
                                     <span x-show="restaurantDetails[id]?.arrondissement"> · </span>
                                     <span x-text="restaurantDetails[id]?.arrondissement || ''"></span>
                                 </p>
                             </div>
 
-                            <!-- Actions -->
                             <div class="flex items-center gap-1">
                                 <button type="button" @click="moveUp(index)"
-                                        class="btn btn-ghost btn-xs" :disabled="index === 0">↑</button>
+                                        style="background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 12px; padding: 2px 4px;" :disabled="index === 0"
+                                        onmouseenter="this.style.color='#111'" onmouseleave="this.style.color='#C9C1B1'">↑</button>
                                 <button type="button" @click="moveDown(index)"
-                                        class="btn btn-ghost btn-xs" :disabled="index === selectedIds.length - 1">↓</button>
+                                        style="background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 12px; padding: 2px 4px;" :disabled="index === selectedIds.length - 1"
+                                        onmouseenter="this.style.color='#111'" onmouseleave="this.style.color='#C9C1B1'">↓</button>
                                 <button type="button" @click="removeRestaurant(index)"
-                                        class="btn btn-ghost btn-xs text-error">✕</button>
+                                        style="background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 16px; padding: 2px 4px;"
+                                        onmouseenter="this.style.color='#D3695E'" onmouseleave="this.style.color='#C9C1B1'">✕</button>
                             </div>
 
-                            <!-- Hidden input pour le formulaire -->
                             <input type="hidden" name="restaurant_ids" :value="id" />
                         </div>
                     </template>
+                </div>
+
+                <div x-show="selectedIds.length === 0" style="text-align: center; padding: 24px; color: #C9C1B1; font-family: 'Inter', sans-serif; font-size: 13px;">
+                    Aucun restaurant sélectionné — utilise le champ ci-dessus.
                 </div>
             </div>
         </div>
@@ -203,6 +206,7 @@ function coupsDeCoeurManager() {
         restaurantDetails: details,
         allRestaurants: allRestaurants,
         searchQuery: '',
+        searchOpen: false,
         filteredRestaurants: [],
         importResult: null,
 

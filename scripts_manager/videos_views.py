@@ -255,8 +255,24 @@ def video_upload(request):
                 'form_data': request.POST, 'mode': 'create',
             })
 
-    # GET
-    return render(request, 'scripts_manager/videos/upload.html', {'mode': 'create'})
+    # GET — charger les restaurants pour le select searchable
+    all_restaurants = []
+    try:
+        db = get_firestore_client(request)
+        for rdoc in db.collection('restaurants').order_by('name').stream():
+            rdata = rdoc.to_dict()
+            all_restaurants.append({
+                'id': rdoc.id,
+                'name': rdata.get('name', rdoc.id),
+                'cuisine': rdata.get('cuisine', ''),
+                'city': rdata.get('city', 'Paris'),
+            })
+    except Exception:
+        pass
+    return render(request, 'scripts_manager/videos/upload.html', {
+        'mode': 'create',
+        'all_restaurants_json': json.dumps(all_restaurants, default=str),
+    })
 
 
 # ==================== UPLOAD MULTIPLE ====================
@@ -481,8 +497,23 @@ def video_edit(request, video_id):
         video = doc.to_dict()
         video['id'] = doc.id
 
+        # Charger les restaurants pour le select searchable
+        all_restaurants = []
+        try:
+            for rdoc in db.collection('restaurants').order_by('name').stream():
+                rdata = rdoc.to_dict()
+                all_restaurants.append({
+                    'id': rdoc.id,
+                    'name': rdata.get('name', rdoc.id),
+                    'cuisine': rdata.get('cuisine', ''),
+                    'city': rdata.get('city', 'Paris'),
+                })
+        except Exception:
+            pass
+
         return render(request, 'scripts_manager/videos/upload.html', {
             'video': video, 'mode': 'edit', 'video_id': video_id,
+            'all_restaurants_json': json.dumps(all_restaurants, default=str),
         })
 
     except Exception as e:
