@@ -7,7 +7,7 @@
 <style>
     /* Butter App Design System */
     .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
-    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; overflow: hidden; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; overflow: visible; }
     .butter-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
     .butter-pill-beige { background: #F1EFEB; color: #535353; }
@@ -42,7 +42,7 @@
     @keyframes butterToast { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
     .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
     .butter-sticky-bar { background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
-    .butter-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 200px; overflow-y: auto; z-index: 50; }
+    .butter-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 200px; overflow-y: auto; z-index: 9999; }
     .butter-dropdown-item { padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; transition: background 0.1s; }
     .butter-dropdown-item:hover { background: #F1EFEB; }
     .butter-dropdown-item + .butter-dropdown-item { border-top: 1px solid #F8F7F5; }

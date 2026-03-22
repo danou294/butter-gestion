@@ -80,7 +80,7 @@
         </div>
 
         <!-- Select searchable + sélection -->
-        <div class="card bg-base-100 shadow-sm border border-base-300 mb-6">
+        <div class="card bg-base-100 shadow-sm border border-base-300 mb-6" style="overflow: visible;">
             <div class="card-body">
                 <h2 class="card-title text-lg mb-3">
                     🏆 Restaurants sélectionnés
@@ -108,7 +108,7 @@
                                style="border: none; outline: none; background: transparent; font-family: 'Inter', sans-serif; font-size: 13px; flex: 1; min-width: 160px; padding: 2px 0;">
                     </div>
                     <div x-show="searchOpen" @click.away="searchOpen = false; searchQuery = ''" x-cloak
-                         style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 260px; overflow-y: auto; z-index: 50;">
+                         style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 260px; overflow-y: auto; z-index: 9999;">
                         <template x-for="r in filteredRestaurants" :key="r.id">
                             <button type="button"
                                     @click="addRestaurant(r); $nextTick(() => $refs.restoSearch.focus())"

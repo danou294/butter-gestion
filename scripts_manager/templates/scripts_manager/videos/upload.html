@@ -22,7 +22,7 @@
         {% csrf_token %}
 
         <!-- Infos principales -->
-        <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card bg-base-100 shadow-sm border border-base-300" style="overflow: visible;">
             <div class="card-body space-y-4">
                 <h2 class="text-lg font-serif font-bold text-base-content">Informations</h2>
 
@@ -87,7 +87,7 @@
                                        style="border: none; outline: none; background: transparent; font-size: 13px; flex: 1; min-width: 120px; padding: 2px 0;">
                             </div>
                             <div x-show="open" @click.away="open = false; q = ''" x-cloak
-                                 style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 240px; overflow-y: auto; z-index: 50;">
+                                 style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 240px; overflow-y: auto; z-index: 9999;">
                                 <template x-for="r in filtered()" :key="r.id">
                                     <div @click="selectedId = r.id; selectedName = r.name; open = false; q = ''"
                                          style="padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; transition: background 0.1s;"
