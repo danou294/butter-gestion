@@ -353,9 +353,9 @@ function homeSections() {
         getGuideCity(id) { const g = this.allGuides.find(x => x.id === id); return g ? g.city : ''; },
         filterGuides(q, s) {
             const available = this.allGuides.filter(g => !s.guideIds.includes(g.id));
-            if (!q) return available.slice(0, 12);
+            if (!q) return available;
             const l = q.toLowerCase();
-            return available.filter(g => g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l)).slice(0, 12);
+            return available.filter(g => g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l));
         },
     }
 }
