@@ -156,6 +156,9 @@ urlpatterns = [
     path('home-sections/', home_sections_views.home_sections_manage, name='home_sections_manage'),
     path('home-sections/save/', home_sections_views.home_sections_save, name='home_sections_save'),
     path('home-sections/<str:section_id>/delete/', home_sections_views.home_sections_delete, name='home_sections_delete'),
+    path('home-sections/seed-types/', home_sections_views.home_sections_seed_types, name='home_sections_seed_types'),
+    path('home-sections/order/', home_sections_views.home_sections_order, name='home_sections_order'),
+    path('home-sections/order/save/', home_sections_views.home_sections_order_save, name='home_sections_order_save'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),

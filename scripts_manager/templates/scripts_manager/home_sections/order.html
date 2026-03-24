@@ -1,0 +1,212 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Ordre des sections - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-beige { background: #F1EFEB; color: #535353; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-yellow { background: rgba(254,225,137,0.3); color: #8B6914; }
+    .butter-pill-grey { background: #E0E0E0; color: #888; }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .butter-select { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 12px; background: #FEFFFE; }
+    .unsaved-dot { width: 6px; height: 6px; border-radius: 50%; background: #FEE189; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .section-row {
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 20px;
+        transition: background 0.15s, box-shadow 0.15s;
+        cursor: grab;
+        user-select: none;
+    }
+    .section-row:active { cursor: grabbing; }
+    .section-row:hover { background: #FAFAF8; }
+    .section-row + .section-row { border-top: 1px solid #F1EFEB; }
+    .section-row.dragging { opacity: 0.4; background: #F1EFEB; }
+    .section-row.drag-over { box-shadow: 0 -2px 0 0 #60BC81 inset; }
+
+    .drag-handle { color: #C9C1B1; font-size: 16px; cursor: grab; flex-shrink: 0; }
+    .drag-handle:active { cursor: grabbing; }
+
+    .order-badge {
+        font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+        color: #C9C1B1; background: #F1EFEB; padding: 2px 8px; border-radius: 6px;
+        min-width: 28px; text-align: center; flex-shrink: 0;
+    }
+
+    .section-title {
+        font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; color: #111; flex: 1;
+    }
+    .section-inactive { opacity: 0.45; }
+
+    .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
+    .butter-sticky-bar {
+        background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
+        border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08);
+        padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="orderSections()">
+
+    <div class="max-w-3xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;">
+                        Ordre des sections
+                    </h1>
+                    <p style="font-family: 'Inter'; font-size: 13px; color: #888; margin-top: 4px;">
+                        Glisse les sections pour changer leur ordre sur la page d'accueil.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="filterCity" class="butter-select">
+                        <template x-for="city in cities" :key="city">
+                            <option :value="city" x-text="city"></option>
+                        </template>
+                    </select>
+                    <a href="{% url 'scripts_manager:home_sections_manage' %}" class="butter-btn" style="background: transparent; color: #535353;">
+                        Modifier sections
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections list -->
+        <div class="butter-card" style="overflow: hidden;">
+            <template x-if="citySections().length === 0">
+                <div style="padding: 40px; text-align: center;">
+                    <span style="font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucune section pour cette ville.</span>
+                </div>
+            </template>
+
+            <template x-for="(section, idx) in citySections()" :key="section.id">
+                <div class="section-row"
+                     :class="{ 'section-inactive': !section.isActive, 'dragging': dragIdx === idx, 'drag-over': dragOverIdx === idx }"
+                     draggable="true"
+                     @dragstart="onDragStart($event, idx)"
+                     @dragend="onDragEnd()"
+                     @dragover.prevent="onDragOver(idx)"
+                     @drop.prevent="onDrop(idx)">
+
+                    <!-- Drag handle -->
+                    <span class="drag-handle">&#9776;</span>
+
+                    <!-- Order badge -->
+                    <span class="order-badge" x-text="idx"></span>
+
+                    <!-- Type pill -->
+                    <span class="butter-pill"
+                          :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos'}"
+                          x-text="typeLabel(section.type)"></span>
+
+                    <!-- Title -->
+                    <span class="section-title" x-text="section.title || 'Sans titre'"></span>
+
+                    <!-- Active pill -->
+                    <span class="butter-pill" :class="section.isActive ? 'butter-pill-green' : 'butter-pill-grey'"
+                          x-text="section.isActive ? 'Actif' : 'Off'"></span>
+                </div>
+            </template>
+        </div>
+
+        <!-- Sticky save bar -->
+        <div class="butter-sticky">
+            <div class="butter-sticky-bar">
+                <span style="font-family: 'Inter'; font-size: 12px; color: #888;" x-text="citySections().length + ' sections'"></span>
+                <form method="post" action="{% url 'scripts_manager:home_sections_order_save' %}" class="flex items-center gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="order_data" :value="JSON.stringify(buildOrderData())">
+                    <template x-if="hasChanges">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #8B6914; display: flex; align-items: center; gap: 4px;">
+                            <span class="unsaved-dot"></span> Non sauvegardé
+                        </span>
+                    </template>
+                    <button type="submit" class="butter-btn butter-btn-primary"
+                            :style="!hasChanges && 'opacity: 0.3; pointer-events: none;'">
+                        Sauvegarder l'ordre
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function orderSections() {
+    const allSections = JSON.parse('{{ sections_json|escapejs }}').map(s => ({
+        ...s,
+        type: s.type || 'guides',
+    }));
+    const cities = JSON.parse('{{ cities_json|escapejs }}');
+
+    return {
+        sections: allSections,
+        cities: cities.length ? cities : ['Paris'],
+        filterCity: cities.length ? cities[0] : 'Paris',
+        hasChanges: false,
+        dragIdx: null,
+        dragOverIdx: null,
+
+        citySections() {
+            return this.sections
+                .filter(s => s.city === this.filterCity)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        },
+
+        typeLabel(type) {
+            const labels = { guides: 'Guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos' };
+            return labels[type] || 'Guides';
+        },
+
+        // ── Drag & Drop ──
+        onDragStart(e, idx) {
+            this.dragIdx = idx;
+            e.dataTransfer.effectAllowed = 'move';
+        },
+        onDragEnd() {
+            this.dragIdx = null;
+            this.dragOverIdx = null;
+        },
+        onDragOver(idx) {
+            if (this.dragIdx === null || this.dragIdx === idx) return;
+            this.dragOverIdx = idx;
+        },
+        onDrop(targetIdx) {
+            if (this.dragIdx === null || this.dragIdx === targetIdx) return;
+
+            const list = this.citySections();
+            const dragged = list[this.dragIdx];
+            // Remove from old position, insert at new
+            list.splice(this.dragIdx, 1);
+            list.splice(targetIdx, 0, dragged);
+
+            // Reassign order values
+            list.forEach((s, i) => { s.order = i; });
+
+            this.dragIdx = null;
+            this.dragOverIdx = null;
+            this.hasChanges = true;
+        },
+
+        buildOrderData() {
+            return this.sections.map(s => ({ id: s.id, order: s.order }));
+        },
+    };
+}
+</script>
+{% endblock %}

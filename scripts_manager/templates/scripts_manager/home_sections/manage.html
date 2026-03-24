@@ -96,6 +96,12 @@
                         <option value="Londres">Londres</option>
                         <option value="Mykonos">Mykonos</option>
                     </select>
+                    <form method="post" action="{% url 'scripts_manager:home_sections_seed_types' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="butter-btn butter-btn-ghost"
+                                onclick="return confirm('Ajouter les sections Coups de coeur et Vidéos pour chaque ville ?')"
+                                title="Créer les sections coups_de_coeur et videos pour chaque ville active">Initialiser types</button>
+                    </form>
                     <button @click="addSection()" class="butter-btn butter-btn-primary">+ Nouvelle section</button>
                 </div>
             </div>
@@ -131,11 +137,17 @@
 
                         <!-- Pills -->
                         <span class="butter-pill butter-pill-beige" x-text="section.city"></span>
-                        <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
-                              x-text="section.displaySize === 'large' ? 'Grand' : 'Petit'"></span>
+                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos'}"
+                              x-text="sectionTypeLabel(section.type)"></span>
+                        <template x-if="section.type === 'guides'">
+                            <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
+                                  x-text="section.displaySize === 'large' ? 'Grand' : 'Petit'"></span>
+                        </template>
                         <span class="butter-pill" :class="section.isActive ? 'butter-pill-green' : 'butter-pill-grey'"
                               x-text="section.isActive ? 'Actif' : 'Off'"></span>
-                        <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.guideIds.length + ' guides'"></span>
+                        <template x-if="section.type === 'guides'">
+                            <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.guideIds.length + ' guides'"></span>
+                        </template>
                     </div>
 
                     <!-- Expanded content -->
@@ -146,10 +158,18 @@
 
                                 <!-- Fields -->
                                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                                    <div class="md:col-span-4">
+                                    <div class="md:col-span-3">
                                         <span class="butter-label">Titre</span>
                                         <input type="text" x-model="section.title" @input="markChanged()"
                                                placeholder="Ex: Brunch spots" class="butter-input w-full">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <span class="butter-label">Type</span>
+                                        <select x-model="section.type" @change="markChanged()" class="butter-select w-full">
+                                            <option value="guides">Guides</option>
+                                            <option value="coups_de_coeur">Coups de coeur</option>
+                                            <option value="videos">Nos dégustations</option>
+                                        </select>
                                     </div>
                                     <div class="md:col-span-2">
                                         <span class="butter-label">Ville</span>
@@ -160,14 +180,16 @@
                                             <option value="Mykonos">Mykonos</option>
                                         </select>
                                     </div>
-                                    <div class="md:col-span-2">
-                                        <span class="butter-label">Taille</span>
-                                        <select x-model="section.displaySize" @change="markChanged()" class="butter-select w-full">
-                                            <option value="small">Petit (160px)</option>
-                                            <option value="large">Grand (220px)</option>
-                                        </select>
-                                    </div>
-                                    <div class="md:col-span-2">
+                                    <template x-if="section.type === 'guides'">
+                                        <div class="md:col-span-2">
+                                            <span class="butter-label">Taille</span>
+                                            <select x-model="section.displaySize" @change="markChanged()" class="butter-select w-full">
+                                                <option value="small">Petit (160px)</option>
+                                                <option value="large">Grand (220px)</option>
+                                            </select>
+                                        </div>
+                                    </template>
+                                    <div class="md:col-span-1">
                                         <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; padding-bottom: 2px;">
                                             <input type="checkbox" x-model="section.isActive" @change="markChanged()" class="toggle toggle-sm toggle-success">
                                             <span style="font-family: 'Inter'; font-size: 13px;" x-text="section.isActive ? 'Visible' : 'Masqué'"></span>
@@ -178,9 +200,19 @@
                                     </div>
                                 </div>
 
+                                <!-- Info pour types non-guides -->
+                                <template x-if="section.type !== 'guides'">
+                                    <div style="margin-top: 16px; padding: 16px; background: #FAFAF8; border-radius: 12px; text-align: center;">
+                                        <span style="font-family: 'Inter'; font-size: 13px; color: #888;"
+                                              x-text="section.type === 'coups_de_coeur' ? 'Les restaurants Coups de coeur sont gérés depuis la page dédiée.' : 'Les vidéos sont gérées depuis la page Vidéos.'"></span>
+                                    </div>
+                                </template>
+
+                                <!-- Guides (uniquement pour type "guides") -->
+                                <template x-if="section.type === 'guides'">
+                                <div>
                                 <div class="butter-divider" style="margin: 20px 0;"></div>
 
-                                <!-- Guides -->
                                 <div>
                                     <div class="flex items-center gap-2 mb-3">
                                         <span style="font-family: 'Inter'; font-size: 13px; font-weight: 600; color: #111;">Guides</span>
@@ -242,6 +274,8 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
+                                </template>
                             </div>
                         </div>
                     </template>
@@ -268,7 +302,7 @@
                 <div class="flex items-center gap-3">
                     <button @click="addSection()" class="butter-btn butter-btn-ghost" style="color: #60BC81;">+ Section</button>
                     <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;"
-                          x-text="sections.length + ' sections · ' + sections.reduce((t, s) => t + s.guideIds.length, 0) + ' guides'"></span>
+                          x-text="sections.length + ' sections · ' + sections.filter(s => s.type === 'guides').reduce((t, s) => t + s.guideIds.length, 0) + ' guides'"></span>
                 </div>
                 <form method="post" action="{% url 'scripts_manager:home_sections_save' %}" class="flex items-center gap-3">
                     {% csrf_token %}
@@ -294,7 +328,7 @@
 function homeSections() {
     let uid = 0, tid = 0;
     return {
-        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, _expanded: false, _uid: uid++ })),
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', _expanded: false, _uid: uid++ })),
         allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
         filterCity: '', hasChanges: false, toasts: [],
 
@@ -306,10 +340,14 @@ function homeSections() {
         notify(msg, type = 'info') { this.toasts.push({ message: msg, type, _id: tid++ }); },
         removeToast(i) { this.toasts.splice(i, 1); },
 
+        sectionTypeLabel(type) {
+            const labels = { guides: 'Guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos' };
+            return labels[type] || 'Guides';
+        },
         addSection() {
             const city = this.filterCity || 'Paris';
             const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
-            this.sections.push({ id: '', title: '', guideIds: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
+            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
             this.markChanged();
             this.notify('Section ajoutee — ' + city, 'success');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
