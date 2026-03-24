@@ -19,6 +19,7 @@ from . import home_guide_views
 from . import marrakech_views
 from . import videos_views
 from . import home_sections_views
+from . import paywall_config_views
 
 app_name = 'scripts_manager'
 
@@ -159,6 +160,11 @@ urlpatterns = [
     path('home-sections/seed-types/', home_sections_views.home_sections_seed_types, name='home_sections_seed_types'),
     path('home-sections/order/', home_sections_views.home_sections_order, name='home_sections_order'),
     path('home-sections/order/save/', home_sections_views.home_sections_order_save, name='home_sections_order_save'),
+
+    # Paywall Config
+    path('paywall-config/', paywall_config_views.paywall_config_manage, name='paywall_config_manage'),
+    path('paywall-config/save/', paywall_config_views.paywall_config_save, name='paywall_config_save'),
+    path('paywall-config/reset/', paywall_config_views.paywall_config_reset, name='paywall_config_reset'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),

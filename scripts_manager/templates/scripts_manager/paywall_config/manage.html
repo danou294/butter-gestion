@@ -1,0 +1,224 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Paywall Config - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-input { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 14px; background: #FEFFFE; transition: border-color 0.2s; width: 100%; }
+    .butter-input:focus { border-color: #60BC81; outline: none; box-shadow: 0 0 0 3px rgba(96,188,129,0.1); }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-btn-danger { background: transparent; color: #D3695E; }
+    .butter-btn-danger:hover { background: rgba(211,105,94,0.08); }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .butter-divider { height: 1px; background: #F1EFEB; }
+    .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
+    .butter-sticky-bar { background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-yellow { background: rgba(254,225,137,0.3); color: #8B6914; }
+    .unsaved-dot { width: 6px; height: 6px; border-radius: 50%; background: #FEE189; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .reason-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; transition: background 0.15s; }
+    .reason-row:hover { background: #FAFAF8; }
+    .reason-row + .reason-row { border-top: 1px solid #F1EFEB; }
+    .butter-order-btn { background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 11px; padding: 2px 4px; line-height: 1; }
+    .butter-order-btn:hover { color: #111; }
+    .butter-order-btn:disabled { opacity: 0.2; cursor: default; }
+    .butter-toast { position: fixed; top: 90px; right: 20px; z-index: 9999; }
+    .butter-toast-item { background: #fff; border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); font-family: 'Inter', sans-serif; font-size: 13px; animation: butterToast 0.3s ease; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .butter-toast-item.success { border-left: 3px solid #60BC81; }
+    .butter-toast-item.error { border-left: 3px solid #D3695E; }
+    @keyframes butterToast { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="paywallConfig()">
+
+    <!-- Toasts -->
+    <div class="butter-toast">
+        <template x-for="(toast, ti) in toasts" :key="toast._id">
+            <div class="butter-toast-item" :class="toast.type"
+                 x-init="setTimeout(() => toasts.splice(ti, 1), 2500)">
+                <span x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
+
+    <div class="max-w-2xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;">
+                        Paywall — Feedback de refus
+                    </h1>
+                    <p style="font-family: 'Inter'; font-size: 13px; color: #888; margin-top: 4px;">
+                        Bottom sheet affiché quand un utilisateur decline le paywall.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <template x-if="hasChanges">
+                        <span class="butter-pill butter-pill-yellow" style="gap: 4px;">
+                            <span class="unsaved-dot"></span> Non sauvegardé
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Champs principaux -->
+        <div class="butter-card" style="padding: 24px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="butter-label">Titre</span>
+                    <input type="text" x-model="config.title" @input="markChanged()"
+                           placeholder="Tu n'es pas intéressé ?" class="butter-input">
+                </div>
+                <div>
+                    <span class="butter-label">Sous-titre</span>
+                    <input type="text" x-model="config.subtitle" @input="markChanged()"
+                           placeholder="Explique-nous pourquoi" class="butter-input">
+                </div>
+            </div>
+            <div style="margin-top: 16px; max-width: 300px;">
+                <span class="butter-label">Label bouton fermer</span>
+                <input type="text" x-model="config.closeLabel" @input="markChanged()"
+                       placeholder="Fermer" class="butter-input">
+            </div>
+        </div>
+
+        <!-- Raisons -->
+        <div class="butter-card">
+            <div style="padding: 16px 20px;" class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span style="font-family: 'Inter'; font-size: 15px; font-weight: 600; color: #111;">Raisons</span>
+                    <span style="font-family: 'Inter'; font-size: 11px; background: #F1EFEB; color: #888; padding: 1px 8px; border-radius: 10px;"
+                          x-text="config.reasons.length"></span>
+                </div>
+                <button @click="addReason()" class="butter-btn butter-btn-ghost" style="color: #60BC81; font-size: 12px;">+ Ajouter</button>
+            </div>
+            <div class="butter-divider"></div>
+
+            <div x-show="config.reasons.length > 0">
+                <template x-for="(reason, i) in config.reasons" :key="i">
+                    <div class="reason-row">
+                        <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1; width: 16px; text-align: right;" x-text="i + 1"></span>
+                        <div class="flex gap-0">
+                            <button @click="moveReason(i, -1)" class="butter-order-btn" :disabled="i === 0">&uarr;</button>
+                            <button @click="moveReason(i, 1)" class="butter-order-btn" :disabled="i === config.reasons.length - 1">&darr;</button>
+                        </div>
+                        <input type="text" x-model="config.reasons[i]" @input="markChanged()"
+                               class="butter-input" style="flex: 1;" placeholder="Raison...">
+                        <button @click="removeReason(i)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;" title="Supprimer">&times;</button>
+                    </div>
+                </template>
+            </div>
+
+            <div x-show="config.reasons.length === 0"
+                 style="text-align: center; padding: 30px; color: #C9C1B1; font-family: 'Inter'; font-size: 13px;">
+                Aucune raison. Clique sur « + Ajouter » pour en créer.
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="butter-card" style="padding: 24px;">
+            <span class="butter-label" style="margin-bottom: 12px;">Aperçu mobile</span>
+            <div style="max-width: 340px; margin: 0 auto; background: #fff; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); overflow: hidden; border: 1px solid #F1EFEB;">
+                <!-- Handle -->
+                <div style="text-align: center; padding: 10px 0 4px;">
+                    <div style="width: 36px; height: 4px; background: #E0E0E0; border-radius: 2px; margin: 0 auto;"></div>
+                </div>
+                <!-- Content -->
+                <div style="padding: 16px 24px 24px; text-align: center;">
+                    <p style="font-family: 'Inria Serif', serif; font-size: 18px; font-weight: 700; color: #111; margin-bottom: 4px;" x-text="config.title || 'Titre'"></p>
+                    <p style="font-family: 'Inter'; font-size: 13px; color: #888; margin-bottom: 16px;" x-text="config.subtitle || 'Sous-titre'"></p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <template x-for="(reason, i) in config.reasons" :key="i">
+                            <div style="background: #F8F7F5; border-radius: 12px; padding: 12px 16px; font-family: 'Inter'; font-size: 13px; color: #333; text-align: left;"
+                                 x-text="reason"></div>
+                        </template>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <span style="font-family: 'Inter'; font-size: 13px; color: #888; cursor: pointer;" x-text="config.closeLabel || 'Fermer'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky bar -->
+        <div class="butter-sticky">
+            <div class="butter-sticky-bar">
+                <div class="flex items-center gap-3">
+                    <form method="post" action="{% url 'scripts_manager:paywall_config_reset' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="butter-btn butter-btn-ghost"
+                                onclick="return confirm('Remettre les valeurs par défaut ?')">
+                            Réinitialiser
+                        </button>
+                    </form>
+                    <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;"
+                          x-text="config.reasons.length + ' raisons'"></span>
+                </div>
+                <form method="post" action="{% url 'scripts_manager:paywall_config_save' %}" class="flex items-center gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="config_data" :value="JSON.stringify(config)">
+                    <template x-if="hasChanges">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #8B6914; display: flex; align-items: center; gap: 4px;">
+                            <span class="unsaved-dot"></span> En attente
+                        </span>
+                    </template>
+                    <button type="submit" class="butter-btn butter-btn-primary"
+                            :style="!hasChanges && 'opacity: 0.3; pointer-events: none;'">
+                        Sauvegarder
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function paywallConfig() {
+    let tid = 0;
+    return {
+        config: JSON.parse('{{ config_json|escapejs }}'),
+        hasChanges: false,
+        toasts: [],
+
+        markChanged() { this.hasChanges = true; },
+        notify(msg, type = 'success') { this.toasts.push({ message: msg, type, _id: tid++ }); },
+
+        addReason() {
+            this.config.reasons.push('');
+            this.markChanged();
+            this.$nextTick(() => {
+                const inputs = document.querySelectorAll('.reason-row input');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            });
+        },
+        removeReason(i) {
+            this.config.reasons.splice(i, 1);
+            this.markChanged();
+        },
+        moveReason(i, d) {
+            const j = i + d;
+            if (j < 0 || j >= this.config.reasons.length) return;
+            [this.config.reasons[i], this.config.reasons[j]] = [this.config.reasons[j], this.config.reasons[i]];
+            this.markChanged();
+        },
+    }
+}
+</script>
+{% endblock %}
