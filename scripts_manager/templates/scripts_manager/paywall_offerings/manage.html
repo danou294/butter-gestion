@@ -1,0 +1,117 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Configuration Paywalls - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-input { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 14px; background: #FEFFFE; transition: border-color 0.2s; width: 100%; }
+    .butter-input:focus { border-color: #60BC81; outline: none; box-shadow: 0 0 0 3px rgba(96,188,129,0.1); }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-yellow { background: rgba(254,225,137,0.3); color: #8B6914; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-divider { height: 1px; background: #F1EFEB; }
+    .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
+    .butter-sticky-bar { background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .unsaved-dot { width: 6px; height: 6px; border-radius: 50%; background: #FEE189; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .offering-row { padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
+    .offering-row:hover { background: #FAFAF8; }
+    .offering-row + .offering-row { border-top: 1px solid #F1EFEB; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="paywallOfferings()">
+    <div class="max-w-3xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;">
+                        Configuration Paywalls
+                    </h1>
+                    <p style="font-family: 'Inter'; font-size: 13px; color: #888; margin-top: 4px;">
+                        Offering RevenueCat associé à chaque emplacement de paywall dans l'app.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <template x-if="hasChanges">
+                        <span class="butter-pill butter-pill-yellow" style="gap: 4px;">
+                            <span class="unsaved-dot"></span> Non sauvegardé
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offerings -->
+        <div class="butter-card">
+            <template x-for="[key, desc] in placements" :key="key">
+                <div class="offering-row">
+                    <div style="min-width: 280px;">
+                        <span style="font-family: 'Inter'; font-weight: 600; font-size: 13px; color: #111;" x-text="key"></span>
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #888; display: block; margin-top: 2px;" x-text="desc"></span>
+                    </div>
+                    <div style="flex: 1;">
+                        <input type="text" :value="offerings[key] || ''" @input="offerings[key] = $event.target.value; markChanged()"
+                               class="butter-input" placeholder="Offering ID RevenueCat">
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Sticky bar -->
+        <div class="butter-sticky">
+            <div class="butter-sticky-bar">
+                <div class="flex items-center gap-3">
+                    <form method="post" action="{% url 'scripts_manager:paywall_offerings_reset' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="butter-btn butter-btn-ghost"
+                                onclick="return confirm('Remettre les valeurs par défaut ?')">
+                            Réinitialiser
+                        </button>
+                    </form>
+                    <span class="butter-pill butter-pill-green" x-text="placements.length + ' emplacements'"></span>
+                </div>
+                <form method="post" action="{% url 'scripts_manager:paywall_offerings_save' %}" class="flex items-center gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="offerings_data" :value="JSON.stringify(offerings)">
+                    <template x-if="hasChanges">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #8B6914; display: flex; align-items: center; gap: 4px;">
+                            <span class="unsaved-dot"></span> En attente
+                        </span>
+                    </template>
+                    <button type="submit" class="butter-btn butter-btn-primary"
+                            :style="!hasChanges && 'opacity: 0.3; pointer-events: none;'">
+                        Sauvegarder
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function paywallOfferings() {
+    return {
+        offerings: JSON.parse('{{ offerings_json|escapejs }}'),
+        placements: JSON.parse('{{ placements_json|escapejs }}'),
+        hasChanges: false,
+        markChanged() { this.hasChanges = true; },
+    }
+}
+</script>
+{% endblock %}

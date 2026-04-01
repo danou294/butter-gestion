@@ -21,6 +21,7 @@ from . import videos_views
 from . import home_sections_views
 from . import paywall_config_views
 from . import survey_views
+from . import paywall_offerings_views
 
 app_name = 'scripts_manager'
 
@@ -176,6 +177,11 @@ urlpatterns = [
     path('paywall-config/', paywall_config_views.paywall_config_manage, name='paywall_config_manage'),
     path('paywall-config/save/', paywall_config_views.paywall_config_save, name='paywall_config_save'),
     path('paywall-config/reset/', paywall_config_views.paywall_config_reset, name='paywall_config_reset'),
+
+    # Paywall Offerings
+    path('paywall-offerings/', paywall_offerings_views.paywall_offerings_manage, name='paywall_offerings_manage'),
+    path('paywall-offerings/save/', paywall_offerings_views.paywall_offerings_save, name='paywall_offerings_save'),
+    path('paywall-offerings/reset/', paywall_offerings_views.paywall_offerings_reset, name='paywall_offerings_reset'),
 
     # Recherche de restaurants
     path('search/', search_restaurants_views.search_restaurants_index, name='search_restaurants'),
