@@ -20,6 +20,7 @@ from . import marrakech_views
 from . import videos_views
 from . import home_sections_views
 from . import paywall_config_views
+from . import survey_views
 
 app_name = 'scripts_manager'
 
@@ -160,6 +161,16 @@ urlpatterns = [
     path('home-sections/seed-types/', home_sections_views.home_sections_seed_types, name='home_sections_seed_types'),
     path('home-sections/order/', home_sections_views.home_sections_order, name='home_sections_order'),
     path('home-sections/order/save/', home_sections_views.home_sections_order_save, name='home_sections_order_save'),
+
+    # Sondages in-app
+    path('surveys/', survey_views.survey_list, name='survey_list'),
+    path('surveys/create/', survey_views.survey_edit, name='survey_create'),
+    path('surveys/save/', survey_views.survey_save, name='survey_save'),
+    path('surveys/seed/', survey_views.survey_seed, name='survey_seed'),
+    path('surveys/<str:survey_id>/edit/', survey_views.survey_edit, name='survey_edit'),
+    path('surveys/<str:survey_id>/delete/', survey_views.survey_delete, name='survey_delete'),
+    path('surveys/<str:survey_id>/results/', survey_views.survey_results, name='survey_results'),
+    path('surveys/<str:survey_id>/export-csv/', survey_views.survey_export_csv, name='survey_export_csv'),
 
     # Paywall Config
     path('paywall-config/', paywall_config_views.paywall_config_manage, name='paywall_config_manage'),

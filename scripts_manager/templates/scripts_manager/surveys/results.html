@@ -1,0 +1,178 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Résultats sondage - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-beige { background: #F1EFEB; color: #535353; }
+    .butter-select { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 12px; background: #FEFFFE; }
+    .stat-card { padding: 20px; text-align: center; }
+    .stat-number { font-family: 'Inria Serif', serif; font-size: 32px; font-weight: 700; color: #111; }
+    .stat-label { font-family: 'Inter'; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .bar-yes { background: rgba(96,188,129,0.3); border-radius: 6px; height: 24px; transition: width 0.3s; }
+    .bar-no { background: rgba(211,105,94,0.2); border-radius: 6px; height: 24px; transition: width 0.3s; }
+    .question-stat { padding: 16px 20px; }
+    .question-stat + .question-stat { border-top: 1px solid #F1EFEB; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="surveyResults()">
+    <div class="max-w-4xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <a href="{% url 'scripts_manager:survey_list' %}" class="butter-btn butter-btn-ghost" style="padding: 6px 12px;">&larr; Retour</a>
+                        <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;"
+                            x-text="'Résultats — ' + survey.id"></h1>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="filterRestaurant" class="butter-select">
+                        <option value="">Tous les restaurants</option>
+                        <template x-for="rid in restaurantIds" :key="rid">
+                            <option :value="rid" x-text="rid"></option>
+                        </template>
+                    </select>
+                    <a href="{% url 'scripts_manager:survey_export_csv' survey_id='__ID__' %}"
+                       class="butter-btn butter-btn-ghost"
+                       x-init="$el.href = $el.href.replace('__ID__', survey.id)">
+                        Export CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats globales -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="butter-card stat-card">
+                <div class="stat-number" x-text="filteredResponses().length">{{ total_responses }}</div>
+                <div class="stat-label">Réponses totales</div>
+            </div>
+            <div class="butter-card stat-card">
+                <div class="stat-number" x-text="filteredResponses().filter(r => r.completed).length">{{ completed_responses }}</div>
+                <div class="stat-label">Complétées</div>
+            </div>
+            <div class="butter-card stat-card">
+                <div class="stat-number" x-text="uniqueRestaurants()"></div>
+                <div class="stat-label">Restaurants</div>
+            </div>
+            <div class="butter-card stat-card">
+                <div class="stat-number" x-text="uniqueUsers()"></div>
+                <div class="stat-label">Utilisateurs</div>
+            </div>
+        </div>
+
+        <!-- Stats par question -->
+        <div class="butter-card">
+            <div style="padding: 16px 20px;">
+                <span style="font-family: 'Inter'; font-size: 15px; font-weight: 600; color: #111;">Par question</span>
+            </div>
+
+            <template x-for="q in survey.questions" :key="q.id">
+                <div class="question-stat">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="butter-pill butter-pill-beige" style="font-size: 10px;" x-text="q.id"></span>
+                        <span style="font-family: 'Inter'; font-size: 13px; font-weight: 500; color: #111;" x-text="q.text"></span>
+                    </div>
+
+                    <div class="flex items-center gap-3" style="margin-top: 8px;">
+                        <!-- Oui -->
+                        <div style="flex: 1;">
+                            <div class="flex items-center justify-between" style="font-family: 'Inter'; font-size: 11px; margin-bottom: 4px;">
+                                <span style="color: #3C8D57; font-weight: 600;">OUI</span>
+                                <span style="color: #888;" x-text="getQStat(q.id).yes + ' (' + getQStat(q.id).yes_pct + '%)'"></span>
+                            </div>
+                            <div style="background: #F1EFEB; border-radius: 6px; height: 24px; overflow: hidden;">
+                                <div class="bar-yes" :style="'width: ' + getQStat(q.id).yes_pct + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- Non -->
+                        <div style="flex: 1;">
+                            <div class="flex items-center justify-between" style="font-family: 'Inter'; font-size: 11px; margin-bottom: 4px;">
+                                <span style="color: #D3695E; font-weight: 600;">NON</span>
+                                <span style="color: #888;" x-text="getQStat(q.id).no + ' (' + getQStat(q.id).no_pct + '%)'"></span>
+                            </div>
+                            <div style="background: #F1EFEB; border-radius: 6px; height: 24px; overflow: hidden;">
+                                <div class="bar-no" :style="'width: ' + getQStat(q.id).no_pct + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- Total -->
+                        <div style="min-width: 60px; text-align: right;">
+                            <span style="font-family: 'Inter'; font-size: 12px; color: #888;" x-text="getQStat(q.id).total + ' rép.'"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="survey.questions.length === 0">
+                <div style="padding: 40px; text-align: center; font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">
+                    Aucune question dans ce sondage.
+                </div>
+            </template>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function surveyResults() {
+    return {
+        survey: JSON.parse('{{ survey_json|escapejs }}'),
+        allResponses: JSON.parse('{{ responses_json|escapejs }}'),
+        questionStats: JSON.parse('{{ question_stats_json|escapejs }}'),
+        restaurantIds: JSON.parse('{{ restaurant_ids_json|escapejs }}'),
+        filterRestaurant: '',
+
+        filteredResponses() {
+            if (!this.filterRestaurant) return this.allResponses;
+            return this.allResponses.filter(r => r.restaurantId === this.filterRestaurant);
+        },
+
+        uniqueRestaurants() {
+            return new Set(this.filteredResponses().map(r => r.restaurantId)).size;
+        },
+
+        uniqueUsers() {
+            return new Set(this.filteredResponses().map(r => r.userId)).size;
+        },
+
+        getQStat(qid) {
+            const responses = this.filteredResponses();
+            if (this.filterRestaurant) {
+                // Recalculer pour le filtre
+                let yes = 0, no = 0;
+                for (const r of responses) {
+                    const a = (r.responses || {})[qid];
+                    if (a === true) yes++;
+                    else if (a === false) no++;
+                }
+                const total = yes + no;
+                return {
+                    yes, no, total,
+                    yes_pct: total ? Math.round(yes / total * 100) : 0,
+                    no_pct: total ? Math.round(no / total * 100) : 0,
+                };
+            }
+            return this.questionStats[qid] || { yes: 0, no: 0, total: 0, yes_pct: 0, no_pct: 0 };
+        },
+    }
+}
+</script>
+{% endblock %}

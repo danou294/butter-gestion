@@ -1,0 +1,386 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}{% if is_new %}Nouveau sondage{% else %}Modifier sondage{% endif %} - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-input { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 14px; background: #FEFFFE; transition: border-color 0.2s; width: 100%; }
+    .butter-input:focus { border-color: #60BC81; outline: none; box-shadow: 0 0 0 3px rgba(96,188,129,0.1); }
+    .butter-select { border: 1.5px solid #E0E0E0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 12px; background: #FEFFFE; }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-primary { background: #111; color: #fff; }
+    .butter-btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-btn-danger { background: transparent; color: #D3695E; }
+    .butter-btn-danger:hover { background: rgba(211,105,94,0.08); }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-yellow { background: rgba(254,225,137,0.3); color: #8B6914; }
+    .butter-pill-beige { background: #F1EFEB; color: #535353; }
+    .butter-divider { height: 1px; background: #F1EFEB; }
+    .butter-sticky { position: sticky; bottom: 16px; z-index: 40; }
+    .butter-sticky-bar { background: rgba(255,255,255,0.92); backdrop-filter: blur(16px); border-radius: 14px; box-shadow: 0 -2px 20px rgba(0,0,0,0.08); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .unsaved-dot { width: 6px; height: 6px; border-radius: 50%; background: #FEE189; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .question-card { border: 1.5px solid #F1EFEB; border-radius: 12px; padding: 16px; transition: all 0.2s; }
+    .question-card:hover { border-color: #E0E0E0; }
+    .question-card.root { border-left: 3px solid #60BC81; }
+    .question-card.branch-yes { border-left: 3px solid #60BC81; }
+    .question-card.branch-no { border-left: 3px solid #D3695E; }
+    .butter-order-btn { background: none; border: none; cursor: pointer; color: #C9C1B1; font-size: 11px; padding: 2px 4px; line-height: 1; }
+    .butter-order-btn:hover { color: #111; }
+    .butter-order-btn:disabled { opacity: 0.2; cursor: default; }
+    .type-checkbox { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; cursor: pointer; transition: all 0.15s; border: 1.5px solid #E0E0E0; font-family: 'Inter'; font-size: 12px; }
+    .type-checkbox.selected { border-color: #60BC81; background: rgba(96,188,129,0.08); }
+    .tree-line { border-left: 2px dashed #E0E0E0; margin-left: 18px; padding-left: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page" x-data="surveyEdit()">
+    <div class="max-w-3xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'scripts_manager:survey_list' %}" class="butter-btn butter-btn-ghost" style="padding: 6px 12px;">&larr; Retour</a>
+                <h1 style="font-family: 'Inria Serif', serif; font-size: 28px; font-weight: 700; color: #111;"
+                    x-text="isNew ? 'Nouveau sondage' : 'Modifier — ' + survey.id"></h1>
+            </div>
+        </div>
+
+        <!-- Config card -->
+        <div class="butter-card" style="padding: 24px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="butter-label">ID du sondage</span>
+                    <input type="text" x-model="survey.id" @input="markChanged()"
+                           placeholder="ex: survey_1" class="butter-input"
+                           :disabled="!isNew" :style="!isNew && 'opacity: 0.5; cursor: not-allowed;'">
+                </div>
+                <div>
+                    <span class="butter-label">Position dans la fiche</span>
+                    <select x-model="survey.position" @change="markChanged()" class="butter-select w-full">
+                        <template x-for="pos in validPositions" :key="pos">
+                            <option :value="pos" x-text="positionLabels[pos]"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <span class="butter-label">Types d'endroits ciblés</span>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="t in validTargetTypes" :key="t">
+                        <div class="type-checkbox" :class="survey.targetTypes.includes(t) && 'selected'"
+                             @click="toggleTargetType(t)">
+                            <span x-text="survey.targetTypes.includes(t) ? '✓' : ''" style="color: #60BC81; font-weight: 700; width: 12px;"></span>
+                            <span x-text="t"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" x-model="survey.enabled" @change="markChanged()" class="toggle toggle-sm toggle-success">
+                    <span style="font-family: 'Inter'; font-size: 13px;" x-text="survey.enabled ? 'Sondage activé' : 'Sondage désactivé'"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Questions -->
+        <div class="butter-card">
+            <div style="padding: 16px 20px;" class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span style="font-family: 'Inter'; font-size: 15px; font-weight: 600; color: #111;">Questions</span>
+                    <span style="font-family: 'Inter'; font-size: 11px; background: #F1EFEB; color: #888; padding: 1px 8px; border-radius: 10px;"
+                          x-text="survey.questions.length"></span>
+                </div>
+                <button @click="addQuestion()" class="butter-btn butter-btn-ghost" style="color: #60BC81; font-size: 12px;">+ Ajouter</button>
+            </div>
+            <div class="butter-divider"></div>
+
+            <div style="padding: 16px 20px;" class="space-y-3">
+                <!-- Arbre de décision visuel -->
+                <template x-for="(q, qi) in sortedQuestions()" :key="q.id">
+                    <div class="question-card" :class="getQuestionClass(q)"
+                         :style="q.showIf ? 'margin-left: ' + (getDepth(q) * 24) + 'px;' : ''">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="flex gap-0">
+                                <button @click="moveQuestion(qi, -1)" class="butter-order-btn" :disabled="qi === 0">&uarr;</button>
+                                <button @click="moveQuestion(qi, 1)" class="butter-order-btn" :disabled="qi === survey.questions.length - 1">&darr;</button>
+                            </div>
+                            <span class="butter-pill butter-pill-beige" x-text="q.id" style="font-size: 10px;"></span>
+                            <template x-if="!q.showIf">
+                                <span class="butter-pill butter-pill-green" style="font-size: 10px;">Racine</span>
+                            </template>
+                            <template x-if="q.showIf && q.showIf.answer === true">
+                                <span class="butter-pill butter-pill-green" style="font-size: 10px;"
+                                      x-text="'Si OUI à ' + q.showIf.questionId"></span>
+                            </template>
+                            <template x-if="q.showIf && q.showIf.answer === false">
+                                <span style="display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter'; font-size: 10px; font-weight: 500; background: rgba(211,105,94,0.1); color: #D3695E;"
+                                      x-text="'Si NON à ' + q.showIf.questionId"></span>
+                            </template>
+                            <div style="flex: 1;"></div>
+                            <button @click="removeQuestion(qi)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;">&times;</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                            <div class="md:col-span-5">
+                                <span class="butter-label">ID</span>
+                                <input type="text" x-model="q.id" @input="markChanged()"
+                                       placeholder="q1" class="butter-input">
+                            </div>
+                            <div class="md:col-span-7">
+                                <span class="butter-label">Condition d'affichage</span>
+                                <select @change="updateShowIf(q, $event.target.value); markChanged()" class="butter-select w-full"
+                                        :value="showIfValue(q)">
+                                    <option value="always">Toujours (racine)</option>
+                                    <template x-for="oq in survey.questions.filter(x => x.id !== q.id && x.id)" :key="oq.id">
+                                        <option :value="'yes_' + oq.id" x-text="'Si OUI à ' + oq.id"></option>
+                                    </template>
+                                    <template x-for="oq in survey.questions.filter(x => x.id !== q.id && x.id)" :key="'no_' + oq.id">
+                                        <option :value="'no_' + oq.id" x-text="'Si NON à ' + oq.id"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 8px;">
+                            <span class="butter-label">Texte de la question</span>
+                            <input type="text" x-model="q.text" @input="markChanged()"
+                                   placeholder="Est-ce que tu recommanderais ce restaurant ?" class="butter-input">
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="survey.questions.length === 0">
+                    <div style="text-align: center; padding: 30px; color: #C9C1B1; font-family: 'Inter'; font-size: 13px;">
+                        Aucune question. Clique sur « + Ajouter » pour commencer.
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Arbre de décision visuel -->
+        <template x-if="survey.questions.length > 0">
+            <div class="butter-card" style="padding: 24px;">
+                <span class="butter-label" style="margin-bottom: 12px;">Arbre de décision</span>
+                <div style="font-family: 'Inter'; font-size: 13px; color: #333;">
+                    <template x-for="q in getRootQuestions()" :key="q.id">
+                        <div>
+                            <div style="padding: 6px 0; font-weight: 500;" x-text="q.id + ': ' + q.text"></div>
+                            <template x-if="getChildren(q.id, true).length > 0 || getChildren(q.id, false).length > 0">
+                                <div class="tree-line">
+                                    <template x-if="getChildren(q.id, true).length > 0">
+                                        <div>
+                                            <span style="color: #3C8D57; font-weight: 600;">OUI →</span>
+                                            <template x-for="cq in getChildren(q.id, true)" :key="cq.id">
+                                                <div style="padding: 4px 0 4px 12px;">
+                                                    <span x-text="cq.id + ': ' + cq.text"></span>
+                                                    <template x-if="getChildren(cq.id, true).length > 0 || getChildren(cq.id, false).length > 0">
+                                                        <div class="tree-line">
+                                                            <template x-if="getChildren(cq.id, true).length > 0">
+                                                                <div>
+                                                                    <span style="color: #3C8D57; font-weight: 600;">OUI →</span>
+                                                                    <template x-for="ccq in getChildren(cq.id, true)" :key="ccq.id">
+                                                                        <div style="padding: 2px 0 2px 12px;" x-text="ccq.id + ': ' + ccq.text"></div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="getChildren(cq.id, false).length > 0">
+                                                                <div>
+                                                                    <span style="color: #D3695E; font-weight: 600;">NON →</span>
+                                                                    <template x-for="ccq in getChildren(cq.id, false)" :key="ccq.id">
+                                                                        <div style="padding: 2px 0 2px 12px;" x-text="ccq.id + ': ' + ccq.text"></div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="getChildren(q.id, false).length > 0">
+                                        <div>
+                                            <span style="color: #D3695E; font-weight: 600;">NON →</span>
+                                            <template x-for="cq in getChildren(q.id, false)" :key="cq.id">
+                                                <div style="padding: 4px 0 4px 12px;">
+                                                    <span x-text="cq.id + ': ' + cq.text"></span>
+                                                    <template x-if="getChildren(cq.id, true).length > 0 || getChildren(cq.id, false).length > 0">
+                                                        <div class="tree-line">
+                                                            <template x-if="getChildren(cq.id, true).length > 0">
+                                                                <div>
+                                                                    <span style="color: #3C8D57; font-weight: 600;">OUI →</span>
+                                                                    <template x-for="ccq in getChildren(cq.id, true)" :key="ccq.id">
+                                                                        <div style="padding: 2px 0 2px 12px;" x-text="ccq.id + ': ' + ccq.text"></div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="getChildren(cq.id, false).length > 0">
+                                                                <div>
+                                                                    <span style="color: #D3695E; font-weight: 600;">NON →</span>
+                                                                    <template x-for="ccq in getChildren(cq.id, false)" :key="ccq.id">
+                                                                        <div style="padding: 2px 0 2px 12px;" x-text="ccq.id + ': ' + ccq.text"></div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Sticky bar -->
+        <div class="butter-sticky">
+            <div class="butter-sticky-bar">
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'scripts_manager:survey_list' %}" class="butter-btn butter-btn-ghost">Annuler</a>
+                    <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;"
+                          x-text="survey.questions.length + ' question(s)'"></span>
+                </div>
+                <form method="post" action="{% url 'scripts_manager:survey_save' %}" class="flex items-center gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="survey_data" :value="JSON.stringify(survey)">
+                    <template x-if="hasChanges">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #8B6914; display: flex; align-items: center; gap: 4px;">
+                            <span class="unsaved-dot"></span> Non sauvegardé
+                        </span>
+                    </template>
+                    <button type="submit" class="butter-btn butter-btn-primary"
+                            :style="!hasChanges && 'opacity: 0.3; pointer-events: none;'">
+                        Sauvegarder
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function surveyEdit() {
+    let qCount = 100;
+    return {
+        survey: JSON.parse('{{ survey_json|escapejs }}'),
+        isNew: {{ is_new|yesno:"true,false" }},
+        hasChanges: false,
+        positionLabels: JSON.parse('{{ position_labels_json|escapejs }}'),
+        validPositions: JSON.parse('{{ valid_positions_json|escapejs }}'),
+        validTargetTypes: JSON.parse('{{ valid_target_types_json|escapejs }}'),
+
+        markChanged() { this.hasChanges = true; },
+
+        toggleTargetType(t) {
+            const idx = this.survey.targetTypes.indexOf(t);
+            if (idx >= 0) {
+                if (this.survey.targetTypes.length > 1) {
+                    this.survey.targetTypes.splice(idx, 1);
+                }
+            } else {
+                if (t === 'all') {
+                    this.survey.targetTypes = ['all'];
+                } else {
+                    this.survey.targetTypes = this.survey.targetTypes.filter(x => x !== 'all');
+                    this.survey.targetTypes.push(t);
+                }
+            }
+            this.markChanged();
+        },
+
+        sortedQuestions() {
+            return [...this.survey.questions].sort((a, b) => (a.order || 0) - (b.order || 0));
+        },
+
+        addQuestion() {
+            const nextOrder = this.survey.questions.length > 0
+                ? Math.max(...this.survey.questions.map(q => q.order || 0)) + 1
+                : 1;
+            const nextId = 'q' + nextOrder;
+            this.survey.questions.push({
+                id: nextId,
+                text: '',
+                showIf: null,
+                order: nextOrder,
+            });
+            this.markChanged();
+        },
+
+        removeQuestion(qi) {
+            const sorted = this.sortedQuestions();
+            const q = sorted[qi];
+            const realIdx = this.survey.questions.findIndex(x => x.id === q.id);
+            if (realIdx >= 0) {
+                this.survey.questions.splice(realIdx, 1);
+                this.markChanged();
+            }
+        },
+
+        moveQuestion(qi, d) {
+            const sorted = this.sortedQuestions();
+            const j = qi + d;
+            if (j < 0 || j >= sorted.length) return;
+            const tmpOrder = sorted[qi].order;
+            sorted[qi].order = sorted[j].order;
+            sorted[j].order = tmpOrder;
+            this.markChanged();
+        },
+
+        showIfValue(q) {
+            if (!q.showIf) return 'always';
+            return (q.showIf.answer ? 'yes_' : 'no_') + q.showIf.questionId;
+        },
+
+        updateShowIf(q, val) {
+            if (val === 'always') {
+                q.showIf = null;
+            } else if (val.startsWith('yes_')) {
+                q.showIf = { questionId: val.substring(4), answer: true };
+            } else if (val.startsWith('no_')) {
+                q.showIf = { questionId: val.substring(3), answer: false };
+            }
+        },
+
+        getQuestionClass(q) {
+            if (!q.showIf) return 'root';
+            return q.showIf.answer ? 'branch-yes' : 'branch-no';
+        },
+
+        getDepth(q) {
+            if (!q.showIf) return 0;
+            const parent = this.survey.questions.find(x => x.id === q.showIf.questionId);
+            if (!parent) return 1;
+            return 1 + this.getDepth(parent);
+        },
+
+        getRootQuestions() {
+            return this.survey.questions.filter(q => !q.showIf).sort((a, b) => (a.order || 0) - (b.order || 0));
+        },
+
+        getChildren(qid, answer) {
+            return this.survey.questions.filter(q =>
+                q.showIf && q.showIf.questionId === qid && q.showIf.answer === answer
+            ).sort((a, b) => (a.order || 0) - (b.order || 0));
+        },
+    }
+}
+</script>
+{% endblock %}

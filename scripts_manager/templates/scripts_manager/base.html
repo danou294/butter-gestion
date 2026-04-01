@@ -98,7 +98,7 @@
                     <!-- Dropdown Page d'accueil -->
                     <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
                         <button @click="open = !open"
-                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'recommended' in request.resolver_match.url_name or 'home_guide' in request.resolver_match.url_name or 'home_sections' in request.resolver_match.url_name or 'quick_filter' in request.resolver_match.url_name or 'coups_de_coeur' in request.resolver_match.url_name or 'paywall_config' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
+                                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1 {% if 'recommended' in request.resolver_match.url_name or 'home_guide' in request.resolver_match.url_name or 'home_sections' in request.resolver_match.url_name or 'quick_filter' in request.resolver_match.url_name or 'coups_de_coeur' in request.resolver_match.url_name or 'paywall_config' in request.resolver_match.url_name or 'survey' in request.resolver_match.url_name %}bg-primary text-primary-content{% else %}text-base-content hover:bg-base-200{% endif %}">
                             📱 App
                             <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -122,6 +122,7 @@
                             <div class="my-1 mx-3 border-t border-base-300"></div>
                             <div class="px-4 py-1.5 text-[10px] font-bold text-secondary uppercase tracking-wider">Paywall</div>
                             <a href="{% url 'scripts_manager:paywall_config_manage' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'paywall_config' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">💰 Feedback refus</a>
+                            <a href="{% url 'scripts_manager:survey_list' %}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-base-content hover:bg-base-200 transition-colors {% if 'survey' in request.resolver_match.url_name %}font-bold text-primary{% endif %}">📊 Sondages</a>
                         </div>
                     </div>
 
