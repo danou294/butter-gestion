@@ -53,6 +53,7 @@ DEFAULT_SURVEY = {
     'id': 'survey_1',
     'enabled': True,
     'position': 'above_reviews',
+    'showResults': False,
     'targetTypes': ['restaurant'],
     'questions': [
         {
@@ -135,6 +136,7 @@ def survey_edit(request, survey_id=None):
             survey = {
                 'id': '',
                 'enabled': False,
+                'showResults': False,
                 'position': 'above_reviews',
                 'targetTypes': ['restaurant'],
                 'questions': [],
@@ -176,6 +178,7 @@ def survey_save(request):
             target_types = ['restaurant']
 
         enabled = bool(survey.get('enabled', False))
+        show_results = bool(survey.get('showResults', False))
 
         questions = []
         for q in survey.get('questions', []):
@@ -203,6 +206,7 @@ def survey_save(request):
         clean_survey = {
             'id': survey_id,
             'enabled': enabled,
+            'showResults': show_results,
             'position': position,
             'targetTypes': target_types,
             'questions': questions,

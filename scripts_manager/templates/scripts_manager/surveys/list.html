@@ -68,6 +68,9 @@
                                       x-text="survey.id"></span>
                                 <span class="butter-pill" :class="survey.enabled ? 'butter-pill-green' : 'butter-pill-grey'"
                                       x-text="survey.enabled ? 'Actif' : 'Désactivé'"></span>
+                                <template x-if="survey.showResults">
+                                    <span class="butter-pill butter-pill-blue">Résultats visibles</span>
+                                </template>
                             </div>
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="butter-pill butter-pill-beige" x-text="positionLabels[survey.position] || survey.position"></span>

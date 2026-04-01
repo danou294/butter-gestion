@@ -86,10 +86,14 @@
                 </div>
             </div>
 
-            <div style="margin-top: 16px;">
+            <div style="margin-top: 16px;" class="flex items-center gap-6">
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" x-model="survey.enabled" @change="markChanged()" class="toggle toggle-sm toggle-success">
                     <span style="font-family: 'Inter'; font-size: 13px;" x-text="survey.enabled ? 'Sondage activé' : 'Sondage désactivé'"></span>
+                </label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" x-model="survey.showResults" @change="markChanged()" class="toggle toggle-sm toggle-success">
+                    <span style="font-family: 'Inter'; font-size: 13px;" x-text="survey.showResults ? 'Résultats visibles par les utilisateurs' : 'Résultats masqués'"></span>
                 </label>
             </div>
         </div>
