@@ -35,9 +35,8 @@ VALID_POSITIONS = [
 VALID_TARGET_TYPES = [
     'restaurant',
     'bar',
-    'coffee shop',
-    'cave à manger',
-    'brasserie',
+    'hotel',
+    'daypass',
     'all',
 ]
 

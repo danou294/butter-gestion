@@ -18,7 +18,7 @@ from .restaurants_views import get_firestore_client
 logger = logging.getLogger(__name__)
 
 COLLECTION = 'home_sections'
-VALID_SECTION_TYPES = ('guides', 'coups_de_coeur', 'videos')
+VALID_SECTION_TYPES = ('guides', 'coups_de_coeur', 'videos', 'decide')
 
 
 @login_required
@@ -124,6 +124,28 @@ def home_sections_save(request):
                     display_size = 'small'
                 doc_data['guideIds'] = guide_ids
                 doc_data['displaySize'] = display_size
+
+            # buttons uniquement pour le type "decide"
+            if section_type == 'decide':
+                VALID_BUTTON_IDS = ('swipe', 'spinner', 'battle')
+                raw_buttons = section.get('buttons', [])
+                if not isinstance(raw_buttons, list):
+                    raw_buttons = []
+                buttons = []
+                for btn in raw_buttons:
+                    if not isinstance(btn, dict):
+                        continue
+                    btn_id = (btn.get('id') or '').strip()
+                    if btn_id not in VALID_BUTTON_IDS:
+                        continue
+                    buttons.append({
+                        'id': btn_id,
+                        'label': (btn.get('label') or btn_id).strip(),
+                        'enabled': bool(btn.get('enabled', True)),
+                        'order': int(btn.get('order', 0) or 0),
+                    })
+                buttons.sort(key=lambda b: b['order'])
+                doc_data['buttons'] = buttons
 
             section_id = section.get('id', '').strip()
             if section_id and section_id in existing_ids:

@@ -137,7 +137,7 @@
 
                         <!-- Pills -->
                         <span class="butter-pill butter-pill-beige" x-text="section.city"></span>
-                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos'}"
+                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
                               x-text="sectionTypeLabel(section.type)"></span>
                         <template x-if="section.type === 'guides'">
                             <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
@@ -147,6 +147,9 @@
                               x-text="section.isActive ? 'Actif' : 'Off'"></span>
                         <template x-if="section.type === 'guides'">
                             <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.guideIds.length + ' guides'"></span>
+                        </template>
+                        <template x-if="section.type === 'decide'">
+                            <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.buttons.length + ' boutons'"></span>
                         </template>
                     </div>
 
@@ -169,6 +172,7 @@
                                             <option value="guides">Guides</option>
                                             <option value="coups_de_coeur">Coups de coeur</option>
                                             <option value="videos">Nos dégustations</option>
+                                            <option value="decide">Decide</option>
                                         </select>
                                     </div>
                                     <div class="md:col-span-2">
@@ -200,12 +204,68 @@
                                     </div>
                                 </div>
 
-                                <!-- Info pour types non-guides -->
-                                <template x-if="section.type !== 'guides'">
+                                <!-- Info pour types coups_de_coeur / videos -->
+                                <template x-if="section.type === 'coups_de_coeur' || section.type === 'videos'">
                                     <div style="margin-top: 16px; padding: 16px; background: #FAFAF8; border-radius: 12px; text-align: center;">
                                         <span style="font-family: 'Inter'; font-size: 13px; color: #888;"
                                               x-text="section.type === 'coups_de_coeur' ? 'Les restaurants Coups de coeur sont gérés depuis la page dédiée.' : 'Les vidéos sont gérées depuis la page Vidéos.'"></span>
                                     </div>
+                                </template>
+
+                                <!-- Boutons (uniquement pour type "decide") -->
+                                <template x-if="section.type === 'decide'">
+                                <div>
+                                <div class="butter-divider" style="margin: 20px 0;"></div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span style="font-family: 'Inter'; font-size: 13px; font-weight: 600; color: #111;">Boutons</span>
+                                        <span style="font-family: 'Inter'; font-size: 11px; background: #F1EFEB; color: #888; padding: 1px 8px; border-radius: 10px;" x-text="section.buttons.length"></span>
+                                    </div>
+
+                                    <!-- Button list -->
+                                    <div x-show="section.buttons.length > 0" style="border: 1.5px solid #F1EFEB; border-radius: 12px; overflow: hidden; margin-bottom: 14px;">
+                                        <template x-for="(btn, bi) in section.buttons" :key="btn.id">
+                                            <div class="butter-guide-row" :style="!btn.enabled && 'opacity: 0.45;'">
+                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1; width: 16px; text-align: right;" x-text="bi + 1"></span>
+                                                <div class="flex gap-0" @click.stop>
+                                                    <button @click="moveButton(section, bi, -1)" class="butter-order-btn" :disabled="bi === 0">&uarr;</button>
+                                                    <button @click="moveButton(section, bi, 1)" class="butter-order-btn" :disabled="bi === section.buttons.length - 1">&darr;</button>
+                                                </div>
+                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1; background: #F1EFEB; padding: 2px 8px; border-radius: 6px;" x-text="btn.id"></span>
+                                                <input type="text" x-model="btn.label" @input="markChanged()"
+                                                       style="font-family: 'Inter'; font-size: 13px; font-weight: 500; color: #111; flex: 1; border: 1px solid #E0E0E0; border-radius: 8px; padding: 4px 10px; background: #FEFFFE;">
+                                                <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;" @click.stop>
+                                                    <input type="checkbox" x-model="btn.enabled" @change="markChanged()" class="toggle toggle-sm toggle-success">
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;" x-text="btn.enabled ? 'Visible' : 'Masqué'"></span>
+                                                </label>
+                                                <button @click="removeButton(section, bi)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;" title="Retirer">&times;</button>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div x-show="section.buttons.length === 0"
+                                         style="text-align: center; padding: 20px; background: #FAFAF8; border-radius: 12px; margin-bottom: 14px;">
+                                        <span style="font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucun bouton. Ajoutez-en avec le menu ci-dessous.</span>
+                                    </div>
+
+                                    <!-- Add button dropdown -->
+                                    <div x-data="{ openBtnMenu: false }" style="position: relative; display: inline-block;">
+                                        <button @click="openBtnMenu = !openBtnMenu" class="butter-btn butter-btn-ghost" style="color: #60BC81;">+ Ajouter un bouton</button>
+                                        <div x-show="openBtnMenu" @click.away="openBtnMenu = false" x-cloak class="butter-dropdown" style="min-width: 200px; left: 0; right: auto;">
+                                            <template x-for="mode in availableButtons(section)" :key="mode.id">
+                                                <div @click="addButton(section, mode.id, mode.label); openBtnMenu = false;" class="butter-dropdown-item">
+                                                    <span style="color: #60BC81; font-weight: 700; font-size: 16px;">+</span>
+                                                    <span style="font-family: 'Inter'; font-weight: 500;" x-text="mode.label"></span>
+                                                    <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1;" x-text="mode.id"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="availableButtons(section).length === 0">
+                                                <div style="padding: 14px; text-align: center; font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Tous les boutons sont ajoutés</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
                                 </template>
 
                                 <!-- Guides (uniquement pour type "guides") -->
@@ -328,7 +388,7 @@
 function homeSections() {
     let uid = 0, tid = 0;
     return {
-        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', _expanded: false, _uid: uid++ })),
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], _expanded: false, _uid: uid++ })),
         allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
         filterCity: '', hasChanges: false, toasts: [],
 
@@ -341,13 +401,13 @@ function homeSections() {
         removeToast(i) { this.toasts.splice(i, 1); },
 
         sectionTypeLabel(type) {
-            const labels = { guides: 'Guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos' };
+            const labels = { guides: 'Guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos', decide: 'Decide' };
             return labels[type] || 'Guides';
         },
         addSection() {
             const city = this.filterCity || 'Paris';
             const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
-            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
+            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
             this.markChanged();
             this.notify('Section ajoutee — ' + city, 'success');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
@@ -394,6 +454,38 @@ function homeSections() {
             if (!q) return available;
             const l = q.toLowerCase();
             return available.filter(g => g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l));
+        },
+
+        // --- Decide buttons ---
+        BUTTON_MODES: [
+            { id: 'swipe', label: 'Swipe' },
+            { id: 'spinner', label: 'Spin' },
+            { id: 'battle', label: 'Choose' },
+        ],
+        availableButtons(s) {
+            const existing = (s.buttons || []).map(b => b.id);
+            return this.BUTTON_MODES.filter(m => !existing.includes(m.id));
+        },
+        addButton(s, id, label) {
+            if (!s.buttons) s.buttons = [];
+            if (s.buttons.some(b => b.id === id)) return;
+            s.buttons.push({ id, label, enabled: true, order: s.buttons.length });
+            this.markChanged();
+            this.notify('Bouton « ' + label + ' » ajouté', 'success');
+        },
+        removeButton(s, bi) {
+            const label = s.buttons[bi].label;
+            s.buttons.splice(bi, 1);
+            s.buttons.forEach((b, i) => b.order = i);
+            this.markChanged();
+            this.notify('Bouton « ' + label + ' » retiré', 'info');
+        },
+        moveButton(s, i, d) {
+            const j = i + d;
+            if (j < 0 || j >= s.buttons.length) return;
+            [s.buttons[i], s.buttons[j]] = [s.buttons[j], s.buttons[i]];
+            s.buttons.forEach((b, idx) => b.order = idx);
+            this.markChanged();
         },
     }
 }
