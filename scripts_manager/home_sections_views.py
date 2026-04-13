@@ -113,6 +113,17 @@ def home_sections_save(request):
                 'updatedAt': datetime.utcnow(),
             }
 
+            # Padding (optionnel, nombre >= 0)
+            for pad_field in ('topPadding', 'bottomPadding'):
+                raw_val = section.get(pad_field)
+                if raw_val is not None and raw_val != '' and raw_val is not False:
+                    try:
+                        val = float(raw_val)
+                        if val >= 0:
+                            doc_data[pad_field] = val
+                    except (ValueError, TypeError):
+                        pass
+
             # guideIds et displaySize uniquement pour le type "guides"
             if section_type == 'guides':
                 guide_ids = section.get('guideIds', [])

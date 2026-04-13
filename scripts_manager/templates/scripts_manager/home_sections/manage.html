@@ -204,6 +204,20 @@
                                     </div>
                                 </div>
 
+                                <!-- Padding -->
+                                <div class="grid grid-cols-2 gap-4" style="margin-top: 12px; max-width: 320px;">
+                                    <div>
+                                        <span class="butter-label">Padding haut (px)</span>
+                                        <input type="number" x-model.number="section.topPadding" @input="markChanged()"
+                                               min="0" step="1" placeholder="0" class="butter-input w-full">
+                                    </div>
+                                    <div>
+                                        <span class="butter-label">Padding bas (px)</span>
+                                        <input type="number" x-model.number="section.bottomPadding" @input="markChanged()"
+                                               min="0" step="1" placeholder="0" class="butter-input w-full">
+                                    </div>
+                                </div>
+
                                 <!-- Info pour types coups_de_coeur / videos -->
                                 <template x-if="section.type === 'coups_de_coeur' || section.type === 'videos'">
                                     <div style="margin-top: 16px; padding: 16px; background: #FAFAF8; border-radius: 12px; text-align: center;">
@@ -388,7 +402,7 @@
 function homeSections() {
     let uid = 0, tid = 0;
     return {
-        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], _expanded: false, _uid: uid++ })),
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], topPadding: s.topPadding ?? '', bottomPadding: s.bottomPadding ?? '', _expanded: false, _uid: uid++ })),
         allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
         filterCity: '', hasChanges: false, toasts: [],
 
@@ -407,7 +421,7 @@ function homeSections() {
         addSection() {
             const city = this.filterCity || 'Paris';
             const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
-            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], order: max + 1, displaySize: 'small', isActive: true, city, _expanded: true, _uid: uid++ });
+            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], order: max + 1, displaySize: 'small', isActive: true, city, topPadding: '', bottomPadding: '', _expanded: true, _uid: uid++ });
             this.markChanged();
             this.notify('Section ajoutee — ' + city, 'success');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
