@@ -109,7 +109,7 @@
 
                     <!-- Type pill -->
                     <span class="butter-pill"
-                          :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos'}"
+                          :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-beige': section.type === 'videos'}"
                           x-text="typeLabel(section.type)"></span>
 
                     <!-- Title -->
@@ -169,7 +169,7 @@ function orderSections() {
         },
 
         typeLabel(type) {
-            const labels = { guides: 'Guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos' };
+            const labels = { guides: 'Guides', videos: 'Vidéos' };
             return labels[type] || 'Guides';
         },
 

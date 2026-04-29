@@ -1,0 +1,113 @@
+{% extends "scripts_manager/base.html" %}
+{% load static %}
+
+{% block title %}Historique question - Butter Backoffice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .butter-page { background: #F1EFEB; min-height: 80vh; margin: -2rem -1rem; padding: 2rem 1rem; }
+    .butter-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: none; }
+    .butter-btn { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 12px; font-size: 13px; padding: 8px 20px; transition: all 0.2s; cursor: pointer; border: none; }
+    .butter-btn-ghost { background: transparent; color: #535353; }
+    .butter-btn-ghost:hover { background: #F1EFEB; }
+    .butter-pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; }
+    .butter-pill-green { background: rgba(96,188,129,0.12); color: #3C8D57; }
+    .butter-pill-beige { background: #F1EFEB; color: #535353; }
+    .butter-pill-grey { background: #E0E0E0; color: #888; }
+    .butter-label { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .answer-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+    .answer-bar-wrap { flex: 1; background: #F1EFEB; border-radius: 6px; height: 16px; overflow: hidden; }
+    .answer-bar { background: rgba(96,188,129,0.3); height: 16px; }
+    .version-section { padding: 18px 22px; }
+    .version-section + .version-section { border-top: 1px solid #F1EFEB; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="butter-page">
+    <div class="max-w-3xl mx-auto space-y-5">
+
+        <!-- Header -->
+        <div style="padding: 8px 0;">
+            <div class="flex items-center gap-3 flex-wrap">
+                <a href="{% url 'scripts_manager:survey_edit' survey_id=survey_id %}" class="butter-btn butter-btn-ghost"
+                   style="padding: 6px 12px;">&larr; Retour au sondage</a>
+                <h1 style="font-family: 'Inria Serif', serif; font-size: 24px; font-weight: 700; color: #111;">
+                    Historique — <span style="font-family: monospace;">{{ question.id }}</span>
+                </h1>
+            </div>
+            <p style="font-family: 'Inter'; font-size: 13px; color: #535353; margin-top: 8px;">{{ question.text }}</p>
+        </div>
+
+        <div class="butter-card">
+            {% for v in versions %}
+            <div class="version-section">
+                <div class="flex items-center gap-2 flex-wrap mb-2">
+                    <span class="butter-pill butter-pill-beige" style="font-family: monospace;">{{ v.version_id }}</span>
+                    {% if v.is_current %}
+                    <span class="butter-pill butter-pill-green">Version courante</span>
+                    {% else %}
+                    <span class="butter-pill butter-pill-grey">Archivée</span>
+                    {% endif %}
+                    {% if v.created_at %}
+                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">
+                        Créée le {{ v.created_at|date:"d/m/Y H:i" }}
+                    </span>
+                    {% endif %}
+                    {% if v.archived_at %}
+                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">
+                        · Archivée le {{ v.archived_at|date:"d/m/Y H:i" }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div style="margin-top: 8px;">
+                    {% for ans in v.answers %}
+                    <div class="answer-row">
+                        <div style="min-width: 160px; font-family: 'Inter'; font-size: 12px; color: #333;">{{ ans }}</div>
+                        <div class="answer-bar-wrap">
+                            <div class="answer-bar"
+                                 data-ans="{{ ans }}"
+                                 data-version="{{ v.version_id }}"
+                                 style="width: 0%;"></div>
+                        </div>
+                        <div style="min-width: 80px; text-align: right; font-family: 'Inter'; font-size: 12px; color: #888;"
+                             data-count-ans="{{ ans }}"
+                             data-count-version="{{ v.version_id }}">0</div>
+                    </div>
+                    {% endfor %}
+
+                    <div style="margin-top: 6px; font-family: 'Inter'; font-size: 11px; color: #888;">
+                        Total : {{ v.total_votes }} vote(s)
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="padding: 40px; text-align: center; font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">
+                Aucune version archivée.
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+{{ versions|json_script:"versions-data" }}
+<script>
+(function() {
+    const data = JSON.parse(document.getElementById('versions-data').textContent);
+    data.forEach(v => {
+        const total = v.total_votes || 0;
+        Object.entries(v.vote_counts || {}).forEach(([ans, count]) => {
+            const pct = total ? Math.round(count / total * 100) : 0;
+            document.querySelectorAll(
+                '.answer-bar[data-version="' + CSS.escape(v.version_id) + '"][data-ans="' + CSS.escape(ans) + '"]'
+            ).forEach(el => { el.style.width = pct + '%'; });
+            document.querySelectorAll(
+                '[data-count-version="' + CSS.escape(v.version_id) + '"][data-count-ans="' + CSS.escape(ans) + '"]'
+            ).forEach(el => { el.textContent = count + ' (' + pct + '%)'; });
+        });
+    });
+})();
+</script>
+{% endblock %}

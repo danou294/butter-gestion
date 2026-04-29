@@ -188,6 +188,103 @@ def get_restaurants_with_missing_logos(request=None):
         return set()
 
 
+def list_restaurant_photo_urls(restaurant_id, request=None):
+    """Retourne la liste des URLs publiques des photos webp d'un restaurant.
+    Cherche dans `Photos restaurants/{restaurant_id}{N}.webp` (ex: ALFR1.webp, ALFR2.webp).
+    """
+    try:
+        client = get_storage_client(request)
+        if not client or not restaurant_id:
+            return []
+
+        bucket_name = get_firebase_bucket(request)
+        bucket = client.bucket(bucket_name)
+        prefix = f"Photos restaurants/{restaurant_id}"
+        blobs = list(bucket.list_blobs(prefix=prefix))
+
+        import urllib.parse
+        photos = []
+        for blob in blobs:
+            filename = blob.name.replace("Photos restaurants/", "")
+            if not filename.lower().endswith('.webp'):
+                continue
+            base_name = filename.replace('.webp', '').replace('.WEBP', '')
+            # Le format attendu est {restaurant_id}{N} où N est un entier
+            if not base_name.startswith(restaurant_id):
+                continue
+            suffix = base_name[len(restaurant_id):]
+            if not suffix.isdigit():
+                continue
+            encoded_path = urllib.parse.quote(blob.name, safe='')
+            url = f"https://firebasestorage.googleapis.com/v0/b/{bucket_name}/o/{encoded_path}?alt=media"
+            photos.append({
+                'name': base_name,
+                'number': int(suffix),
+                'url': url,
+            })
+
+        photos.sort(key=lambda p: p['number'])
+        return photos
+    except Exception as e:
+        logger.error(f"Erreur lors du listing des photos pour {restaurant_id}: {e}")
+        return []
+
+
+def list_photos_for_restaurants(restaurant_ids, request=None):
+    """Renvoie un dict {restaurant_id: [{name, number, url}]} en un seul appel Storage.
+    Utilisé par les pages où on doit montrer les photos de plusieurs restos d'un coup.
+    """
+    result = {rid: [] for rid in restaurant_ids}
+    if not restaurant_ids:
+        return result
+    try:
+        client = get_storage_client(request)
+        if not client:
+            return result
+
+        bucket_name = get_firebase_bucket(request)
+        bucket = client.bucket(bucket_name)
+        prefix = "Photos restaurants/"
+        blobs = list(bucket.list_blobs(prefix=prefix))
+
+        # Tri ids par longueur descendante pour matcher le préfixe le plus long en premier
+        # (au cas où un id serait préfixe d'un autre).
+        ids_sorted = sorted(restaurant_ids, key=len, reverse=True)
+        ids_set = set(restaurant_ids)
+        import urllib.parse
+
+        for blob in blobs:
+            filename = blob.name.replace(prefix, "")
+            if not filename.lower().endswith('.webp'):
+                continue
+            base_name = filename.replace('.webp', '').replace('.WEBP', '')
+            matched_id = None
+            suffix = None
+            for rid in ids_sorted:
+                if base_name.startswith(rid):
+                    s = base_name[len(rid):]
+                    if s.isdigit():
+                        matched_id = rid
+                        suffix = s
+                        break
+            if not matched_id or matched_id not in ids_set:
+                continue
+            encoded_path = urllib.parse.quote(blob.name, safe='')
+            url = f"https://firebasestorage.googleapis.com/v0/b/{bucket_name}/o/{encoded_path}?alt=media"
+            result[matched_id].append({
+                'name': base_name,
+                'number': int(suffix),
+                'url': url,
+            })
+
+        for rid in result:
+            result[rid].sort(key=lambda p: p['number'])
+        return result
+    except Exception as e:
+        logger.error(f"Erreur lors du listing batch des photos: {e}")
+        return result
+
+
 def get_restaurant_media_info(restaurant_ids):
     """Récupère les informations sur les photos et logos pour chaque restaurant
     
@@ -647,16 +744,16 @@ def restaurant_edit(request, restaurant_id):
             # Normaliser les champs avant d'afficher le formulaire
             if 'name' not in restaurant_data:
                 restaurant_data['name'] = (
-                    restaurant_data.get('Name') or 
-                    restaurant_data.get('nom') or 
-                    restaurant_data.get('NOM') or 
+                    restaurant_data.get('Name') or
+                    restaurant_data.get('nom') or
+                    restaurant_data.get('NOM') or
                     None
                 )
             if 'address' not in restaurant_data:
                 restaurant_data['address'] = restaurant_data.get('adresse') or restaurant_data.get('Address')
             if 'raw_name' not in restaurant_data:
                 restaurant_data['raw_name'] = restaurant_data.get('Raw_name') or restaurant_data.get('rawName')
-            
+
             return render(request, 'scripts_manager/restaurants/form.html', {
                 'action': 'edit',
                 'restaurant': restaurant_data

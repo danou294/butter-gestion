@@ -1,21 +1,23 @@
 """
 Views pour la gestion des "Recommandés pour toi"
 Collection Firestore : recommended (document 'current')
-Structure : { restaurantIds: [...], updatedAt: timestamp }
-
-Indépendant des "Coups de coeur de la semaine" (collection coups_de_coeur).
+Structure : { restaurantIds: [...], featured_image_overrides: {rid: url}, updatedAt: timestamp }
 """
 
 import csv
 import io
+import json
+import logging
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from datetime import datetime
 
-from .restaurants_views import get_firestore_client
+from .restaurants_views import get_firestore_client, list_photos_for_restaurants
 from .firebase_utils import get_firebase_bucket
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -34,11 +36,13 @@ def recommended_manage(request):
 
         current_ids = []
         updated_at = None
+        featured_overrides = {}
 
         if doc.exists:
             data = doc.to_dict()
             current_ids = data.get('restaurantIds', [])
             updated_at = data.get('updatedAt')
+            featured_overrides = data.get('featured_image_overrides', {}) or {}
 
         # Charger les restaurants sélectionnés avec leurs détails
         selected_restaurants = []
@@ -60,6 +64,9 @@ def recommended_manage(request):
                         rdata['logoFullUrl'] = ''
                     selected_restaurants.append(rdata)
 
+        # Photos disponibles par resto (pour le picker d'override)
+        photos_by_rid = list_photos_for_restaurants(current_ids, request) if current_ids else {}
+
         # Charger TOUS les restaurants pour le sélecteur
         all_restaurants_docs = db.collection('restaurants').order_by('name').stream()
         all_restaurants = []
@@ -79,6 +86,8 @@ def recommended_manage(request):
             'updated_at': updated_at,
             'all_restaurants': all_restaurants,
             'selected_count': len(selected_restaurants),
+            'featured_overrides_json': json.dumps(featured_overrides, ensure_ascii=False),
+            'photos_by_rid_json': json.dumps(photos_by_rid, ensure_ascii=False),
         }
 
         return render(request, 'scripts_manager/recommended/manage.html', context)
@@ -90,6 +99,8 @@ def recommended_manage(request):
             'current_ids': [],
             'all_restaurants': [],
             'selected_count': 0,
+            'featured_overrides_json': '{}',
+            'photos_by_rid_json': '{}',
         })
 
 
@@ -107,20 +118,37 @@ def recommended_save(request):
         restaurant_ids = request.POST.getlist('restaurant_ids')
         restaurant_ids = [rid.strip() for rid in restaurant_ids if rid.strip()]
 
+        # Overrides photos par resto (JSON serialisé par le front)
+        overrides_raw = request.POST.get('featured_overrides', '{}') or '{}'
+        try:
+            overrides = json.loads(overrides_raw)
+        except json.JSONDecodeError:
+            overrides = {}
+
+        clean_overrides = {}
+        if isinstance(overrides, dict):
+            for rid, url in overrides.items():
+                if rid in restaurant_ids and isinstance(url, str) and url.strip():
+                    clean_overrides[rid] = url.strip()
+
         # Sauvegarder dans Firestore
         doc_ref = db.collection('recommended').document('current')
         doc_ref.set({
             'restaurantIds': restaurant_ids,
+            'featured_image_overrides': clean_overrides,
             'updatedAt': datetime.now(),
         })
 
         count = len(restaurant_ids)
+        n_overrides = len(clean_overrides)
+        suffix = f" — {n_overrides} photo(s) override" if n_overrides else ""
         messages.success(
             request,
-            f"Recommandés mis à jour ! {count} restaurant(s) sélectionné(s)."
+            f"Recommandés mis à jour ! {count} restaurant(s) sélectionné(s){suffix}."
         )
 
     except Exception as e:
+        logger.exception("[recommended_save] Erreur: %s", e)
         messages.error(request, f"Erreur lors de la sauvegarde : {str(e)}")
 
     return redirect('scripts_manager:recommended_manage')

@@ -13,7 +13,6 @@ from . import onboarding_views
 from . import revenuecat_views
 from . import quick_filters_views
 from . import signups_views
-from . import coups_de_coeur_views
 from . import recommended_views
 from . import home_guide_views
 from . import marrakech_views
@@ -141,11 +140,6 @@ urlpatterns = [
     path('quick-filters/<str:filter_id>/delete/', quick_filters_views.quick_filter_delete, name='quick_filter_delete'),
     path('quick-filters/<str:filter_id>/json/', quick_filters_views.quick_filter_get_json, name='quick_filter_get_json'),
 
-    # Coups de coeur de la semaine
-    path('coups-de-coeur/', coups_de_coeur_views.coups_de_coeur_manage, name='coups_de_coeur_manage'),
-    path('coups-de-coeur/save/', coups_de_coeur_views.coups_de_coeur_save, name='coups_de_coeur_save'),
-    path('coups-de-coeur/export/', coups_de_coeur_views.coups_de_coeur_export, name='coups_de_coeur_export'),
-
     # Recommandés pour toi
     path('recommandes/', recommended_views.recommended_manage, name='recommended_manage'),
     path('recommandes/save/', recommended_views.recommended_save, name='recommended_save'),
@@ -172,6 +166,8 @@ urlpatterns = [
     path('surveys/<str:survey_id>/delete/', survey_views.survey_delete, name='survey_delete'),
     path('surveys/<str:survey_id>/results/', survey_views.survey_results, name='survey_results'),
     path('surveys/<str:survey_id>/export-csv/', survey_views.survey_export_csv, name='survey_export_csv'),
+    path('surveys/<str:survey_id>/questions/<str:qid>/history/', survey_views.survey_question_history, name='survey_question_history'),
+    path('surveys/targeting-count/', survey_views.survey_targeting_count, name='survey_targeting_count'),
 
     # Paywall Config
     path('paywall-config/', paywall_config_views.paywall_config_manage, name='paywall_config_manage'),

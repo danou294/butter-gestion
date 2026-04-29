@@ -1,7 +1,7 @@
 """
 Views pour la gestion des sections dynamiques de la page d'accueil.
 Collection Firestore : home_sections
-Chaque document = une section avec un type (guides, coups_de_coeur, videos).
+Chaque document = une section avec un type (guides, videos, decide).
 """
 
 import json
@@ -18,7 +18,7 @@ from .restaurants_views import get_firestore_client
 logger = logging.getLogger(__name__)
 
 COLLECTION = 'home_sections'
-VALID_SECTION_TYPES = ('guides', 'coups_de_coeur', 'videos', 'decide')
+VALID_SECTION_TYPES = ('guides', 'videos', 'decide')
 
 
 @login_required
@@ -290,7 +290,7 @@ CITIES = ['Paris', 'Marrakech']
 @require_http_methods(["POST"])
 @login_required
 def home_sections_seed_types(request):
-    """Seed les sections coups_de_coeur et videos pour chaque ville active."""
+    """Seed les sections videos pour chaque ville active + tag les anciennes en 'guides'."""
     try:
         db = get_firestore_client(request)
 
@@ -314,31 +314,12 @@ def home_sections_seed_types(request):
                 s['type'] = 'guides'
                 migrated += 1
 
-        # 2. Créer coups_de_coeur et videos pour chaque ville
+        # 2. Créer videos pour chaque ville si absent
         for city in CITIES:
             city_sections = [s for s in sections if s.get('city') == city]
             city_types = {s.get('type') for s in city_sections}
             existing_orders = [s.get('order', 0) for s in city_sections]
             max_order = max(existing_orders) if existing_orders else -1
-
-            if 'coups_de_coeur' not in city_types:
-                # Décaler les sections existantes de +1
-                for s in city_sections:
-                    db.collection(COLLECTION).document(s['_id']).update({
-                        'order': s.get('order', 0) + 1,
-                    })
-                    s['order'] = s.get('order', 0) + 1
-                db.collection(COLLECTION).add({
-                    'title': 'Coups de coeur',
-                    'type': 'coups_de_coeur',
-                    'order': 0,
-                    'isActive': True,
-                    'city': city,
-                    'createdAt': datetime.utcnow(),
-                    'updatedAt': datetime.utcnow(),
-                })
-                max_order += 1
-                created += 1
 
             if 'videos' not in city_types:
                 db.collection(COLLECTION).add({

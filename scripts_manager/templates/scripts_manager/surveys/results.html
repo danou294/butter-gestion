@@ -20,8 +20,7 @@
     .stat-card { padding: 20px; text-align: center; }
     .stat-number { font-family: 'Inria Serif', serif; font-size: 32px; font-weight: 700; color: #111; }
     .stat-label { font-family: 'Inter'; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-    .bar-yes { background: rgba(96,188,129,0.3); border-radius: 6px; height: 24px; transition: width 0.3s; }
-    .bar-no { background: rgba(211,105,94,0.2); border-radius: 6px; height: 24px; transition: width 0.3s; }
+    .answer-bar { background: rgba(96,188,129,0.3); border-radius: 6px; height: 22px; transition: width 0.3s; }
     .question-stat { padding: 16px 20px; }
     .question-stat + .question-stat { border-top: 1px solid #F1EFEB; }
 </style>
@@ -80,41 +79,45 @@
         <!-- Stats par question -->
         <div class="butter-card">
             <div style="padding: 16px 20px;">
-                <span style="font-family: 'Inter'; font-size: 15px; font-weight: 600; color: #111;">Par question</span>
+                <span style="font-family: 'Inter'; font-size: 15px; font-weight: 600; color: #111;">
+                    Par question (version courante uniquement)
+                </span>
             </div>
 
             <template x-for="q in survey.questions" :key="q.id">
                 <div class="question-stat">
-                    <div class="flex items-center gap-2 mb-2">
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
                         <span class="butter-pill butter-pill-beige" style="font-size: 10px;" x-text="q.id"></span>
+                        <span class="butter-pill butter-pill-green" style="font-size: 10px;"
+                              x-text="getQStat(q.id).current_version_id || (q.current_version_id || 'v1')"></span>
                         <span style="font-family: 'Inter'; font-size: 13px; font-weight: 500; color: #111;" x-text="q.text"></span>
+                        <a :href="'/surveys/' + survey.id + '/questions/' + q.id + '/history/'"
+                           class="butter-btn butter-btn-ghost" style="font-size: 11px; padding: 2px 10px;" target="_blank">
+                            Historique
+                        </a>
                     </div>
 
-                    <div class="flex items-center gap-3" style="margin-top: 8px;">
-                        <!-- Oui -->
-                        <div style="flex: 1;">
-                            <div class="flex items-center justify-between" style="font-family: 'Inter'; font-size: 11px; margin-bottom: 4px;">
-                                <span style="color: #3C8D57; font-weight: 600;">OUI</span>
-                                <span style="color: #888;" x-text="getQStat(q.id).yes + ' (' + getQStat(q.id).yes_pct + '%)'"></span>
+                    <div class="space-y-2" style="margin-top: 10px;">
+                        <template x-for="row in getQStat(q.id).breakdown" :key="row.answer">
+                            <div class="flex items-center gap-3">
+                                <div style="min-width: 140px; font-family: 'Inter'; font-size: 12px; color: #333;"
+                                     x-text="row.answer"></div>
+                                <div style="flex: 1; background: #F1EFEB; border-radius: 6px; height: 22px; overflow: hidden;">
+                                    <div class="answer-bar" :style="'width: ' + row.pct + '%'"></div>
+                                </div>
+                                <div style="min-width: 80px; text-align: right; font-family: 'Inter'; font-size: 12px; color: #888;"
+                                     x-text="row.count + ' (' + row.pct + '%)'"></div>
                             </div>
-                            <div style="background: #F1EFEB; border-radius: 6px; height: 24px; overflow: hidden;">
-                                <div class="bar-yes" :style="'width: ' + getQStat(q.id).yes_pct + '%'"></div>
+                        </template>
+                        <template x-if="getQStat(q.id).breakdown.length === 0">
+                            <div style="font-family: 'Inter'; font-size: 12px; color: #C9C1B1;">
+                                Aucune réponse définie sur la version courante.
                             </div>
-                        </div>
-                        <!-- Non -->
-                        <div style="flex: 1;">
-                            <div class="flex items-center justify-between" style="font-family: 'Inter'; font-size: 11px; margin-bottom: 4px;">
-                                <span style="color: #D3695E; font-weight: 600;">NON</span>
-                                <span style="color: #888;" x-text="getQStat(q.id).no + ' (' + getQStat(q.id).no_pct + '%)'"></span>
-                            </div>
-                            <div style="background: #F1EFEB; border-radius: 6px; height: 24px; overflow: hidden;">
-                                <div class="bar-no" :style="'width: ' + getQStat(q.id).no_pct + '%'"></div>
-                            </div>
-                        </div>
-                        <!-- Total -->
-                        <div style="min-width: 60px; text-align: right;">
-                            <span style="font-family: 'Inter'; font-size: 12px; color: #888;" x-text="getQStat(q.id).total + ' rép.'"></span>
-                        </div>
+                        </template>
+                    </div>
+
+                    <div style="margin-top: 6px; font-family: 'Inter'; font-size: 11px; color: #888;">
+                        Total : <span x-text="getQStat(q.id).total"></span> réponse(s)
                     </div>
                 </div>
             </template>
@@ -153,24 +156,40 @@ function surveyResults() {
             return new Set(this.filteredResponses().map(r => r.userId)).size;
         },
 
+        _legacyAnswerToString(a) {
+            if (a === true) return 'Oui';
+            if (a === false) return 'Non';
+            if (typeof a === 'string') return a;
+            return null;
+        },
+
         getQStat(qid) {
-            const responses = this.filteredResponses();
-            if (this.filterRestaurant) {
-                // Recalculer pour le filtre
-                let yes = 0, no = 0;
-                for (const r of responses) {
-                    const a = (r.responses || {})[qid];
-                    if (a === true) yes++;
-                    else if (a === false) no++;
-                }
-                const total = yes + no;
-                return {
-                    yes, no, total,
-                    yes_pct: total ? Math.round(yes / total * 100) : 0,
-                    no_pct: total ? Math.round(no / total * 100) : 0,
-                };
+            const baseStat = this.questionStats[qid] || {
+                breakdown: [], total: 0, current_version_id: '', answers: []
+            };
+
+            if (!this.filterRestaurant) return baseStat;
+
+            // Filtre par restaurant : on recalcule sur les réponses de la version courante
+            const currentVid = baseStat.current_version_id || 'v1';
+            const answers = baseStat.answers || [];
+            const counts = Object.fromEntries(answers.map(a => [a, 0]));
+            let total = 0;
+            for (const r of this.filteredResponses()) {
+                const a = (r.responses || {})[qid];
+                const ans = this._legacyAnswerToString(a);
+                if (!ans) continue;
+                const v = ((r.versionMap || {})[qid]) || 'v1';
+                if (v !== currentVid) continue;
+                counts[ans] = (counts[ans] || 0) + 1;
+                total++;
             }
-            return this.questionStats[qid] || { yes: 0, no: 0, total: 0, yes_pct: 0, no_pct: 0 };
+            const breakdown = answers.map(a => ({
+                answer: a,
+                count: counts[a] || 0,
+                pct: total ? Math.round((counts[a] || 0) / total * 100) : 0,
+            }));
+            return { ...baseStat, breakdown, total };
         },
     }
 }
