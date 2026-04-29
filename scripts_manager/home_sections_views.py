@@ -139,6 +139,26 @@ def home_sections_save(request):
                 doc_data['guideIds'] = guide_ids
                 doc_data['displaySize'] = display_size
 
+                # Layout overrides (optionnels, vide = fallback sur displaySize)
+                # cardWidth/cardHeight (carousel home) et gridColumns/gridAspectRatio (page section)
+                for fkey in ('cardWidth', 'cardHeight', 'gridAspectRatio'):
+                    raw_val = section.get(fkey)
+                    if raw_val is not None and raw_val != '' and raw_val is not False:
+                        try:
+                            val = float(raw_val)
+                            if val > 0:
+                                doc_data[fkey] = val
+                        except (ValueError, TypeError):
+                            pass
+                raw_cols = section.get('gridColumns')
+                if raw_cols is not None and raw_cols != '' and raw_cols is not False:
+                    try:
+                        val = int(raw_cols)
+                        if val > 0:
+                            doc_data['gridColumns'] = val
+                    except (ValueError, TypeError):
+                        pass
+
             # collections uniquement pour le type "guide_collections"
             if section_type == 'guide_collections':
                 raw_collections = section.get('collections', [])

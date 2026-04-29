@@ -474,6 +474,62 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Layout (avancé) — repliable -->
+                                <div style="margin-top: 18px; border: 1.5px solid #F1EFEB; border-radius: 12px;">
+                                    <button type="button"
+                                            @click="section._layoutOpen = !section._layoutOpen"
+                                            style="width: 100%; background: none; border: none; padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-family: 'Inter'; font-size: 13px; font-weight: 600; color: #535353;">
+                                        <span>⚙️ Layout (avancé)</span>
+                                        <span style="font-size: 11px; color: #C9C1B1;" x-text="section._layoutOpen ? '▲' : '▼'"></span>
+                                    </button>
+                                    <div x-show="section._layoutOpen" x-cloak style="padding: 0 16px 16px 16px;">
+                                        <p style="font-family: 'Inter'; font-size: 11px; color: #888; margin-bottom: 12px;">
+                                            Optionnel — laisse vide pour utiliser la valeur par défaut associée à la taille (Petit/Grand).
+                                        </p>
+
+                                        <div style="margin-bottom: 14px;">
+                                            <span class="butter-label">Carousel home (cards horizontales)</span>
+                                            <div class="grid grid-cols-2 gap-3" style="max-width: 360px;">
+                                                <div>
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">Largeur (px)</span>
+                                                    <input type="number" x-model.number="section.cardWidth" @input="markChanged()"
+                                                           min="40" step="1" placeholder="160 / 220" class="butter-input w-full">
+                                                </div>
+                                                <div>
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">Hauteur (px)</span>
+                                                    <input type="number" x-model.number="section.cardHeight" @input="markChanged()"
+                                                           min="40" step="1" placeholder="160 / 220" class="butter-input w-full">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span class="butter-label">Page « voir tout » (grille)</span>
+                                            <div class="grid grid-cols-2 gap-3" style="max-width: 360px;">
+                                                <div>
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">Colonnes</span>
+                                                    <input type="number" x-model.number="section.gridColumns" @input="markChanged()"
+                                                           min="1" max="6" step="1" placeholder="2" class="butter-input w-full">
+                                                </div>
+                                                <div>
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #888;">Ratio cards (W/H)</span>
+                                                    <input type="number" x-model.number="section.gridAspectRatio" @input="markChanged()"
+                                                           min="0.1" step="0.01" placeholder="0.78" class="butter-input w-full">
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2" style="margin-top: 8px;">
+                                                <span style="font-family: 'Inter'; font-size: 11px; color: #888;">Presets ratio :</span>
+                                                <button type="button" @click="section.gridAspectRatio = 0.78; markChanged()"
+                                                        class="butter-pill butter-pill-beige" style="cursor: pointer;">Portrait 0.78</button>
+                                                <button type="button" @click="section.gridAspectRatio = 1.0; markChanged()"
+                                                        class="butter-pill butter-pill-beige" style="cursor: pointer;">Carré 1.0</button>
+                                                <button type="button" @click="section.gridAspectRatio = 1.5; markChanged()"
+                                                        class="butter-pill butter-pill-beige" style="cursor: pointer;">Paysage 1.5</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 </div>
                                 </template>
                             </div>
@@ -529,7 +585,7 @@ function homeSections() {
     let uid = 0, tid = 0;
     const firebaseBucket = '{{ firebase_bucket|escapejs }}';
     return {
-        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], collections: (s.collections || []).map(c => ({ ...c, guideIds: c.guideIds || [] })), topPadding: s.topPadding ?? '', bottomPadding: s.bottomPadding ?? '', _expanded: false, _uid: uid++ })),
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], collections: (s.collections || []).map(c => ({ ...c, guideIds: c.guideIds || [] })), topPadding: s.topPadding ?? '', bottomPadding: s.bottomPadding ?? '', cardWidth: s.cardWidth ?? '', cardHeight: s.cardHeight ?? '', gridColumns: s.gridColumns ?? '', gridAspectRatio: s.gridAspectRatio ?? '', _expanded: false, _layoutOpen: false, _uid: uid++ })),
         allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
         firebaseBucket: firebaseBucket,
         filterCity: '', hasChanges: false, toasts: [],
@@ -549,7 +605,7 @@ function homeSections() {
         addSection() {
             const city = this.filterCity || 'Paris';
             const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
-            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], collections: [], order: max + 1, displaySize: 'small', isActive: true, city, topPadding: '', bottomPadding: '', _expanded: true, _uid: uid++ });
+            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], collections: [], order: max + 1, displaySize: 'small', isActive: true, city, topPadding: '', bottomPadding: '', cardWidth: '', cardHeight: '', gridColumns: '', gridAspectRatio: '', _expanded: true, _layoutOpen: false, _uid: uid++ });
             this.markChanged();
             this.notify('Section ajoutee — ' + city, 'success');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
