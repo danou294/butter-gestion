@@ -139,8 +139,9 @@ def home_sections_save(request):
                 doc_data['guideIds'] = guide_ids
                 doc_data['displaySize'] = display_size
 
-                # Layout overrides (optionnels, vide = fallback sur displaySize)
-                # cardWidth/cardHeight (carousel home) et gridColumns/gridAspectRatio (page section)
+            # Layout overrides (optionnels, vide = fallback sur displaySize / défauts front)
+            # Appliqués aux types 'guides' ET 'guide_collections' (même sémantique côté front)
+            if section_type in ('guides', 'guide_collections'):
                 for fkey in ('cardWidth', 'cardHeight', 'gridAspectRatio'):
                     raw_val = section.get(fkey)
                     if raw_val is not None and raw_val != '' and raw_val is not False:

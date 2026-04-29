@@ -474,8 +474,11 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
+                                </template>
 
-                                <!-- Layout (avancé) — repliable -->
+                                <!-- Layout (avancé) — repliable, partagé entre 'guides' et 'guide_collections' -->
+                                <template x-if="section.type === 'guides' || section.type === 'guide_collections'">
                                 <div style="margin-top: 18px; border: 1.5px solid #F1EFEB; border-radius: 12px;">
                                     <button type="button"
                                             @click="section._layoutOpen = !section._layoutOpen"
@@ -485,7 +488,10 @@
                                     </button>
                                     <div x-show="section._layoutOpen" x-cloak style="padding: 0 16px 16px 16px;">
                                         <p style="font-family: 'Inter'; font-size: 11px; color: #888; margin-bottom: 12px;">
-                                            Optionnel — laisse vide pour utiliser la valeur par défaut associée à la taille (Petit/Grand).
+                                            Optionnel — laisse vide pour utiliser la valeur par défaut.
+                                            <template x-if="section.type === 'guide_collections'">
+                                                <span> Pour les <b>collections de guides</b>, ces valeurs s'appliquent aux cards collection sur la home et sont aussi héritées par la page guides ouverte au tap d'une collection.</span>
+                                            </template>
                                         </p>
 
                                         <div style="margin-bottom: 14px;">
@@ -529,7 +535,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
                                 </div>
                                 </template>
                             </div>
