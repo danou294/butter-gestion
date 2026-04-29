@@ -185,11 +185,21 @@
                 </div>
 
                 <div class="p-5 overflow-y-auto space-y-4">
-                    <div>
-                        <label class="label py-1"><span class="label-text text-xs font-semibold">URL libre (optionnel)</span></label>
-                        <input type="url" x-model="pickerUrl"
-                               placeholder="https://firebasestorage.googleapis.com/..."
-                               class="input input-bordered input-sm w-full">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="label py-1"><span class="label-text text-xs font-semibold">ID photo (ex: ALFR1)</span></label>
+                            <input type="text" x-model="pickerId"
+                                   @input="pickerUrl = idToUrl($event.target.value)"
+                                   placeholder="ALFR1"
+                                   class="input input-bordered input-sm w-full font-mono">
+                        </div>
+                        <div>
+                            <label class="label py-1"><span class="label-text text-xs font-semibold">URL complète (optionnel)</span></label>
+                            <input type="url" x-model="pickerUrl"
+                                   @input="pickerId = urlToId($event.target.value)"
+                                   placeholder="https://firebasestorage.googleapis.com/..."
+                                   class="input input-bordered input-sm w-full">
+                        </div>
                     </div>
 
                     <template x-if="pickerPhotos.length > 0">
@@ -199,7 +209,7 @@
                             </p>
                             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                 <template x-for="p in pickerPhotos" :key="p.url">
-                                    <div @click="pickerUrl = p.url"
+                                    <div @click="pickerUrl = p.url; pickerId = p.name"
                                          :class="pickerUrl === p.url ? 'ring-4 ring-primary' : 'ring-1 ring-base-300'"
                                          class="cursor-pointer rounded-lg overflow-hidden bg-base-100 hover:ring-2 hover:ring-primary transition">
                                         <div class="aspect-square bg-base-300 overflow-hidden">
@@ -222,7 +232,7 @@
 
                 <div class="p-4 border-t border-base-300 flex items-center justify-between gap-2 bg-base-100">
                     <button type="button" class="btn btn-ghost btn-sm"
-                            @click="pickerUrl = ''">
+                            @click="pickerUrl = ''; pickerId = ''">
                         🧹 Réinitialiser (utiliser la 1ère photo par défaut)
                     </button>
                     <div class="flex gap-2">
@@ -248,6 +258,7 @@ function recommendedManager() {
     const allRestaurants = {{ all_restaurants|safe }};
     const initialOverrides = JSON.parse('{{ featured_overrides_json|escapejs }}');
     const photosByRid = JSON.parse('{{ photos_by_rid_json|escapejs }}');
+    const firebaseBucket = '{{ firebase_bucket|escapejs }}';
 
     const details = {};
     {% for r in selected_restaurants %}
@@ -268,9 +279,11 @@ function recommendedManager() {
         importResult: null,
         overrides: { ...initialOverrides },
         photosByRid: photosByRid,
+        firebaseBucket: firebaseBucket,
         pickerOpen: false,
         pickerRid: null,
         pickerUrl: '',
+        pickerId: '',
         pickerPhotos: [],
 
         getDefaultPhotoUrl(rid) {
@@ -282,9 +295,29 @@ function recommendedManager() {
             return this.overrides[rid] || this.getDefaultPhotoUrl(rid);
         },
 
+        idToUrl(id) {
+            const trimmed = (id || '').trim();
+            if (!trimmed) return '';
+            const path = `Photos restaurants/${trimmed}.webp`;
+            return `https://firebasestorage.googleapis.com/v0/b/${this.firebaseBucket}/o/${encodeURIComponent(path)}?alt=media`;
+        },
+
+        urlToId(url) {
+            if (!url) return '';
+            try {
+                const decoded = decodeURIComponent(url);
+                const m = decoded.match(/Photos restaurants\/([A-Za-z0-9_-]+)\.webp/i);
+                return m ? m[1] : '';
+            } catch (e) {
+                return '';
+            }
+        },
+
         openPicker(rid) {
             this.pickerRid = rid;
-            this.pickerUrl = this.overrides[rid] || '';
+            const existing = this.overrides[rid] || '';
+            this.pickerUrl = existing;
+            this.pickerId = this.urlToId(existing);
             this.pickerPhotos = this.photosByRid[rid] || [];
             this.pickerOpen = true;
         },
@@ -293,12 +326,16 @@ function recommendedManager() {
             this.pickerOpen = false;
             this.pickerRid = null;
             this.pickerUrl = '';
+            this.pickerId = '';
             this.pickerPhotos = [];
         },
 
         confirmPicker() {
             const rid = this.pickerRid;
-            const url = (this.pickerUrl || '').trim();
+            // Si l'utilisateur a saisi un ID mais pas l'URL (ou vice-versa), on synchronise
+            let url = (this.pickerUrl || '').trim();
+            const id = (this.pickerId || '').trim();
+            if (!url && id) url = this.idToUrl(id);
             if (rid) {
                 if (url) {
                     this.overrides[rid] = url;

@@ -88,6 +88,7 @@ def recommended_manage(request):
             'selected_count': len(selected_restaurants),
             'featured_overrides_json': json.dumps(featured_overrides, ensure_ascii=False),
             'photos_by_rid_json': json.dumps(photos_by_rid, ensure_ascii=False),
+            'firebase_bucket': bucket_name,
         }
 
         return render(request, 'scripts_manager/recommended/manage.html', context)
@@ -101,6 +102,7 @@ def recommended_manage(request):
             'selected_count': 0,
             'featured_overrides_json': '{}',
             'photos_by_rid_json': '{}',
+            'firebase_bucket': get_firebase_bucket(request),
         })
 
 

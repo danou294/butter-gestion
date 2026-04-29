@@ -433,6 +433,7 @@ def survey_save(request):
             'showResults': show_results,
             'position': position,
             'targetTypes': target_types,
+            'targeting': _normalize_targeting(new_survey.get('targeting')),
             'questions': clean_questions,
         }
 

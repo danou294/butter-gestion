@@ -91,6 +91,68 @@
                 </div>
             </div>
 
+            <!-- Ciblage filtres au niveau du sondage -->
+            <div style="margin-top: 18px;">
+                <span class="butter-label">Ciblage par filtres (s'applique à tout le sondage)</span>
+                <div class="targeting-mode" style="margin-bottom: 10px;">
+                    <label :class="surveyTargetingMode === 'all' && 'selected'">
+                        <input type="radio" value="all" x-model="surveyTargetingMode" @change="markChanged()">
+                        Tous les restos (pas de filtre)
+                    </label>
+                    <label :class="surveyTargetingMode === 'ids' && 'selected'">
+                        <input type="radio" value="ids" x-model="surveyTargetingMode" @change="markChanged()">
+                        Restos spécifiques
+                    </label>
+                    <label :class="surveyTargetingMode === 'filters' && 'selected'">
+                        <input type="radio" value="filters" x-model="surveyTargetingMode" @change="markChanged()">
+                        Filtres dynamiques
+                    </label>
+                </div>
+
+                <template x-if="surveyTargetingMode === 'ids'">
+                    <div>
+                        <span class="butter-label">IDs de restaurants (séparés par virgule ou espace)</span>
+                        <textarea x-model="surveyTargetingIdsText" @input="markChanged()"
+                                  placeholder="ALFR, CHEJ3, EAMA2…" rows="2"
+                                  class="butter-input" style="font-family: monospace;"></textarea>
+                    </div>
+                </template>
+
+                <template x-if="surveyTargetingMode === 'filters'">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <template x-for="fkey in targetingFilterKeys" :key="fkey">
+                            <div class="filter-group">
+                                <div class="label" x-text="targetingFilterLabels[fkey]"></div>
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="opt in targetingFilterOptions[fkey]" :key="opt">
+                                        <div class="type-checkbox"
+                                             :class="(surveyTargetingFilters[fkey] || []).includes(opt) && 'selected'"
+                                             style="font-size: 11px; padding: 4px 8px;"
+                                             @click="toggleSurveyFilter(fkey, opt)">
+                                            <span x-text="opt"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    <button type="button" @click="previewSurveyCount()" class="butter-btn butter-btn-ghost"
+                            style="font-size: 11px; padding: 4px 10px;">
+                        🔍 Aperçu : combien de restos matchent ?
+                    </button>
+                    <template x-if="surveyPreviewCount !== null && surveyPreviewCount !== undefined">
+                        <span class="butter-pill butter-pill-beige"
+                              x-text="'≈ ' + surveyPreviewCount + ' resto(s)'"></span>
+                    </template>
+                    <template x-if="surveyPreviewLoading">
+                        <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;">…</span>
+                    </template>
+                </div>
+            </div>
+
             <div style="margin-top: 16px;" class="flex items-center gap-6 flex-wrap">
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" x-model="survey.enabled" @change="markChanged()" class="toggle toggle-sm toggle-success">
@@ -291,8 +353,11 @@
 {% block extra_js %}
 <script>
 function surveyEdit() {
+    const initialSurvey = prepareSurvey(JSON.parse('{{ survey_json|escapejs }}'));
+    const initialSurveyTargeting = parseInitialTargeting(initialSurvey.targeting);
+
     return {
-        survey: prepareSurvey(JSON.parse('{{ survey_json|escapejs }}')),
+        survey: initialSurvey,
         isNew: {{ is_new|yesno:"true,false" }},
         hasChanges: false,
         positionLabels: JSON.parse('{{ position_labels_json|escapejs }}'),
@@ -302,7 +367,60 @@ function surveyEdit() {
         targetingFilterOptions: JSON.parse('{{ targeting_filter_options_json|escapejs }}'),
         targetingFilterLabels: JSON.parse('{{ targeting_filter_labels_json|escapejs }}'),
 
+        // Targeting au niveau du sondage
+        surveyTargetingMode: initialSurveyTargeting.mode,
+        surveyTargetingIdsText: initialSurveyTargeting.idsText,
+        surveyTargetingFilters: initialSurveyTargeting.filters,
+        surveyPreviewCount: null,
+        surveyPreviewLoading: false,
+
         markChanged() { this.hasChanges = true; },
+
+        toggleSurveyFilter(fkey, opt) {
+            if (!this.surveyTargetingFilters[fkey]) this.surveyTargetingFilters[fkey] = [];
+            const arr = this.surveyTargetingFilters[fkey];
+            const i = arr.indexOf(opt);
+            if (i >= 0) arr.splice(i, 1);
+            else arr.push(opt);
+            this.markChanged();
+        },
+
+        _buildSurveyTargeting() {
+            if (this.surveyTargetingMode === 'ids') {
+                const ids = (this.surveyTargetingIdsText || '')
+                    .split(/[\s,;]+/).map(s => s.trim()).filter(s => s);
+                return ids.length ? { restaurant_ids: ids } : null;
+            }
+            if (this.surveyTargetingMode === 'filters') {
+                const filters = {};
+                Object.keys(this.surveyTargetingFilters || {}).forEach(k => {
+                    const v = this.surveyTargetingFilters[k];
+                    if (Array.isArray(v) && v.length) filters[k] = [...v];
+                });
+                return Object.keys(filters).length ? { filters } : null;
+            }
+            return null;
+        },
+
+        async previewSurveyCount() {
+            this.surveyPreviewLoading = true;
+            this.surveyPreviewCount = null;
+            try {
+                const targeting = this._buildSurveyTargeting();
+                const resp = await fetch('{% url "scripts_manager:survey_targeting_count" %}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._getCsrf() },
+                    body: JSON.stringify({ targeting }),
+                });
+                const data = await resp.json();
+                this.surveyPreviewCount = data.count !== undefined ? data.count : '?';
+            } catch (e) {
+                this.surveyPreviewCount = 'erreur';
+            } finally {
+                this.surveyPreviewLoading = false;
+            }
+        },
 
         toggleTargetType(t) {
             const idx = this.survey.targetTypes.indexOf(t);
@@ -468,6 +586,7 @@ function surveyEdit() {
                 showResults: this.survey.showResults,
                 position: this.survey.position,
                 targetTypes: this.survey.targetTypes,
+                targeting: this._buildSurveyTargeting(),
                 questions: this.survey.questions.map(q => ({
                     id: q.id,
                     text: q.text,
@@ -500,8 +619,27 @@ function prepareSurvey(s) {
     s.showResults = !!s.showResults;
     s.position = s.position || 'above_reviews';
     s.targetTypes = Array.isArray(s.targetTypes) ? s.targetTypes : ['restaurant'];
+    s.targeting = s.targeting || null;
     s.questions = (s.questions || []).map(q => prepareQuestion(q));
     return s;
+}
+
+function parseInitialTargeting(t) {
+    let mode = 'all';
+    let idsText = '';
+    let filters = {};
+    if (t) {
+        if (Array.isArray(t.restaurant_ids) && t.restaurant_ids.length) {
+            mode = 'ids';
+            idsText = t.restaurant_ids.join(', ');
+        } else if (t.filters && Object.keys(t.filters).length) {
+            mode = 'filters';
+            Object.keys(t.filters).forEach(k => {
+                if (Array.isArray(t.filters[k])) filters[k] = [...t.filters[k]];
+            });
+        }
+    }
+    return { mode, idsText, filters };
 }
 
 function prepareQuestion(q) {
