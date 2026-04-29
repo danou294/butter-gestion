@@ -137,7 +137,7 @@
 
                         <!-- Pills -->
                         <span class="butter-pill butter-pill-beige" x-text="section.city"></span>
-                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
+                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'guide_collections', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
                               x-text="sectionTypeLabel(section.type)"></span>
                         <template x-if="section.type === 'guides'">
                             <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
@@ -150,6 +150,9 @@
                         </template>
                         <template x-if="section.type === 'decide'">
                             <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="section.buttons.length + ' boutons'"></span>
+                        </template>
+                        <template x-if="section.type === 'guide_collections'">
+                            <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="(section.collections || []).length + ' collections'"></span>
                         </template>
                     </div>
 
@@ -170,6 +173,7 @@
                                         <span class="butter-label">Type</span>
                                         <select x-model="section.type" @change="markChanged()" class="butter-select w-full">
                                             <option value="guides">Guides</option>
+                                            <option value="guide_collections">Collections de guides</option>
                                             <option value="videos">Nos dégustations</option>
                                             <option value="decide">Decide</option>
                                         </select>
@@ -278,6 +282,128 @@
                                             </template>
                                         </div>
                                     </div>
+                                </div>
+                                </div>
+                                </template>
+
+                                <!-- Collections de guides (uniquement pour type "guide_collections") -->
+                                <template x-if="section.type === 'guide_collections'">
+                                <div>
+                                <div class="butter-divider" style="margin: 20px 0;"></div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span style="font-family: 'Inter'; font-size: 13px; font-weight: 600; color: #111;">Collections</span>
+                                        <span style="font-family: 'Inter'; font-size: 11px; background: #F1EFEB; color: #888; padding: 1px 8px; border-radius: 10px;" x-text="(section.collections || []).length"></span>
+                                        <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1; margin-left: 6px;">
+                                            Chaque collection = une carte sur la home → ouvre une grille de guides au tap
+                                        </span>
+                                    </div>
+
+                                    <div x-show="(section.collections || []).length === 0"
+                                         style="text-align: center; padding: 20px; background: #FAFAF8; border-radius: 12px; margin-bottom: 14px;">
+                                        <span style="font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucune collection. Ajoutes-en une avec le bouton ci-dessous.</span>
+                                    </div>
+
+                                    <div class="space-y-3" style="margin-bottom: 14px;">
+                                        <template x-for="(col, ci) in (section.collections || [])" :key="col.id || ci">
+                                            <div style="border: 1.5px solid #F1EFEB; border-radius: 12px; padding: 14px; background: #FFFFFF;">
+                                                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                                    <div class="flex gap-0">
+                                                        <button type="button" @click="moveCollection(section, ci, -1)" class="butter-order-btn" :disabled="ci === 0">&uarr;</button>
+                                                        <button type="button" @click="moveCollection(section, ci, 1)" class="butter-order-btn" :disabled="ci === section.collections.length - 1">&darr;</button>
+                                                    </div>
+                                                    <span class="butter-pill butter-pill-beige" style="font-size: 10px; font-family: monospace;" x-text="col.id"></span>
+                                                    <span style="font-family: 'Inter'; font-size: 11px; color: #C9C1B1;" x-text="(col.guideIds || []).length + ' guide(s)'"></span>
+                                                    <div style="flex: 1;"></div>
+                                                    <button type="button" @click="removeCollection(section, ci)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;" title="Retirer">&times;</button>
+                                                </div>
+
+                                                <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                    <div class="md:col-span-7">
+                                                        <span class="butter-label">Titre de la carte</span>
+                                                        <input type="text" x-model="col.title" @input="markChanged()"
+                                                               placeholder="Ex: Avril 2026" class="butter-input w-full">
+                                                    </div>
+                                                    <div class="md:col-span-5">
+                                                        <span class="butter-label">Sous-titre (optionnel)</span>
+                                                        <input type="text" x-model="col.subtitle" @input="markChanged()"
+                                                               placeholder="Brunchs du printemps" class="butter-input w-full">
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-1 md:grid-cols-12 gap-3" style="margin-top: 10px;">
+                                                    <div class="md:col-span-4">
+                                                        <span class="butter-label">ID photo (Photos restaurants/{ID}.webp)</span>
+                                                        <input type="text" :value="col.imageId"
+                                                               @input="updateCollectionImageId(col, $event.target.value)"
+                                                               placeholder="ALFR1" class="butter-input w-full" style="font-family: monospace;">
+                                                    </div>
+                                                    <div class="md:col-span-6">
+                                                        <span class="butter-label">URL de la photo (auto, éditable)</span>
+                                                        <input type="text" :value="col.imageUrl"
+                                                               @input="updateCollectionImageUrl(col, $event.target.value)"
+                                                               placeholder="https://firebasestorage.googleapis.com/..." class="butter-input w-full" style="font-size: 11px;">
+                                                    </div>
+                                                    <div class="md:col-span-2">
+                                                        <span class="butter-label">Aperçu</span>
+                                                        <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: #F1EFEB; display: flex; align-items: center; justify-content: center;">
+                                                            <img x-show="col.imageUrl" :src="col.imageUrl" alt=""
+                                                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                                                 @error="$el.style.display='none'">
+                                                            <span x-show="!col.imageUrl" style="font-size: 18px; color: #C9C1B1;">📷</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Guides dans cette collection -->
+                                                <div style="margin-top: 14px;">
+                                                    <span class="butter-label">Guides dans cette collection</span>
+
+                                                    <div x-show="(col.guideIds || []).length > 0" style="border: 1.5px solid #F1EFEB; border-radius: 10px; overflow: hidden; margin-bottom: 8px;">
+                                                        <template x-for="(gid, gi) in col.guideIds" :key="gid">
+                                                            <div class="butter-guide-row">
+                                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1; width: 16px; text-align: right;" x-text="gi + 1"></span>
+                                                                <div class="flex gap-0" @click.stop>
+                                                                    <button type="button" @click="moveCollectionGuide(col, gi, -1)" class="butter-order-btn" :disabled="gi === 0">&uarr;</button>
+                                                                    <button type="button" @click="moveCollectionGuide(col, gi, 1)" class="butter-order-btn" :disabled="gi === col.guideIds.length - 1">&darr;</button>
+                                                                </div>
+                                                                <span style="font-family: 'Inter'; font-size: 13px; font-weight: 500; color: #111; flex: 1;" x-text="getGuideName(gid)"></span>
+                                                                <span style="font-family: 'Inter'; font-size: 10px; color: #C9C1B1;" x-text="gid"></span>
+                                                                <button type="button" @click="removeCollectionGuide(col, gi)" class="butter-order-btn" style="color: #D3695E; font-size: 16px;" title="Retirer">&times;</button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+
+                                                    <div x-data="{ q: '', open: false }" style="position: relative;">
+                                                        <div @click="open = true; $nextTick(() => $refs.colSearchInput.focus())"
+                                                             class="butter-input" style="cursor: text; padding: 6px 10px; min-height: 36px;">
+                                                            <input type="text" x-model="q" x-ref="colSearchInput"
+                                                                   @focus="open = true" @click.stop
+                                                                   @keydown.escape="open = false; q = ''"
+                                                                   placeholder="Ajouter un guide à cette collection..."
+                                                                   style="border: none; outline: none; background: transparent; font-family: 'Inter'; font-size: 13px; width: 100%;">
+                                                        </div>
+                                                        <div x-show="open" @click.away="open = false; q = ''" x-cloak class="butter-dropdown" style="max-height: 240px;">
+                                                            <template x-for="g in filterGuidesForCollection(q, col)" :key="g.id">
+                                                                <div @click="addCollectionGuide(col, g.id); q = ''; $nextTick(() => $refs.colSearchInput.focus())" class="butter-dropdown-item">
+                                                                    <span style="color: #60BC81; font-weight: 700; font-size: 16px;">+</span>
+                                                                    <span style="font-family: 'Inter'; font-weight: 500; flex: 1;" x-text="g.name"></span>
+                                                                    <span class="butter-pill butter-pill-beige" style="font-size: 10px; padding: 2px 8px;" x-text="g.city"></span>
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="filterGuidesForCollection(q, col).length === 0">
+                                                                <div style="padding: 14px; text-align: center; font-family: 'Inter'; font-size: 13px; color: #C9C1B1;">Aucun résultat</div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <button type="button" @click="addCollection(section)" class="butter-btn butter-btn-ghost" style="color: #60BC81;">
+                                        + Ajouter une collection
+                                    </button>
                                 </div>
                                 </div>
                                 </template>
@@ -401,9 +527,11 @@
 <script>
 function homeSections() {
     let uid = 0, tid = 0;
+    const firebaseBucket = '{{ firebase_bucket|escapejs }}';
     return {
-        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], topPadding: s.topPadding ?? '', bottomPadding: s.bottomPadding ?? '', _expanded: false, _uid: uid++ })),
+        sections: JSON.parse('{{ sections_json|escapejs }}').map(s => ({ ...s, type: s.type || 'guides', guideIds: s.guideIds || [], displaySize: s.displaySize || 'small', buttons: s.buttons || [], collections: (s.collections || []).map(c => ({ ...c, guideIds: c.guideIds || [] })), topPadding: s.topPadding ?? '', bottomPadding: s.bottomPadding ?? '', _expanded: false, _uid: uid++ })),
         allGuides: JSON.parse('{{ all_guides_json|escapejs }}'),
+        firebaseBucket: firebaseBucket,
         filterCity: '', hasChanges: false, toasts: [],
 
         filteredSections() {
@@ -415,13 +543,13 @@ function homeSections() {
         removeToast(i) { this.toasts.splice(i, 1); },
 
         sectionTypeLabel(type) {
-            const labels = { guides: 'Guides', videos: 'Vidéos', decide: 'Decide' };
+            const labels = { guides: 'Guides', guide_collections: 'Collections de guides', videos: 'Vidéos', decide: 'Decide' };
             return labels[type] || 'Guides';
         },
         addSection() {
             const city = this.filterCity || 'Paris';
             const max = this.sections.reduce((m, s) => Math.max(m, s.order || 0), -1);
-            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], order: max + 1, displaySize: 'small', isActive: true, city, topPadding: '', bottomPadding: '', _expanded: true, _uid: uid++ });
+            this.sections.push({ id: '', title: '', type: 'guides', guideIds: [], buttons: [], collections: [], order: max + 1, displaySize: 'small', isActive: true, city, topPadding: '', bottomPadding: '', _expanded: true, _uid: uid++ });
             this.markChanged();
             this.notify('Section ajoutee — ' + city, 'success');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 80);
@@ -500,6 +628,91 @@ function homeSections() {
             [s.buttons[i], s.buttons[j]] = [s.buttons[j], s.buttons[i]];
             s.buttons.forEach((b, idx) => b.order = idx);
             this.markChanged();
+        },
+
+        // --- Collections de guides ---
+        _imageIdToUrl(id) {
+            const trimmed = (id || '').trim();
+            if (!trimmed) return '';
+            const path = `Photos restaurants/${trimmed}.webp`;
+            return `https://firebasestorage.googleapis.com/v0/b/${this.firebaseBucket}/o/${encodeURIComponent(path)}?alt=media`;
+        },
+        _imageUrlToId(url) {
+            if (!url) return '';
+            try {
+                const decoded = decodeURIComponent(url);
+                const m = decoded.match(/Photos restaurants\/([A-Za-z0-9_-]+)\.webp/i);
+                return m ? m[1] : '';
+            } catch (e) {
+                return '';
+            }
+        },
+        addCollection(s) {
+            if (!s.collections) s.collections = [];
+            const ts = Date.now().toString(36);
+            s.collections.push({
+                id: 'col_' + ts + '_' + s.collections.length,
+                title: '',
+                subtitle: '',
+                imageId: '',
+                imageUrl: '',
+                guideIds: [],
+                order: s.collections.length,
+            });
+            this.markChanged();
+            this.notify('Collection ajoutée', 'success');
+        },
+        removeCollection(s, ci) {
+            const t = (s.collections[ci] && s.collections[ci].title) || 'sans titre';
+            if (!confirm('Supprimer la collection « ' + t + ' » ?')) return;
+            s.collections.splice(ci, 1);
+            s.collections.forEach((c, i) => c.order = i);
+            this.markChanged();
+            this.notify('Collection retirée', 'info');
+        },
+        moveCollection(s, ci, d) {
+            const j = ci + d;
+            if (j < 0 || j >= s.collections.length) return;
+            [s.collections[ci], s.collections[j]] = [s.collections[j], s.collections[ci]];
+            s.collections.forEach((c, i) => c.order = i);
+            this.markChanged();
+        },
+        updateCollectionImageId(col, val) {
+            col.imageId = val;
+            col.imageUrl = this._imageIdToUrl(val);
+            this.markChanged();
+        },
+        updateCollectionImageUrl(col, val) {
+            col.imageUrl = val;
+            const id = this._imageUrlToId(val);
+            if (id) col.imageId = id;
+            this.markChanged();
+        },
+        addCollectionGuide(col, gid) {
+            if (!col.guideIds) col.guideIds = [];
+            if (col.guideIds.includes(gid)) return;
+            col.guideIds.push(gid);
+            this.markChanged();
+            this.notify('« ' + this.getGuideName(gid) + ' » ajouté', 'success');
+        },
+        removeCollectionGuide(col, gi) {
+            const n = this.getGuideName(col.guideIds[gi]);
+            col.guideIds.splice(gi, 1);
+            this.markChanged();
+            this.notify('« ' + n + ' » retiré', 'info');
+        },
+        moveCollectionGuide(col, gi, d) {
+            const j = gi + d;
+            if (j < 0 || j >= col.guideIds.length) return;
+            [col.guideIds[gi], col.guideIds[j]] = [col.guideIds[j], col.guideIds[gi]];
+            this.markChanged();
+        },
+        filterGuidesForCollection(q, col) {
+            const taken = col.guideIds || [];
+            const available = this.allGuides.filter(g => !taken.includes(g.id));
+            if (!q) return available;
+            const l = q.toLowerCase();
+            return available.filter(g => g.name.toLowerCase().includes(l) || g.id.toLowerCase().includes(l));
         },
     }
 }

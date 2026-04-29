@@ -1,7 +1,7 @@
 """
 Views pour la gestion des sections dynamiques de la page d'accueil.
 Collection Firestore : home_sections
-Chaque document = une section avec un type (guides, videos, decide).
+Chaque document = une section avec un type (guides, videos, decide, guide_collections).
 """
 
 import json
@@ -14,11 +14,12 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 
 from .restaurants_views import get_firestore_client
+from .firebase_utils import get_firebase_bucket
 
 logger = logging.getLogger(__name__)
 
 COLLECTION = 'home_sections'
-VALID_SECTION_TYPES = ('guides', 'videos', 'decide')
+VALID_SECTION_TYPES = ('guides', 'videos', 'decide', 'guide_collections')
 
 
 @login_required
@@ -58,6 +59,7 @@ def home_sections_manage(request):
             'all_guides_json': json.dumps(all_guides, default=str),
             'total_count': len(sections),
             'active_count': sum(1 for s in sections if s.get('isActive', False)),
+            'firebase_bucket': get_firebase_bucket(request),
         }
         return render(request, 'scripts_manager/home_sections/manage.html', context)
 
@@ -68,6 +70,7 @@ def home_sections_manage(request):
             'sections': [], 'sections_json': '[]',
             'all_guides': [], 'all_guides_json': '[]',
             'total_count': 0, 'active_count': 0,
+            'firebase_bucket': get_firebase_bucket(request),
         })
 
 
@@ -135,6 +138,36 @@ def home_sections_save(request):
                     display_size = 'small'
                 doc_data['guideIds'] = guide_ids
                 doc_data['displaySize'] = display_size
+
+            # collections uniquement pour le type "guide_collections"
+            if section_type == 'guide_collections':
+                raw_collections = section.get('collections', [])
+                if not isinstance(raw_collections, list):
+                    raw_collections = []
+                collections = []
+                for idx, col in enumerate(raw_collections):
+                    if not isinstance(col, dict):
+                        continue
+                    title_col = (col.get('title') or '').strip()
+                    if not title_col:
+                        continue
+                    image_id = (col.get('imageId') or '').strip()
+                    image_url = (col.get('imageUrl') or '').strip()
+                    raw_guide_ids = col.get('guideIds', [])
+                    if not isinstance(raw_guide_ids, list):
+                        raw_guide_ids = []
+                    guide_ids = [g for g in raw_guide_ids if isinstance(g, str) and g.strip()]
+                    collections.append({
+                        'id': (col.get('id') or '').strip() or f"col_{int(datetime.utcnow().timestamp() * 1000)}_{idx}",
+                        'title': title_col,
+                        'subtitle': (col.get('subtitle') or '').strip(),
+                        'imageId': image_id,
+                        'imageUrl': image_url,
+                        'guideIds': guide_ids,
+                        'order': int(col.get('order', idx) or idx),
+                    })
+                collections.sort(key=lambda c: c['order'])
+                doc_data['collections'] = collections
 
             # buttons uniquement pour le type "decide"
             if section_type == 'decide':
