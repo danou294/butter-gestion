@@ -43,7 +43,9 @@ DEDUPE_IDS = False
 # Mapping colonnes Excel Marrakech → colonnes attendues par le script (format Paris)
 MARRAKECH_COLUMN_MAPPINGS = {
     "Restaurants": {
+        # Alias possibles pour le nom (la 1re trouvée dans l'Excel gagne)
         "Restaurant": "Vrai Nom",
+        "Nom": "Vrai Nom",
         "Spécialité précise": "Spécialité_TAG",
         "Quartier": "Arrondissement",
         "Instagram": "Lien de votre compte instagram",
@@ -54,7 +56,10 @@ MARRAKECH_COLUMN_MAPPINGS = {
         "Commentaire": "Infos",
     },
     "Hôtels": {
+        # Alias possibles pour le nom
         "Hôtel / Établissement": "Vrai Nom",
+        "Nom de l'hôtel": "Vrai Nom",
+        "Nom": "Vrai Nom",
         "Prix moyen": "Prix par nuit",
         "Quartier": "Arrondissement",
         "Catégorie": "Catégorie hôtel",
@@ -347,7 +352,7 @@ def string_to_tag_list(v):
 DAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 DAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 DAY_EN_TO_FR = dict(zip(DAYS_EN, DAYS_FR))
-DAY_PATTERN = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche):\s*"
+DAY_PATTERN = r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s*:\s*"
 RE_12H = re.compile(r"(\d{1,2}:\d{2})\s*([APMapm]{2})?\s*-\s*(\d{1,2}:\d{2})\s*([APMapm]{2})")
 RE_24H = re.compile(r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})")
 
@@ -400,11 +405,13 @@ def parse_day_slots(text):
 
 def split_hours_by_day(hours_str):
     text = parse_bracketed_list_if_any(hours_str)
-    text = re.sub(DAY_PATTERN, r"\n\1: ", clean_text(text))
-    parts = re.split(DAY_PATTERN, text)
+    # Case-insensitive : accepte "lundi", "Lundi", "LUNDI", etc.
+    text = re.sub(DAY_PATTERN, r"\n\1: ", clean_text(text), flags=re.IGNORECASE)
+    parts = re.split(DAY_PATTERN, text, flags=re.IGNORECASE)
     chunks = {}
     for i in range(1, len(parts), 2):
-        day = parts[i]
+        # Normaliser la casse : "lundi" → "Lundi" pour matcher DAY_EN_TO_FR / DAYS_FR
+        day = parts[i].capitalize()
         value = parts[i + 1].strip()
         fr_day = DAY_EN_TO_FR.get(day, day)
         chunks[fr_day] = value
@@ -684,6 +691,20 @@ def _synthesize_restaurant_tags(df, rows, log_file):
         rows["Ambiance_TAG"] = rows.apply(_build_ambiance_tag, axis=1)
         log(f"   Ambiance_TAG synthétisé depuis Festif", log_file)
 
+    # Nom de l'hôtel → enrichit Infos (description du resto)
+    if "Nom de l'hôtel" in rows.columns:
+        def _enrich_infos_with_hotel_name(row):
+            parts = []
+            existing = str(row.get("Infos", "")).strip()
+            if existing and existing.lower() not in ["", "nan"]:
+                parts.append(existing)
+            hotel_name = str(row.get("Nom de l'hôtel", "")).strip()
+            if hotel_name and hotel_name.lower() not in ["", "nan"]:
+                parts.append(f"Situé dans l'hôtel {hotel_name}")
+            return " | ".join(parts)
+        rows["Infos"] = rows.apply(_enrich_infos_with_hotel_name, axis=1)
+        log(f"   Nom de l'hôtel intégré dans Infos", log_file)
+
     # Prix $ → €
     if "Prix_TAG" in rows.columns:
         rows["Prix_TAG"] = rows["Prix_TAG"].apply(
@@ -785,11 +806,17 @@ def _normalize_marrakech_columns(df, rows, sheet_name, import_city, log_file):
         log(f"   ⚠️  Pas de mapping pour la feuille '{sheet_name}', tentative avec Restaurants", log_file)
         mapping = MARRAKECH_COLUMN_MAPPINGS.get("Restaurants", {})
 
-    # 1) Renommer les colonnes
+    # 1) Renommer les colonnes — support alias multiples (1re source trouvée gagne par dst)
     rename_dict = {}
+    seen_dst = set(df.columns)  # ne pas écraser une colonne déjà existante
     for src_col, dst_col in mapping.items():
-        if src_col in df.columns and src_col != dst_col:
-            rename_dict[src_col] = dst_col
+        if src_col not in df.columns or src_col == dst_col:
+            continue
+        if dst_col in seen_dst:
+            log(f"   ⚠️  Alias '{src_col}' ignoré : '{dst_col}' déjà présent", log_file)
+            continue
+        rename_dict[src_col] = dst_col
+        seen_dst.add(dst_col)
     if rename_dict:
         df = df.rename(columns=rename_dict)
         rows = rows.rename(columns=rename_dict)
