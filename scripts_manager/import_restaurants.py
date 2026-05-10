@@ -66,7 +66,7 @@ MARRAKECH_COLUMN_MAPPINGS = {
         "Tag": "Ref",
         "Quartier": "Arrondissement",
         "Instagram": "Lien de votre compte instagram",
-        "Tranche de prix ": "Prix_TAG",  # Note: espace final dans le nom Excel
+        "Tranche de prix": "Prix_TAG",
         "Lien réservation": "Lien de réservation",
         "Notes": "Infos",
     },
@@ -773,6 +773,13 @@ def _normalize_marrakech_columns(df, rows, sheet_name, import_city, log_file):
     """
     log(f"🏙️  Normalisation colonnes {import_city} (feuille: {sheet_name})...", log_file)
 
+    # 0) Strip whitespace autour des noms de colonnes (robustesse aux espaces parasites)
+    strip_rename = {c: c.strip() for c in df.columns if isinstance(c, str) and c != c.strip()}
+    if strip_rename:
+        df = df.rename(columns=strip_rename)
+        rows = rows.rename(columns=strip_rename)
+        log(f"   Espaces nettoyés sur colonnes: {list(strip_rename.keys())}", log_file)
+
     mapping = MARRAKECH_COLUMN_MAPPINGS.get(sheet_name, {})
     if not mapping:
         log(f"   ⚠️  Pas de mapping pour la feuille '{sheet_name}', tentative avec Restaurants", log_file)
@@ -1123,9 +1130,12 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             addresses_array.append(addr_entry)
 
         rid = normalize_id_from_tag(tag)
+        # Tag normalisé en MAJUSCULES pour cohérence avec l'ID Firestore et les chemins
+        # de logos/photos (Logos/{tag}1.webp). Insensible à la casse côté Excel.
+        tag_normalized = rid
         doc = {
             "id": rid,
-            "tag": tag,
+            "tag": tag_normalized,
             "name": name,
             "raw_name": raw_name,
             "address": address,
@@ -1160,7 +1170,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             "cuisines": cuisines_tags,
             "preferences": preferences_tags,
             "recommended_by": recommended_by_tags,
-            "tag_initial": [tag] if tag else [],
+            "tag_initial": [tag_normalized] if tag_normalized else [],
             "restaurant_type": types_tags,
             "location_type": lieu_tags,
             "extras": terrace_tags,
