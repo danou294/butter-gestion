@@ -99,8 +99,8 @@
                     <form method="post" action="{% url 'scripts_manager:home_sections_seed_types' %}" style="display: inline;">
                         {% csrf_token %}
                         <button type="submit" class="butter-btn butter-btn-ghost"
-                                onclick="return confirm('Ajouter les sections Vidéos pour chaque ville ?')"
-                                title="Créer la section videos pour chaque ville active">Initialiser types</button>
+                                onclick="return confirm('Ajouter les sections Coups de coeur et Vidéos pour chaque ville ?')"
+                                title="Créer les sections coups_de_coeur et videos pour chaque ville active">Initialiser types</button>
                     </form>
                     <button @click="addSection()" class="butter-btn butter-btn-primary">+ Nouvelle section</button>
                 </div>
@@ -137,7 +137,7 @@
 
                         <!-- Pills -->
                         <span class="butter-pill butter-pill-beige" x-text="section.city"></span>
-                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'guide_collections', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
+                        <span class="butter-pill" :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'guide_collections' || section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
                               x-text="sectionTypeLabel(section.type)"></span>
                         <template x-if="section.type === 'guides'">
                             <span class="butter-pill" :class="section.displaySize === 'large' ? 'butter-pill-green' : 'butter-pill-beige'"
@@ -174,6 +174,7 @@
                                         <select x-model="section.type" @change="markChanged()" class="butter-select w-full">
                                             <option value="guides">Guides</option>
                                             <option value="guide_collections">Collections de guides</option>
+                                            <option value="coups_de_coeur">Coups de coeur</option>
                                             <option value="videos">Nos dégustations</option>
                                             <option value="decide">Decide</option>
                                         </select>
@@ -221,12 +222,11 @@
                                     </div>
                                 </div>
 
-                                <!-- Info pour type videos -->
-                                <template x-if="section.type === 'videos'">
+                                <!-- Info pour types coups_de_coeur / videos -->
+                                <template x-if="section.type === 'coups_de_coeur' || section.type === 'videos'">
                                     <div style="margin-top: 16px; padding: 16px; background: #FAFAF8; border-radius: 12px; text-align: center;">
-                                        <span style="font-family: 'Inter'; font-size: 13px; color: #888;">
-                                            Les vidéos sont gérées depuis la page Vidéos.
-                                        </span>
+                                        <span style="font-family: 'Inter'; font-size: 13px; color: #888;"
+                                              x-text="section.type === 'coups_de_coeur' ? 'Les restaurants Coups de coeur sont gérés depuis la page dédiée.' : 'Les vidéos sont gérées depuis la page Vidéos.'"></span>
                                     </div>
                                 </template>
 
@@ -604,7 +604,7 @@ function homeSections() {
         removeToast(i) { this.toasts.splice(i, 1); },
 
         sectionTypeLabel(type) {
-            const labels = { guides: 'Guides', guide_collections: 'Collections de guides', videos: 'Vidéos', decide: 'Decide' };
+            const labels = { guides: 'Guides', guide_collections: 'Collections de guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos', decide: 'Decide' };
             return labels[type] || 'Guides';
         },
         addSection() {

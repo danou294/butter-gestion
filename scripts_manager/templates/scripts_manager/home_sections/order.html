@@ -109,7 +109,7 @@
 
                     <!-- Type pill -->
                     <span class="butter-pill"
-                          :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'guide_collections', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
+                          :class="{'butter-pill-green': section.type === 'guides', 'butter-pill-yellow': section.type === 'guide_collections' || section.type === 'coups_de_coeur', 'butter-pill-beige': section.type === 'videos' || section.type === 'decide'}"
                           x-text="typeLabel(section.type)"></span>
 
                     <!-- Title -->
@@ -169,7 +169,7 @@ function orderSections() {
         },
 
         typeLabel(type) {
-            const labels = { guides: 'Guides', guide_collections: 'Collections de guides', videos: 'Vidéos', decide: 'Decide' };
+            const labels = { guides: 'Guides', guide_collections: 'Collections de guides', coups_de_coeur: 'Coups de coeur', videos: 'Vidéos', decide: 'Decide' };
             return labels[type] || 'Guides';
         },
 

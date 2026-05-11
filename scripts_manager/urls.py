@@ -13,6 +13,7 @@ from . import onboarding_views
 from . import revenuecat_views
 from . import quick_filters_views
 from . import signups_views
+from . import coups_de_coeur_views
 from . import recommended_views
 from . import home_guide_views
 from . import marrakech_views
@@ -139,6 +140,11 @@ urlpatterns = [
     path('quick-filters/<str:filter_id>/edit/', quick_filters_views.quick_filter_edit, name='quick_filter_edit'),
     path('quick-filters/<str:filter_id>/delete/', quick_filters_views.quick_filter_delete, name='quick_filter_delete'),
     path('quick-filters/<str:filter_id>/json/', quick_filters_views.quick_filter_get_json, name='quick_filter_get_json'),
+
+    # Coups de coeur de la semaine
+    path('coups-de-coeur/', coups_de_coeur_views.coups_de_coeur_manage, name='coups_de_coeur_manage'),
+    path('coups-de-coeur/save/', coups_de_coeur_views.coups_de_coeur_save, name='coups_de_coeur_save'),
+    path('coups-de-coeur/export/', coups_de_coeur_views.coups_de_coeur_export, name='coups_de_coeur_export'),
 
     # Recommandés pour toi
     path('recommandes/', recommended_views.recommended_manage, name='recommended_manage'),

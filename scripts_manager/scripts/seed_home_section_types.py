@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Seed script : ajouter la section videos dans home_sections + tagger les anciennes
-sections en `type='guides'` quand elles n'ont pas de type.
+Seed script : ajouter les sections coups_de_coeur et videos dans home_sections.
 
 Pour chaque ville active, crée :
+  - { type: "coups_de_coeur", title: "Coups de coeur", order: 1, isActive: true }
   - { type: "videos", title: "Nos dégustations", order: <dernier>, isActive: true }
+
+Et ajoute type: "guides" aux sections existantes qui n'ont pas de type.
 
 Usage :
     python3 seed_home_section_types.py [--env dev|prod] [--dry-run]
@@ -64,7 +66,7 @@ def seed(db, dry_run: bool):
 
     print(f"\n  {migrated} sections migrées avec type='guides'\n")
 
-    # 2. Pour chaque ville, créer videos si absent
+    # 2. Pour chaque ville, créer coups_de_coeur et videos si absents
     created = 0
     for city in CITIES:
         city_docs = [d for d in docs if d.to_dict().get('city') == city]
@@ -72,8 +74,31 @@ def seed(db, dry_run: bool):
         existing_orders = [d.to_dict().get('order', 0) for d in city_docs]
         max_order = max(existing_orders) if existing_orders else -1
 
+        # Coups de coeur en premier (order 0), décaler les guides existants
+        if 'coups_de_coeur' not in city_types:
+            print(f"  [CREATE] {city}: coups_de_coeur (order=0)")
+            if not dry_run:
+                # Décaler les sections existantes de +1
+                for d in city_docs:
+                    data = d.to_dict()
+                    db.collection(COLLECTION).document(d.id).update({
+                        'order': data.get('order', 0) + 1,
+                    })
+                db.collection(COLLECTION).add({
+                    'title': 'Coups de coeur',
+                    'type': 'coups_de_coeur',
+                    'order': 0,
+                    'isActive': True,
+                    'city': city,
+                    'createdAt': datetime.utcnow(),
+                    'updatedAt': datetime.utcnow(),
+                })
+                max_order += 1  # account for shift
+            created += 1
+
+        # Videos en dernier
         if 'videos' not in city_types:
-            video_order = max_order + 1
+            video_order = max_order + 1 + (1 if 'coups_de_coeur' not in city_types else 0)
             print(f"  [CREATE] {city}: videos (order={video_order})")
             if not dry_run:
                 db.collection(COLLECTION).add({
