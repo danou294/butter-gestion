@@ -57,25 +57,35 @@ def init(env: str):
 
 
 def find_blobs_for_tag(bucket, prefix: str, tag: str):
-    """Retourne les blobs qui matchent {prefix}{tag}<chiffres>.webp"""
-    pattern = re.compile(rf"^{re.escape(prefix)}{re.escape(tag)}(\d+)\.webp$", re.IGNORECASE)
+    """
+    Retourne les blobs qui matchent {prefix}{tag}<chiffres>(_<WxH>)?.(webp|png|jpg|jpeg)
+    Couvre : main webp, original png/jpg, versions resized (_1200x1200, _400x400, etc.)
+    Garantit que le tag ne déborde pas sur un tag voisin (ex. MFA ne match pas MFAI*).
+    """
+    pattern = re.compile(
+        rf"^{re.escape(prefix)}{re.escape(tag)}(\d+)(_\d+x\d+)?\.(webp|png|jpg|jpeg)$",
+        re.IGNORECASE,
+    )
     matches = []
     for blob in bucket.list_blobs(prefix=f"{prefix}{tag}"):
         m = pattern.match(blob.name)
         if m:
-            matches.append((blob, m.group(1)))
+            num = m.group(1)
+            size_suffix = m.group(2) or ""
+            ext = m.group(3)
+            matches.append((blob, num, size_suffix, ext))
     return matches
 
 
 def duplicate_for_tag(bucket, tag: str, suffix: str, dry_run: bool):
-    """Duplique tous les blobs Logos/{tag}*.webp et Photos restaurants/{tag}*.webp vers {tag}{suffix}."""
+    """Duplique tous les blobs (logos + photos + versions resized) vers {tag}{suffix}."""
     actions = []
     skipped_existing = 0
     new_tag = f"{tag}{suffix}"
     for prefix in PREFIXES:
         matches = find_blobs_for_tag(bucket, prefix, tag)
-        for src_blob, num in matches:
-            dst_name = f"{prefix}{new_tag}{num}.webp"
+        for src_blob, num, size_suffix, ext in matches:
+            dst_name = f"{prefix}{new_tag}{num}{size_suffix}.{ext}"
             dst_blob = bucket.blob(dst_name)
             if dst_blob.exists():
                 skipped_existing += 1
