@@ -101,6 +101,31 @@ SHEET_VENUE_TYPE = {
     "Plages": "plage",
 }
 
+# Villes dont l'Excel a un en-tête en ligne 1 (ligne 0 vide / réservée).
+# Marrakech (et autres single-header) lit les headers directement en ligne 0.
+DOUBLE_HEADER_CITIES = {"paris", "côte d'azur", "saint-tropez"}
+
+# Dérivation venue_type depuis la colonne "Type d'établissement" (fallback quand
+# une colonne explicite "Type de lieu" n'a pas encore été ajoutée par l'utilisateur).
+# Valeurs comparées en lowercase. Tout ce qui n'est pas dans ce mapping → "restaurant".
+ETABLISSEMENT_TO_VENUE_TYPE = {
+    "beach club": "plage",
+    "plage privée": "plage",
+    "plage privee": "plage",
+    "paillote": "plage",
+    "paillotte": "plage",
+}
+
+# Amenities propres au sud (Côte d'Azur / Saint-Tropez). Stockés en champs
+# Firestore dédiés (bool "has_*" + string "*_precision" pour les détails).
+SOUTH_AMENITIES = [
+    ("Transats", "has_transats", "transats_precision"),
+    ("Piscine", "has_piscine", "piscine_precision"),
+    ("Voiturier", "has_voiturier", "voiturier_precision"),
+    ("Pieds dans le sable", "has_pieds_dans_sable", "pieds_dans_sable_precision"),
+    ("Activités nautiques", "has_activites_nautiques", "activites_nautiques_precision"),
+]
+
 # Mapping prix $ → € (Marrakech utilise $ dans l'Excel)
 DOLLAR_TO_EURO_PRICE = {
     "$": "€",
@@ -845,11 +870,23 @@ def _normalize_marrakech_columns(df, rows, sheet_name, import_city, log_file):
             df[aff_col] = df[tag_col]
             rows[aff_col] = rows[tag_col]
 
-    # 3) Auto-set venue_type depuis le nom d'onglet
-    venue_type = SHEET_VENUE_TYPE.get(sheet_name, "restaurant")
-    df["Type de lieu"] = venue_type
-    rows["Type de lieu"] = venue_type
-    log(f"   venue_type auto: '{venue_type}'", log_file)
+    # 3) Auto-set venue_type depuis le nom d'onglet — seulement si :
+    #   (a) la colonne "Type de lieu" n'est pas déjà présente dans l'Excel ET
+    #   (b) le nom d'onglet est explicitement mappé dans SHEET_VENUE_TYPE
+    #       (Restaurants/Hôtels/Daypass/Plages — Marrakech).
+    # Pour les onglets nommés par sous-ville (Cannes, Nice, etc.) on NE met PAS
+    # de valeur par défaut, pour laisser la dérivation per-row depuis
+    # "Type d'établissement" (Beach club/Plage privée → plage) opérer dans
+    # row_to_flat_doc.
+    if "Type de lieu" in df.columns:
+        log(f"   colonne 'Type de lieu' déjà présente dans l'Excel, conservée", log_file)
+    elif sheet_name in SHEET_VENUE_TYPE:
+        venue_type = SHEET_VENUE_TYPE[sheet_name]
+        df["Type de lieu"] = venue_type
+        rows["Type de lieu"] = venue_type
+        log(f"   venue_type auto: '{venue_type}' (depuis nom d'onglet '{sheet_name}')", log_file)
+    else:
+        log(f"   pas de mapping sheet→venue_type pour '{sheet_name}', dérivation per-row", log_file)
 
     # 4) Auto-set ville
     df["Ville"] = import_city
@@ -936,14 +973,17 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             raise ValueError("Le fichier Excel ne contient aucune donnée")
 
         # Détection du format header selon la ville
-        is_single_header = (import_city.lower() != "paris")
+        # - single-header (Marrakech) : row 0 = headers directement
+        # - double-header (Paris, Côte d'Azur, Saint-Tropez) : row 0 = vide ou
+        #   catégories, row 1 = vrais headers
+        is_single_header = (import_city.lower() not in DOUBLE_HEADER_CITIES)
 
         if is_single_header:
             # Single header : row 0 = vrais headers (Marrakech, etc.)
             rows = df.copy()
             log(f"📋 Format single-header détecté (ville: {import_city})", log_file)
         else:
-            # Double header : row 0 = catégories, row 1 = vrais headers (Paris)
+            # Double header : row 0 réservée, row 1 = vrais headers
             df.columns = df.iloc[0]
             rows = df.iloc[1:].copy()
             log(f"📋 Format double-header détecté (ville: {import_city})", log_file)
@@ -1003,9 +1043,31 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         doc_city = clean_text(entry.get("Ville") or "")
         if not doc_city:
             doc_city = import_city  # fallback sur la ville du contexte d'import
-        venue_type = clean_text(entry.get("Type de lieu") or "").lower()
-        if venue_type not in VENUE_TYPES:
-            venue_type = "restaurant"
+
+        # venue_type : trois sources, par priorité décroissante.
+        # 1. Colonne "Type de lieu" explicite (peut contenir une valeur multiple
+        #    séparée par virgule, ex: "plage,restaurant") → utilisateur en a le contrôle final.
+        # 2. Colonne "Type d'établissement" (présente dans les Excel sud) → dérivée
+        #    par ETABLISSEMENT_TO_VENUE_TYPE (Beach club / Plage privée / Paillote → "plage").
+        # 3. Fallback : "restaurant".
+        # Renvoie toujours une liste : multi-type produira plusieurs docs Firestore
+        # qui partagent le même tag/storage mais ont des venue_type distincts.
+        venue_types_list = []
+        type_de_lieu_raw = clean_text(entry.get("Type de lieu") or "").lower()
+        if type_de_lieu_raw:
+            explicit = [t.strip() for t in type_de_lieu_raw.split(",") if t.strip()]
+            venue_types_list = [t for t in explicit if t in VENUE_TYPES]
+        if not venue_types_list:
+            type_etab_raw = clean_text(entry.get("Type d'établissement") or "").lower()
+            if type_etab_raw:
+                derived = ETABLISSEMENT_TO_VENUE_TYPE.get(type_etab_raw, "restaurant")
+                venue_types_list = [derived]
+        if not venue_types_list:
+            venue_types_list = ["restaurant"]
+        # dédupliquer en gardant l'ordre
+        seen = set()
+        venue_types_list = [t for t in venue_types_list if not (t in seen or seen.add(t))]
+        venue_type = venue_types_list[0]  # primary pour le doc de base
         hotel_category = clean_text(entry.get("Catégorie hôtel") or entry.get("Categorie hotel") or "")
         price_per_night_raw = clean_text(entry.get("Prix par nuit") or "")
         price_per_night = None
@@ -1239,7 +1301,46 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             doc["equipements"] = equipements
         if star_rating:
             doc["star_rating"] = star_rating
-        return rid, doc
+
+        # Type d'établissement brut (sud) — conservé en tant que metadata séparée
+        # de venue_type, utile pour l'affichage ("Restaurant d'hôtel", "Glacier", etc.)
+        establishment_type = clean_text(entry.get("Type d'établissement") or "")
+        if establishment_type:
+            doc["establishment_type"] = establishment_type
+
+        # Amenities sud (Côte d'Azur / Saint-Tropez) — uniquement si remplis dans l'Excel
+        for amenity_col, has_field, prec_field in SOUTH_AMENITIES:
+            val_raw = clean_text(entry.get(amenity_col) or "").lower()
+            if val_raw in ("oui", "yes", "true", "1"):
+                doc[has_field] = True
+            elif val_raw in ("non", "no", "false", "0"):
+                doc[has_field] = False
+            # — Précision (tiret cadratin ou trait d'union, selon orthographe Excel)
+            prec = clean_text(
+                entry.get(f"{amenity_col} — Précision")
+                or entry.get(f"{amenity_col} - Précision")
+                or entry.get(f"{amenity_col} — Precision")
+                or ""
+            )
+            if prec:
+                doc[prec_field] = prec
+
+        # Multi-type : si plusieurs venue_type sur cette ligne, on retourne une
+        # liste de docs qui partagent le même tag/storage mais ont des id et
+        # venue_type distincts. Le 1er doc garde l'id original (rid), les
+        # suivants reçoivent un suffixe "_{venue_type}".
+        if len(venue_types_list) > 1:
+            result = []
+            for i, vt in enumerate(venue_types_list):
+                if i == 0:
+                    result.append((rid, {**doc, "venue_type": vt}))
+                else:
+                    extra_rid = f"{rid}_{vt}" if rid else ""
+                    extra_doc = {**doc, "id": extra_rid, "venue_type": vt}
+                    result.append((extra_rid, extra_doc))
+            return result
+
+        return [(rid, doc)]
 
     # Première passe : compter les restaurants nécessitant un géocodage
     log("🔍 Analyse préliminaire : comptage des restaurants nécessitant un géocodage...", log_file)
@@ -1289,15 +1390,23 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
     missing_tag_rows = []
     total_rows = len(rows)
     log(f"🔄 Conversion de {total_rows} lignes Excel en documents Firebase...", log_file)
+    multi_type_count = 0
     for count, (idx, row) in enumerate(rows.iterrows(), 1):
         if count % 10 == 0 or count == 1:
             log(f"   📊 Progression: {count}/{total_rows} restaurants traités", log_file)
-        rid, doc = row_to_flat_doc(row)
-        if not rid:
-            missing_tag_rows.append(idx + 2)
-            continue
-        ids.append(rid)
-        records.append(doc)
+        # row_to_flat_doc retourne une liste (>1 si la ligne est multi-type)
+        docs_for_row = row_to_flat_doc(row)
+        if len(docs_for_row) > 1:
+            multi_type_count += 1
+            log(f"   🔀 Ligne multi-type ({len(docs_for_row)} docs): {[d[0] for d in docs_for_row]}", log_file)
+        for rid, doc in docs_for_row:
+            if not rid:
+                missing_tag_rows.append(idx + 2)
+                continue
+            ids.append(rid)
+            records.append(doc)
+    if multi_type_count:
+        log(f"🔀 {multi_type_count} lignes multi-type traitées (docs Firestore dupliqués, storage partagé via tag)", log_file)
 
     dup_counts = Counter([i for i in ids if i])
     duplicates = [k for k, c in dup_counts.items() if c > 1]
