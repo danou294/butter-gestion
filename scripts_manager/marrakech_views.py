@@ -25,18 +25,6 @@ VENUE_TYPE_LABELS = {
 }
 
 
-def _get_venue_types(data):
-    """Retourne la liste des venue_types d'un doc, gère array ET string (back-compat)."""
-    vt = data.get('venue_type')
-    if vt is None or vt == '':
-        return ['restaurant']
-    if isinstance(vt, str):
-        return [vt]
-    if isinstance(vt, list):
-        return [str(t) for t in vt if t] or ['restaurant']
-    return ['restaurant']
-
-
 def _build_logo_url(rdata, bucket_name):
     """Construit l'URL du logo Firebase Storage."""
     tag = rdata.get('tag', '')
@@ -63,22 +51,18 @@ def marrakech_list(request):
         docs = list(query.stream())
 
         all_restaurants = []
-        # Counts par type : un venue multi-type compte dans CHAQUE catégorie
         counts = {'restaurant': 0, 'hotel': 0, 'daypass': 0}
 
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
-            vtypes = _get_venue_types(data)
-            data['venue_types'] = vtypes  # normalisé pour le template
-            for vt in vtypes:
-                if vt in counts:
-                    counts[vt] += 1
+            vtype = data.get('venue_type', 'restaurant')
+            counts[vtype] = counts.get(vtype, 0) + 1
             data['logoUrl'] = _build_logo_url(data, bucket_name)
             all_restaurants.append(data)
 
-        # Filtrer par type (un venue hotel+daypass apparaît dans les 2 onglets)
-        filtered = [r for r in all_restaurants if active_tab in r.get('venue_types', ['restaurant'])]
+        # Filtrer par type
+        filtered = [r for r in all_restaurants if r.get('venue_type', 'restaurant') == active_tab]
         filtered.sort(key=lambda r: r.get('name', ''))
 
         context = {
@@ -122,13 +106,13 @@ def marrakech_export(request):
         rows = []
         for doc in docs:
             data = doc.to_dict()
-            venues = _get_venue_types(data)
-            if vtype and vtype not in venues:
+            venue = data.get('venue_type', 'restaurant')
+            if vtype and venue != vtype:
                 continue
             rows.append({
                 'Tag': data.get('tag', ''),
                 'Nom': data.get('name', doc.id),
-                'Type': ', '.join(venues),
+                'Type': venue,
                 'Quartier': data.get('arrondissement', ''),
                 'Prix': ', '.join(data.get('price_range', [])) if isinstance(data.get('price_range'), list) else str(data.get('price_range', '')),
                 'Categorie hotel': data.get('hotel_category', ''),
@@ -190,10 +174,8 @@ def marrakech_stats(request):
 
         for doc in docs:
             data = doc.to_dict()
-            vtypes = _get_venue_types(data)
-            for vt in vtypes:
-                if vt in counts:
-                    counts[vt] += 1
+            vtype = data.get('venue_type', 'restaurant')
+            counts[vtype] = counts.get(vtype, 0) + 1
             counts['total'] += 1
             q = data.get('arrondissement', 'Inconnu')
             quartiers[q] = quartiers.get(q, 0) + 1

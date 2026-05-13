@@ -777,7 +777,7 @@ def dev_import_function(request):
                 
                 # Limiter à N enregistrements
                 test_records = records[:limit]
-                imported, _imported_ids = import_records(db, "restaurants", test_records, 400, log_file)
+                imported = import_records(db, "restaurants", test_records, 400, log_file)
                 
                 if file_path.exists():
                     file_path.unlink()

@@ -1160,8 +1160,6 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         # Tag normalisé en MAJUSCULES pour cohérence avec l'ID Firestore et les chemins
         # de logos/photos (Logos/{tag}1.webp). Insensible à la casse côté Excel.
         tag_normalized = rid
-        # venue_type stocké en ARRAY (un même doc peut être à la fois hotel + daypass)
-        venue_type_array = [venue_type] if venue_type else []
         doc = {
             "id": rid,
             "tag": tag_normalized,
@@ -1211,9 +1209,9 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
             # Multi-adresses
             "addresses": addresses_array,
             "arrondissements": all_arrondissements,
-            # Multi-ville / multi-type (venue_type = ARRAY pour supporter hotel+daypass)
+            # Multi-ville / multi-type
             "city": doc_city,
-            "venue_type": venue_type_array,
+            "venue_type": venue_type,
         }
         # Champs hôtel / daypass (ajoutés uniquement si pertinents)
         if hotel_category:
@@ -1363,15 +1361,14 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
 # -------------------- Clean & Import --------------------
 def delete_collection(db, collection_name: str, batch_size: int, log_file: str, city: str = None, venue_type: str = None) -> int:
     """Supprime les documents d'une collection. Si city est fourni, supprime uniquement les docs de cette ville.
-    Si venue_type est fourni, supprime uniquement les docs contenant ce type (array_contains)."""
+    Si venue_type est fourni, supprime uniquement les docs de ce type (restaurant, hotel, daypass)."""
     total_deleted = 0
     while True:
         query = db.collection(collection_name)
         if city:
             query = query.where("city", "==", city)
         if venue_type:
-            # venue_type est stocké en ARRAY → array_contains
-            query = query.where("venue_type", "array_contains", venue_type)
+            query = query.where("venue_type", "==", venue_type)
         docs = list(query.limit(batch_size).stream())
         if not docs:
             break
@@ -1389,58 +1386,11 @@ def delete_collection(db, collection_name: str, batch_size: int, log_file: str, 
         log(f"🗑️  Supprimés cumulés{scope}: {total_deleted}", log_file)
     return total_deleted
 
-
-def cleanup_venue_type_orphans(db, collection_name: str, city: str, venue_type: str, imported_ids: set, log_file: str):
-    """
-    Pour les docs city+array_contains(venue_type) qui NE sont PAS dans imported_ids :
-    - Retire venue_type de leur array
-    - Si l'array devient vide → delete le doc
-    Préserve les docs qui ont AUSSI un autre venue_type (hotel+daypass).
-    Retourne (touched_count, deleted_count).
-    """
-    query = db.collection(collection_name).where("city", "==", city).where("venue_type", "array_contains", venue_type)
-    current_docs = list(query.stream())
-    touched = 0
-    deleted = 0
-    batch = db.batch()
-    batch_count = 0
-    for d in current_docs:
-        if d.id in imported_ids:
-            continue
-        data = d.to_dict() or {}
-        types = data.get("venue_type", [])
-        if isinstance(types, str):
-            types = [types]
-        new_types = [t for t in types if t != venue_type]
-        if new_types:
-            batch.update(d.reference, {"venue_type": new_types})
-            touched += 1
-        else:
-            batch.delete(d.reference)
-            deleted += 1
-        batch_count += 1
-        if batch_count >= 400:
-            batch.commit()
-            batch = db.batch()
-            batch_count = 0
-    if batch_count > 0:
-        batch.commit()
-    log(f"🧹 Cleanup orphelins ({city}, {venue_type}) : {touched} type retiré, {deleted} docs supprimés (array vide)", log_file)
-    return touched, deleted
-
-def import_records(db, collection_name: str, records: List[Dict[str, Any]], batch_size: int, log_file: str):
-    """
-    Importe les records en fusionnant venue_type (array) avec l'existant.
-    - Si le doc existe déjà avec venue_type=['hotel'] et qu'on importe une ligne 'daypass',
-      le doc final aura venue_type=['hotel', 'daypass'] (dédupé, ordre préservé).
-    - Le reste des champs est écrasé par les valeurs du nouvel import (set avec merge=True).
-    Retourne (imported_count, set des ids importés).
-    """
+def import_records(db, collection_name: str, records: List[Dict[str, Any]], batch_size: int, log_file: str) -> int:
     imported = 0
     skipped = 0
-    imported_ids = set()
     collection = db.collection(collection_name)
-
+    
     for doc in records:
         rid = (doc.get("id") or "").strip()
         if not rid or not isinstance(doc, dict):
@@ -1449,35 +1399,17 @@ def import_records(db, collection_name: str, records: List[Dict[str, Any]], batc
             continue
         try:
             doc_ref = collection.document(rid)
-            # Lire l'existant pour merger venue_type
-            existing_snap = doc_ref.get()
-            existing_types = []
-            if existing_snap.exists:
-                existing_data = existing_snap.to_dict() or {}
-                ev = existing_data.get("venue_type", [])
-                if isinstance(ev, str):
-                    existing_types = [ev]
-                elif isinstance(ev, list):
-                    existing_types = [str(t) for t in ev if t]
-            new_types_from_record = doc.get("venue_type", [])
-            if isinstance(new_types_from_record, str):
-                new_types_from_record = [new_types_from_record]
-            # Union dédupée, ordre préservé (existant en premier)
-            merged_types = list(dict.fromkeys(existing_types + list(new_types_from_record)))
-            doc_to_write = dict(doc)
-            doc_to_write["venue_type"] = merged_types
-            doc_ref.set(doc_to_write, merge=True)
+            doc_ref.set(doc, merge=True)
             imported += 1
-            imported_ids.add(rid)
             if imported % 50 == 0:
                 log(f"📥 Importés: {imported}", log_file)
         except Exception as e:
             log(f"❌ Erreur doc {rid}: {e}", log_file)
             skipped += 1
             continue
-
+    
     log(f"📥 Importés: {imported}", log_file)
-    return imported, imported_ids
+    return imported
 
 def write_import_log(db, collection_logs: str, payload: Dict[str, Any], log_file: str):
     data = dict(payload)
@@ -1660,29 +1592,30 @@ def import_restaurants_from_excel(excel_path: str, sheet_name: str = "Feuil1", r
         log(f"❌ Conversion échouée: {e}\n{traceback.format_exc()}", log_file)
         raise
 
-    # 3) Import avec merge venue_type (pas de delete pré-import : on préserve les autres types)
+    # 3) Clean collection — scopé par ville ET venue_type pour ne pas écraser les autres types
     import_venue_type = SHEET_VENUE_TYPE.get(sheet_name)
     try:
-        log(f"🚚 Import de {len(records)} documents (merge venue_type='{import_venue_type}') ...", log_file)
-        imported, imported_ids = import_records(db, COLLECTION_SOURCE, records, BATCH_SIZE, log_file)
+        scope_parts = []
+        if city:
+            scope_parts.append(f"ville: {import_city}")
+        if import_venue_type:
+            scope_parts.append(f"type: {import_venue_type}")
+        scope_label = f"'{COLLECTION_SOURCE}' ({', '.join(scope_parts)})" if scope_parts else f"'{COLLECTION_SOURCE}'"
+        log(f"🧹 Suppression de {scope_label} ...", log_file)
+        deleted = delete_collection(db, COLLECTION_SOURCE, BATCH_SIZE, log_file, city=city, venue_type=import_venue_type)
+        log(f"✅ Suppression terminée: {deleted} documents supprimés.", log_file)
+    except Exception as e:
+        log(f"❌ Suppression échouée: {e}\n{traceback.format_exc()}", log_file)
+        raise
+
+    # 4) Import
+    try:
+        log(f"🚚 Import de {len(records)} documents ...", log_file)
+        imported = import_records(db, COLLECTION_SOURCE, records, BATCH_SIZE, log_file)
         log(f"✅ Import terminé: {imported} documents importés.", log_file)
     except Exception as e:
         log(f"❌ Import échoué: {e}\n{traceback.format_exc()}", log_file)
         raise
-
-    # 4) Cleanup orphelins : pour les docs city + venue_type qui n'étaient PAS dans le nouvel import,
-    # on retire ce venue_type de leur array (et supprime le doc si l'array devient vide).
-    # Préserve les venues multi-types (ex. hotel + daypass).
-    if city and import_venue_type:
-        try:
-            log(f"🧹 Cleanup orphelins venue_type='{import_venue_type}' pour city='{import_city}'...", log_file)
-            touched, deleted = cleanup_venue_type_orphans(
-                db, COLLECTION_SOURCE, city, import_venue_type, imported_ids, log_file
-            )
-            log(f"✅ Cleanup terminé: {touched} docs mis à jour, {deleted} docs supprimés.", log_file)
-        except Exception as e:
-            log(f"❌ Cleanup orphelins échoué: {e}\n{traceback.format_exc()}", log_file)
-            raise
 
     # 5) Import log document
     try:
