@@ -35,6 +35,29 @@ FIREBASE_BUCKET_PROD = "butter-vdef.firebasestorage.app"
 FIRESTORE_COLLECTION = "restaurants"
 
 # =============================================================================
+# VILLES ET TYPES DE LIEUX SUPPORTÉS
+# =============================================================================
+# Source de vérité unique pour les villes valides et les venue_type Firestore.
+# Référencée par : formulaire admin restaurant, formulaire guides, import Excel/CSV,
+# seed home_sections. L'app mobile (Flutter) filtre par ces valeurs exactes —
+# attention aux apostrophes (apostrophe droite U+0027, pas typographique U+2019).
+SUPPORTED_CITIES = [
+    "Paris",
+    "Marrakech",
+    "Côte d'Azur",
+    "Saint-Tropez",
+]
+
+VENUE_TYPES = ("restaurant", "hotel", "daypass", "plage")
+
+VENUE_TYPE_LABELS = {
+    "restaurant": "Restaurant",
+    "hotel": "Hôtel",
+    "daypass": "Day pass",
+    "plage": "Plage",
+}
+
+# =============================================================================
 # GESTION DES ENVIRONNEMENTS (DEV/PROD)
 # =============================================================================
 

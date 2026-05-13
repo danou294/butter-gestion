@@ -26,7 +26,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 COLLECTION = "home_sections"
-CITIES = ["Paris", "Marrakech"]
+CITIES = ["Paris", "Marrakech", "Côte d'Azur", "Saint-Tropez"]
 
 
 def get_service_account_path(env: str) -> str:

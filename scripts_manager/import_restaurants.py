@@ -31,7 +31,7 @@ except Exception:
     ZoneInfo = None
 
 # Import de la config Django
-from config import FIRESTORE_COLLECTION, INPUT_DIR, EXPORTS_DIR, BACKUP_DIR
+from config import FIRESTORE_COLLECTION, INPUT_DIR, EXPORTS_DIR, BACKUP_DIR, VENUE_TYPES
 
 # -------------------- Config --------------------
 COLLECTION_SOURCE = FIRESTORE_COLLECTION
@@ -39,8 +39,10 @@ COLLECTION_IMPORT_LOGS = "import logs"
 BATCH_SIZE = 400
 DEDUPE_IDS = False
 
-# -------------------- Marrakech Column Mappings --------------------
-# Mapping colonnes Excel Marrakech → colonnes attendues par le script (format Paris)
+# -------------------- Column Mappings (villes non-Paris) --------------------
+# Mapping colonnes Excel → colonnes attendues par le script (format Paris).
+# Utilisé pour Marrakech ET pour les villes Côte d'Azur / Saint-Tropez.
+# Le nom MARRAKECH_COLUMN_MAPPINGS est conservé pour compat — il s'applique à tout import non-Paris.
 MARRAKECH_COLUMN_MAPPINGS = {
     "Restaurants": {
         # Alias possibles pour le nom (la 1re trouvée dans l'Excel gagne)
@@ -75,6 +77,20 @@ MARRAKECH_COLUMN_MAPPINGS = {
         "Lien réservation": "Lien de réservation",
         "Notes": "Infos",
     },
+    # Plages / beach clubs / paillottes : structure identique aux restaurants.
+    "Plages": {
+        "Plage": "Vrai Nom",
+        "Beach club": "Vrai Nom",
+        "Nom": "Vrai Nom",
+        "Spécialité précise": "Spécialité_TAG",
+        "Quartier": "Arrondissement",
+        "Instagram": "Lien de votre compte instagram",
+        "Menu": "Lien Menu",
+        "Moments": "Moment_TAG",
+        "Horaires d'ouverture": "Horaires",
+        "Tranche de prix": "Prix_TAG",
+        "Commentaire": "Infos",
+    },
 }
 
 # Venue type automatique par nom d'onglet Excel
@@ -82,6 +98,7 @@ SHEET_VENUE_TYPE = {
     "Restaurants": "restaurant",
     "Hôtels": "hotel",
     "Daypass": "daypass",
+    "Plages": "plage",
 }
 
 # Mapping prix $ → € (Marrakech utilise $ dans l'Excel)
@@ -987,7 +1004,7 @@ def convert_excel(excel_path: str, sheet_name: str, out_json: str, out_ndjson: s
         if not doc_city:
             doc_city = import_city  # fallback sur la ville du contexte d'import
         venue_type = clean_text(entry.get("Type de lieu") or "").lower()
-        if venue_type not in ("restaurant", "hotel", "daypass"):
+        if venue_type not in VENUE_TYPES:
             venue_type = "restaurant"
         hotel_category = clean_text(entry.get("Catégorie hôtel") or entry.get("Categorie hotel") or "")
         price_per_night_raw = clean_text(entry.get("Prix par nuit") or "")
