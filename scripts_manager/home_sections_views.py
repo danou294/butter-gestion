@@ -338,7 +338,7 @@ def home_sections_order_save(request):
     return redirect('scripts_manager:home_sections_order')
 
 
-CITIES = ['Paris', 'Marrakech']
+CITIES = ['Paris', 'Marrakech', "Côte d'Azur", 'Saint-Tropez']
 
 
 @require_http_methods(["POST"])

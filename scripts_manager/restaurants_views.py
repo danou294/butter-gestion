@@ -15,6 +15,7 @@ from google.cloud import firestore
 from google.cloud import storage
 from google.oauth2 import service_account
 from .firebase_utils import get_service_account_path, get_firebase_bucket, get_storage_service_account_path
+from config import SUPPORTED_CITIES, VENUE_TYPES, VENUE_TYPE_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -665,7 +666,10 @@ def restaurant_create(request):
     if request.method == 'GET':
         return render(request, 'scripts_manager/restaurants/form.html', {
             'action': 'create',
-            'restaurant': {}
+            'restaurant': {},
+            'supported_cities': SUPPORTED_CITIES,
+            'venue_types': VENUE_TYPES,
+            'venue_type_labels': VENUE_TYPE_LABELS,
         })
     
     elif request.method == 'POST':
@@ -722,7 +726,10 @@ def restaurant_create(request):
             return render(request, 'scripts_manager/restaurants/form.html', {
                 'action': 'create',
                 'restaurant': {},
-                'error': str(e)
+                'error': str(e),
+                'supported_cities': SUPPORTED_CITIES,
+                'venue_types': VENUE_TYPES,
+                'venue_type_labels': VENUE_TYPE_LABELS,
             })
 
 
@@ -756,7 +763,10 @@ def restaurant_edit(request, restaurant_id):
 
             return render(request, 'scripts_manager/restaurants/form.html', {
                 'action': 'edit',
-                'restaurant': restaurant_data
+                'restaurant': restaurant_data,
+                'supported_cities': SUPPORTED_CITIES,
+                'venue_types': VENUE_TYPES,
+                'venue_type_labels': VENUE_TYPE_LABELS,
             })
         
         elif request.method == 'POST':
@@ -812,7 +822,10 @@ def restaurant_edit(request, restaurant_id):
         return render(request, 'scripts_manager/restaurants/form.html', {
             'action': 'edit',
             'restaurant': restaurant_data if 'restaurant_data' in locals() else {},
-            'error': str(e)
+            'error': str(e),
+            'supported_cities': SUPPORTED_CITIES,
+            'venue_types': VENUE_TYPES,
+            'venue_type_labels': VENUE_TYPE_LABELS,
         })
 
 
